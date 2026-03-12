@@ -1,136 +1,61 @@
 import SwiftUI
 
 struct HomeView: View {
+    @StateObject var viewModel: HomeViewModel
+    let onStartGame: () -> Void
+
     private let background = Color(red: 0.04, green: 0.20, blue: 0.12) // dark green
     private let accent = Color(red: 0.55, green: 0.93, blue: 0.68)     // bright green
 
-    private enum Screen {
-        case home
-        case game
-        case howToPlay
+    init(
+        viewModel: HomeViewModel = HomeViewModel(),
+        onStartGame: @escaping () -> Void
+    ) {
+        _viewModel = StateObject(wrappedValue: viewModel)
+        self.onStartGame = onStartGame
     }
-
-    @State private var currentScreen: Screen = .home
 
     var body: some View {
         ZStack {
             background.ignoresSafeArea()
 
-            switch currentScreen {
-            case .home:
-                homeScreen
-            case .game:
-                gameScreen
-            case .howToPlay:
-                howToPlayScreen
-            }
-        }
-    }
+            VStack(spacing: 24) {
+                VStack(spacing: 10) {
+                    Text("LepreCON")
+                        .font(.system(size: 44, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
 
-    private var homeScreen: some View {
-        VStack(spacing: 24) {
-            VStack(spacing: 10) {
-                Text("LepreCON")
-                    .font(.system(size: 44, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
-
-                Text("A wild Irish-themed party game")
-                    .font(.system(size: 17, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.85))
-                    .multilineTextAlignment(.center)
-            }
-
-            VStack(spacing: 14) {
-                Button {
-                    currentScreen = .game
-                } label: {
-                    Text("Start Game")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
+                    Text("A wild Irish-themed party game")
+                        .font(.system(size: 17, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.85))
+                        .multilineTextAlignment(.center)
                 }
-                .buttonStyle(PrimaryButtonStyle(background: accent))
 
-                Button {
-                    currentScreen = .howToPlay
-                } label: {
-                    Text("How to Play")
-                        .font(.subheadline.weight(.semibold))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
+                VStack(spacing: 14) {
+                    Button {
+                        onStartGame()
+                    } label: {
+                        Text("Start Game")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                    }
+                    .buttonStyle(PrimaryButtonStyle(background: accent))
+
+                    Button {
+                        // Placeholder: rules / how-to flow can be added later.
+                    } label: {
+                        Text("How to Play")
+                            .font(.subheadline.weight(.semibold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                    }
+                    .buttonStyle(SecondaryButtonStyle(accent: accent))
                 }
-                .buttonStyle(SecondaryButtonStyle(accent: accent))
+                .frame(maxWidth: 320)
+                .padding(.top, 8)
             }
-            .frame(maxWidth: 320)
-            .padding(.top, 8)
-        }
-        .padding(32)
-    }
-
-    private var gameScreen: some View {
-        VStack(spacing: 24) {
-            topBar
-
-            Spacer()
-
-            Text("Game screen coming soon")
-                .font(.title2.weight(.semibold))
-                .foregroundStyle(.white)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
-
-            Spacer()
-        }
-        .padding(24)
-    }
-
-    private var howToPlayScreen: some View {
-        VStack(spacing: 24) {
-            topBar
-
-            VStack(alignment: .leading, spacing: 12) {
-                Text("How to Play")
-                    .font(.title2.weight(.bold))
-                    .foregroundStyle(.white)
-
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("1. Gather your bravest party crew.")
-                    Text("2. Take turns drawing wild LepreCON challenges.")
-                    Text("3. Earn the most shamrocks to win the night.")
-                }
-                .font(.body)
-                .foregroundStyle(.white.opacity(0.9))
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(24)
-            .background(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(Color.white.opacity(0.06))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .stroke(accent.opacity(0.4), lineWidth: 1)
-                    )
-            )
-
-            Spacer()
-        }
-        .padding(24)
-    }
-
-    private var topBar: some View {
-        HStack {
-            Button {
-                currentScreen = .home
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "chevron.left")
-                    Text("Home")
-                }
-                .font(.subheadline.weight(.semibold))
-            }
-            .foregroundStyle(accent)
-
-            Spacer()
+            .padding(32)
         }
     }
 }
@@ -173,5 +98,5 @@ private struct SecondaryButtonStyle: ButtonStyle {
 }
 
 #Preview {
-    HomeView()
+    HomeView(onStartGame: {})
 }
