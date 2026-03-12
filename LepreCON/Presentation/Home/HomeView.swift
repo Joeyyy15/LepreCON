@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct ContentView: View {
+struct HomeView: View {
     private let background = Color(red: 0.04, green: 0.20, blue: 0.12) // dark green
     private let accent = Color(red: 0.55, green: 0.93, blue: 0.68)     // bright green
 
@@ -173,5 +173,5 @@ private struct SecondaryButtonStyle: ButtonStyle {
 }
 
 #Preview {
-    ContentView()
+    HomeView()
 }
