@@ -46,7 +46,11 @@ struct HomeView: View {
             get: { viewModel.destination },
             set: { viewModel.destination = $0 }
         )) { destination in
-            PlaceholderDestinationView(destination: destination, onDismiss: { viewModel.dismissDestination() })
+            if destination == .howToPlay {
+                HowToPlayView(onDismiss: { viewModel.dismissDestination() })
+            } else {
+                PlaceholderDestinationView(destination: destination, onDismiss: { viewModel.dismissDestination() })
+            }
         }
     }
 
