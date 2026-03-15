@@ -42,6 +42,12 @@ struct HomeView: View {
             .padding(.horizontal, AppTheme.screenPaddingHorizontal)
             .padding(.vertical, AppTheme.screenPaddingVertical)
         }
+        .sheet(item: Binding(
+            get: { viewModel.destination },
+            set: { viewModel.destination = $0 }
+        )) { destination in
+            PlaceholderDestinationView(destination: destination, onDismiss: { viewModel.dismissDestination() })
+        }
     }
 
     // MARK: - Top Bar

@@ -16,42 +16,71 @@ enum PlayMode: String, CaseIterable {
     case local = "Local"
 }
 
+/// Destinations that can be presented from the Home screen. Used with `destination` state for sheet navigation.
+enum HomeDestination: String, CaseIterable, Identifiable {
+    case profile
+    case settings
+    case theStable
+    case howToPlay
+    case recordBook
+    case difficulty
+    case customization
+
+    var id: String { rawValue }
+
+    /// Display title for placeholder screens.
+    var title: String {
+        switch self {
+        case .profile: return "Profile"
+        case .settings: return "Settings"
+        case .theStable: return "The Stable"
+        case .howToPlay: return "How To Play"
+        case .recordBook: return "Record Book"
+        case .difficulty: return "Difficulty"
+        case .customization: return "Customization"
+        }
+    }
+}
+
+
+
 final class HomeViewModel: ObservableObject {
     // MARK: - State
 
     /// Selected play mode for the Online / Local toggle.
+    @Published var destination: HomeDestination?
     @Published var playMode: PlayMode = .local
 
     // MARK: - Top Bar Actions (placeholder)
 
     func profileTapped() {
-        // Placeholder: navigate to profile or show profile sheet.
+        destination = .profile
     }
 
     func settingsTapped() {
-        // Placeholder: navigate to settings or show settings sheet.
+        destination = .settings
     }
 
     // MARK: - Menu Actions (placeholder)
 
     func theStableTapped() {
-        // Placeholder: open The Stable screen.
+        destination = .theStable
     }
 
     func howToPlayTapped() {
-        // Placeholder: open How To Play / rules.
+        destination = .howToPlay
     }
 
     func recordBookTapped() {
-        // Placeholder: open Record Book.
+        destination = .recordBook
     }
 
     func difficultyTapped() {
-        // Placeholder: open Difficulty selection.
+        destination = .difficulty
     }
 
     func customizationTapped() {
-        // Placeholder: open Customization.
+        destination = .customization
     }
 
     // MARK: - Play Mode
@@ -65,6 +94,11 @@ final class HomeViewModel: ObservableObject {
 
     func playTapped() {
         // Placeholder: start game; actual navigation is handled by RootView via onStartGame.
+    }
+
+    /// Clears the current destination (dismisses the presented sheet).
+    func dismissDestination() {
+        destination = nil
     }
 }
 
