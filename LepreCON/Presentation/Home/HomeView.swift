@@ -22,7 +22,15 @@ struct HomeView: View {
 
     var body: some View {
         ZStack {
+            // Base background with subtle top gradient for depth
             AppTheme.background.ignoresSafeArea()
+            LinearGradient(
+                colors: [AppTheme.backgroundHighlight, AppTheme.background],
+                startPoint: .top,
+                endPoint: .center
+            )
+            .opacity(0.6)
+            .ignoresSafeArea()
 
             VStack(spacing: 0) {
                 // Top bar: Profile (left), title space (center), Settings (right)
@@ -34,7 +42,7 @@ struct HomeView: View {
                 // Scrollable menu stack
                 menuSection
 
-                Spacer(minLength: 16)
+                Spacer(minLength: 20)
 
                 // Bottom row: Promo (left), Play button (right)
                 bottomSection
@@ -68,18 +76,26 @@ struct HomeView: View {
     // MARK: - Title
 
     private var titleSection: some View {
-        Text("LepreCON")
-            .font(.system(size: 48, weight: .bold, design: .rounded))
-            .foregroundStyle(AppTheme.textPrimary)
-            .padding(.top, 12)
-            .padding(.bottom, 28)
+        VStack(spacing: 10) {
+            Text("LepreCON")
+                .font(.system(size: 52, weight: .bold, design: .rounded))
+                .foregroundStyle(AppTheme.textPrimary)
+                .shadow(color: .black.opacity(0.4), radius: 8, x: 0, y: 2)
+                .shadow(color: AppTheme.accent.opacity(0.12), radius: 16, x: 0, y: 0)
+            Rectangle()
+                .fill(AppTheme.accent.opacity(0.5))
+                .frame(width: 120, height: 3)
+                .clipShape(Capsule())
+        }
+        .padding(.top, 16)
+        .padding(.bottom, 28)
     }
 
     // MARK: - Menu Stack
 
     private var menuSection: some View {
         ScrollView(.vertical, showsIndicators: false) {
-            VStack(spacing: 12) {
+            VStack(spacing: AppTheme.menuStackSpacing) {
                 MenuButton(title: "The Stable", action: { viewModel.theStableTapped() })
                 MenuButton(title: "How To Play", action: { viewModel.howToPlayTapped() })
                 MenuButton(title: "Record Book", action: { viewModel.recordBookTapped() })
@@ -91,7 +107,7 @@ struct HomeView: View {
             }
             .frame(maxWidth: AppTheme.maxContentWidth)
             .frame(maxWidth: .infinity)
-            .padding(.horizontal, 4)
+            .padding(.horizontal, AppTheme.menuBlockPadding)
         }
         .frame(maxWidth: .infinity)
     }
@@ -123,13 +139,13 @@ struct HomeView: View {
                 onStartGame()
             } label: {
                 Text("Play")
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
                     .foregroundStyle(Color.black.opacity(0.9))
-                    .frame(minWidth: 120)
-                    .padding(.vertical, 18)
-                    .padding(.horizontal, 32)
+                    .frame(minWidth: 130)
+                    .padding(.vertical, 20)
+                    .padding(.horizontal, 36)
             }
-            .buttonStyle(PrimaryButtonStyle())
+            .buttonStyle(HeroButtonStyle())
         }
         .padding(.top, 8)
     }

@@ -18,13 +18,13 @@ struct MenuButton: View {
                 .font(.system(size: 18, weight: .semibold, design: .rounded))
                 .foregroundStyle(AppTheme.textPrimary)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
+                .padding(.vertical, 18)
         }
         .buttonStyle(SecondaryButtonStyle())
     }
 }
 
-#Preview("TopIconButton") {
+#Preview("MenuButton") {
     ZStack {
         AppTheme.background.ignoresSafeArea()
         VStack(spacing: 12) {

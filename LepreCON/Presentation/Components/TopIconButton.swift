@@ -24,7 +24,12 @@ struct TopIconButton: View {
                 .background(
                     RoundedRectangle(cornerRadius: AppTheme.iconButtonCornerRadius, style: .continuous)
                         .fill(Color.white.opacity(0.12))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: AppTheme.iconButtonCornerRadius, style: .continuous)
+                                .stroke(AppTheme.accent.opacity(0.25), lineWidth: 1)
+                        )
                 )
+                .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
         }
         .buttonStyle(.plain)
     }

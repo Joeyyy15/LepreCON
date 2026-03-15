@@ -2,8 +2,8 @@
 // HowToPlayView.swift
 // LepreCON
 //
-// Clean scrolling How To Play screen.
-// Content is structured in readable sections with simple headers and body text.
+// Clean scrolling How To Play screen. Visual style matches the Home screen:
+// gradient background, premium header, and subtle section styling via AppTheme.
 //
 
 import SwiftUI
@@ -99,21 +99,36 @@ private enum HowToPlayContent {
 struct HowToPlayView: View {
     let onDismiss: () -> Void
 
+    private let sectionSpacing: CGFloat = 24
+    private let titleFontSize: CGFloat = 22
+    private let bodyFontSize: CGFloat = 16
+    private let bodyLineSpacing: CGFloat = 6
+
     var body: some View {
         NavigationStack {
-            ScrollView(.vertical, showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 28) {
-                    headerSection
+            ZStack {
+                AppTheme.background.ignoresSafeArea()
+                LinearGradient(
+                    colors: [AppTheme.backgroundHighlight, AppTheme.background],
+                    startPoint: .top,
+                    endPoint: .center
+                )
+                .opacity(0.6)
+                .ignoresSafeArea()
 
-                    ForEach(HowToPlayContent.sections) { section in
-                        sectionView(section)
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: sectionSpacing) {
+                        headerSection
+
+                        ForEach(HowToPlayContent.sections) { section in
+                            sectionView(section)
+                        }
                     }
+                    .padding(.horizontal, AppTheme.screenPaddingHorizontal)
+                    .padding(.top, 12)
+                    .padding(.bottom, 40)
                 }
-                .padding(.horizontal, AppTheme.screenPaddingHorizontal)
-                .padding(.top, 20)
-                .padding(.bottom, 40)
             }
-            .background(AppTheme.background.ignoresSafeArea())
             .navigationTitle("How To Play")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(AppTheme.background, for: .navigationBar)
@@ -130,13 +145,20 @@ struct HowToPlayView: View {
     }
 
     private var headerSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             Text("Learn the rules")
-                .font(.system(size: 28, weight: .bold, design: .rounded))
+                .font(.system(size: 30, weight: .bold, design: .rounded))
                 .foregroundStyle(AppTheme.textPrimary)
+                .shadow(color: .black.opacity(0.35), radius: 6, x: 0, y: 2)
+                .shadow(color: AppTheme.accent.opacity(0.1), radius: 12, x: 0, y: 0)
+
+            Rectangle()
+                .fill(AppTheme.accent.opacity(0.5))
+                .frame(width: 80, height: 2)
+                .clipShape(Capsule())
 
             Text("A quick guide to setup, turns, scoring, the unicorn, and special gems.")
-                .font(.system(size: 16, weight: .regular))
+                .font(.system(size: bodyFontSize, weight: .regular))
                 .foregroundStyle(AppTheme.textSecondary)
                 .lineSpacing(4)
         }
@@ -144,23 +166,27 @@ struct HowToPlayView: View {
     }
 
     private func sectionView(_ section: HowToPlaySection) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             Text(section.title)
-                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .font(.system(size: titleFontSize, weight: .bold, design: .rounded))
                 .foregroundStyle(AppTheme.textPrimary)
 
             Text(section.body)
-                .font(.system(size: 16, weight: .regular))
+                .font(.system(size: bodyFontSize, weight: .regular))
                 .foregroundStyle(AppTheme.textSecondary)
-                .lineSpacing(6)
+                .lineSpacing(bodyLineSpacing)
                 .fixedSize(horizontal: false, vertical: true)
-
-            Rectangle()
-                .fill(AppTheme.accent.opacity(0.18))
-                .frame(height: 1)
-                .padding(.top, 4)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous)
+                .fill(Color.white.opacity(0.04))
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous)
+                        .stroke(AppTheme.accent.opacity(0.22), lineWidth: 1)
+                )
+        )
     }
 }
 

@@ -25,6 +25,9 @@ enum AppTheme {
 
     /// Secondary text with reduced opacity.
     static let textSecondary = Color.white.opacity(0.85)
+
+    /// Slightly lighter green for subtle gradients (e.g. top of screen depth).
+    static let backgroundHighlight = Color(red: 0.06, green: 0.24, blue: 0.15)
 }
 
 // MARK: - Layout Constants
@@ -44,11 +47,17 @@ extension AppTheme {
 
     /// Max content width for readability on large devices.
     static let maxContentWidth: CGFloat = 400
+
+    /// Vertical spacing between menu items on Home.
+    static let menuStackSpacing: CGFloat = 14
+
+    /// Extra padding around the menu block for visual grouping.
+    static let menuBlockPadding: CGFloat = 4
 }
 
 // MARK: - Button Styles
 
-/// Filled primary button (e.g. Play, main CTAs).
+/// Filled primary button (e.g. secondary CTAs).
 struct PrimaryButtonStyle: ButtonStyle {
     var background: Color = AppTheme.accent
 
@@ -66,7 +75,26 @@ struct PrimaryButtonStyle: ButtonStyle {
     }
 }
 
-/// Outlined secondary button for menu items.
+/// Hero CTA for the main action (e.g. Play). Stronger shadow and subtle glow for hierarchy.
+struct HeroButtonStyle: ButtonStyle {
+    var background: Color = AppTheme.accent
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .foregroundStyle(Color.black.opacity(0.9))
+            .background(
+                RoundedRectangle(cornerRadius: AppTheme.cornerRadius + 2, style: .continuous)
+                    .fill(background)
+            )
+            .shadow(color: AppTheme.accent.opacity(0.35), radius: 12, x: 0, y: 0)
+            .shadow(color: .black.opacity(0.35), radius: 18, x: 0, y: 12)
+            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
+            .opacity(configuration.isPressed ? 0.95 : 1.0)
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+    }
+}
+
+/// Outlined secondary button for menu items. Slightly raised feel with soft shadow.
 struct SecondaryButtonStyle: ButtonStyle {
     var accent: Color = AppTheme.accent
 
@@ -74,13 +102,14 @@ struct SecondaryButtonStyle: ButtonStyle {
         configuration.label
             .foregroundStyle(AppTheme.textPrimary)
             .background(
-                RoundedRectangle(cornerRadius: AppTheme.cornerRadius - 2, style: .continuous)
-                    .stroke(accent.opacity(0.85), lineWidth: 1)
-                    .background(
-                        RoundedRectangle(cornerRadius: AppTheme.cornerRadius - 2, style: .continuous)
-                            .fill(Color.white.opacity(configuration.isPressed ? 0.10 : 0.06))
+                RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous)
+                    .fill(Color.white.opacity(configuration.isPressed ? 0.12 : 0.08))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous)
+                            .stroke(accent.opacity(0.6), lineWidth: 1)
                     )
             )
+            .shadow(color: .black.opacity(0.2), radius: 6, x: 0, y: 4)
             .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
             .opacity(configuration.isPressed ? 0.95 : 1.0)
             .animation(.easeOut(duration: 0.12), value: configuration.isPressed)

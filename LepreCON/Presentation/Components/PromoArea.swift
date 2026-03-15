@@ -19,11 +19,15 @@ struct PromoArea: View {
                 .font(.system(size: 11, weight: .regular))
                 .foregroundStyle(AppTheme.textSecondary.opacity(0.8))
         }
-        .padding(12)
+        .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: AppTheme.iconButtonCornerRadius, style: .continuous)
                 .fill(Color.white.opacity(0.08))
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppTheme.iconButtonCornerRadius, style: .continuous)
+                        .stroke(AppTheme.accent.opacity(0.2), lineWidth: 1)
+                )
         )
     }
 }
