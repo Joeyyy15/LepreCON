@@ -11,7 +11,7 @@ import SwiftUI
 struct HomeView: View {
     @StateObject private var viewModel: HomeViewModel
     let onStartGame: () -> Void
-
+    
     init(
         viewModel: HomeViewModel = HomeViewModel(),
         onStartGame: @escaping () -> Void
@@ -19,7 +19,7 @@ struct HomeView: View {
         _viewModel = StateObject(wrappedValue: viewModel)
         self.onStartGame = onStartGame
     }
-
+    
     var body: some View {
         ZStack {
             // Base background with subtle top gradient for depth
@@ -31,19 +31,19 @@ struct HomeView: View {
             )
             .opacity(0.6)
             .ignoresSafeArea()
-
+            
             VStack(spacing: 0) {
                 // Top bar: Profile (left), title space (center), Settings (right)
                 topBar
-
+                
                 // Centered app title
                 titleSection
-
+                
                 // Scrollable menu stack
                 menuSection
-
+                
                 Spacer(minLength: 20)
-
+                
                 // Bottom row: Promo (left), Play button (right)
                 bottomSection
             }
@@ -54,10 +54,18 @@ struct HomeView: View {
             get: { viewModel.destination },
             set: { viewModel.destination = $0 }
         )) { destination in
-            if destination == .howToPlay {
+            switch destination {
+            case .howToPlay:
                 HowToPlayView(onDismiss: { viewModel.dismissDestination() })
-            } else {
-                PlaceholderDestinationView(destination: destination, onDismiss: { viewModel.dismissDestination() })
+                
+            case .theStable:
+                GameLogicSandboxView()
+                
+            default:
+                PlaceholderDestinationView(
+                    destination: destination,
+                    onDismiss: { viewModel.dismissDestination() }
+                )
             }
         }
     }
