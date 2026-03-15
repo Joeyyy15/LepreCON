@@ -1,11 +1,16 @@
+//
+// HomeView.swift
+// LepreCON
+//
+// Home screen layout only. Structure and UI live here; state and actions
+// are delegated to HomeViewModel. Uses reusable components from Presentation/Components.
+//
+
 import SwiftUI
 
 struct HomeView: View {
-    @StateObject var viewModel: HomeViewModel
+    @StateObject private var viewModel: HomeViewModel
     let onStartGame: () -> Void
-
-    private let background = Color(red: 0.04, green: 0.20, blue: 0.12) // dark green
-    private let accent = Color(red: 0.55, green: 0.93, blue: 0.68)     // bright green
 
     init(
         viewModel: HomeViewModel = HomeViewModel(),
@@ -17,86 +22,117 @@ struct HomeView: View {
 
     var body: some View {
         ZStack {
-            background.ignoresSafeArea()
+            AppTheme.background.ignoresSafeArea()
 
-            VStack(spacing: 24) {
-                VStack(spacing: 10) {
-                    Text("LepreCON")
-                        .font(.system(size: 44, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
+            VStack(spacing: 0) {
+                // Top bar: Profile (left), title space (center), Settings (right)
+                topBar
 
-                    Text("A wild Irish-themed party game")
-                        .font(.system(size: 17, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.85))
-                        .multilineTextAlignment(.center)
-                }
+                // Centered app title
+                titleSection
 
-                VStack(spacing: 14) {
-                    Button {
-                        onStartGame()
-                    } label: {
-                        Text("Start Game")
-                            .font(.headline)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
-                    }
-                    .buttonStyle(PrimaryButtonStyle(background: accent))
+                // Scrollable menu stack
+                menuSection
 
-                    Button {
-                        // Placeholder: rules / how-to flow can be added later.
-                    } label: {
-                        Text("How to Play")
-                            .font(.subheadline.weight(.semibold))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                    }
-                    .buttonStyle(SecondaryButtonStyle(accent: accent))
-                }
-                .frame(maxWidth: 320)
-                .padding(.top, 8)
+                Spacer(minLength: 16)
+
+                // Bottom row: Promo (left), Play button (right)
+                bottomSection
             }
-            .padding(32)
+            .padding(.horizontal, AppTheme.screenPaddingHorizontal)
+            .padding(.vertical, AppTheme.screenPaddingVertical)
         }
     }
-}
 
-private struct PrimaryButtonStyle: ButtonStyle {
-    let background: Color
+    // MARK: - Top Bar
 
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .foregroundStyle(Color.black.opacity(0.9))
-            .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(background)
-            )
-            .shadow(color: .black.opacity(0.25), radius: 14, x: 0, y: 10)
-            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
-            .opacity(configuration.isPressed ? 0.95 : 1.0)
-            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+    private var topBar: some View {
+        HStack {
+            TopIconButton(systemName: "person.circle", action: { viewModel.profileTapped() })
+            Spacer()
+            TopIconButton(systemName: "gearshape", action: { viewModel.settingsTapped() })
+        }
+        .padding(.bottom, 8)
+    }
+
+    // MARK: - Title
+
+    private var titleSection: some View {
+        Text("LepreCON")
+            .font(.system(size: 48, weight: .bold, design: .rounded))
+            .foregroundStyle(AppTheme.textPrimary)
+            .padding(.top, 12)
+            .padding(.bottom, 28)
+    }
+
+    // MARK: - Menu Stack
+
+    private var menuSection: some View {
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(spacing: 12) {
+                MenuButton(title: "The Stable", action: { viewModel.theStableTapped() })
+                MenuButton(title: "How To Play", action: { viewModel.howToPlayTapped() })
+                MenuButton(title: "Record Book", action: { viewModel.recordBookTapped() })
+                MenuButton(title: "Difficulty", action: { viewModel.difficultyTapped() })
+                MenuButton(title: "Customization", action: { viewModel.customizationTapped() })
+
+                // Online / Local segmented control
+                playModePicker
+            }
+            .frame(maxWidth: AppTheme.maxContentWidth)
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 4)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var playModePicker: some View {
+        Picker("Play mode", selection: Binding(
+            get: { viewModel.playMode },
+            set: { viewModel.setPlayMode($0) }
+        )) {
+            ForEach(PlayMode.allCases, id: \.self) { mode in
+                Text(mode.rawValue).tag(mode)
+            }
+        }
+        .pickerStyle(.segmented)
+        .padding(.top, 4)
+    }
+
+    // MARK: - Bottom Section
+
+    private var bottomSection: some View {
+        HStack(alignment: .bottom, spacing: 16) {
+            PromoArea()
+                .frame(maxWidth: 140)
+
+            Spacer(minLength: 16)
+
+            Button {
+                viewModel.playTapped()
+                onStartGame()
+            } label: {
+                Text("Play")
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.black.opacity(0.9))
+                    .frame(minWidth: 120)
+                    .padding(.vertical, 18)
+                    .padding(.horizontal, 32)
+            }
+            .buttonStyle(PrimaryButtonStyle())
+        }
+        .padding(.top, 8)
     }
 }
 
-private struct SecondaryButtonStyle: ButtonStyle {
-    let accent: Color
+// MARK: - Previews
 
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .foregroundStyle(.white)
-            .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(accent.opacity(0.85), lineWidth: 1)
-                    .background(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .fill(Color.white.opacity(configuration.isPressed ? 0.10 : 0.06))
-                    )
-            )
-            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
-            .opacity(configuration.isPressed ? 0.95 : 1.0)
-            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
-    }
-}
-
-#Preview {
+#Preview("Home") {
     HomeView(onStartGame: {})
 }
+
+#Preview("Home (compact)") {
+    HomeView(onStartGame: {})
+        .environment(\.horizontalSizeClass, .compact)
+}
+
