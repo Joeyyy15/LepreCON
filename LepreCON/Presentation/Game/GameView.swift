@@ -14,10 +14,24 @@ struct GameView: View {
             Text("Game screen coming soon")
                 .font(.title2.weight(.semibold))
 
+            VStack(spacing: 8) {
+                Text("Game Phase: \(viewModel.session.phase.rawValue)")
+                    .font(.headline)
+
+                Text("Current Player: \(viewModel.currentPlayerName ?? "Not started")")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
+            Button("Start Game") {
+                viewModel.startGame()
+            }
+            .buttonStyle(.borderedProminent)
+
             Button("End Game (placeholder)") {
                 onFinishGame()
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.bordered)
         }
         .padding()
     }
