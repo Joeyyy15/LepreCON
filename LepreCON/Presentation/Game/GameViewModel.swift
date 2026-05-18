@@ -1,8 +1,39 @@
+//
+// GameViewModel.swift
+// LepreCON
+//
+// Owns the current game session and coordinates domain logic for the game screen.
+// SwiftUI views read from here; they do not create GameSession values directly.
+// Full turn/scoring rules are not implemented yet.
+//
+
 import Foundation
-import SwiftUI
 import Combine
 
 final class GameViewModel: ObservableObject {
-    // Placeholder for future game screen state and logic.
-}
 
+    /// The active game state (players, cups, bag, phase). Updated as the game progresses.
+    @Published private(set) var session: GameSession
+
+    private let factory: GameSessionFactory
+
+    /// Display name for whoever's turn it is, when the game is in the playing phase.
+    var currentPlayerName: String? {
+        GameRules.currentPlayer(in: session)?.name
+    }
+
+    /// Creates a new game in setup using default placeholder players until setup UI exists.
+    init(
+        factory: GameSessionFactory = GameSessionFactory(),
+        playerNames: [String] = ["Player 1"]
+    ) {
+        self.factory = factory
+        self.session = factory.makeNewGame(playerNames: playerNames)
+    }
+
+    /// Moves from setup to playing when domain rules allow it.
+    func startGame() {
+        guard GameRules.canStartGame(session) else { return }
+        session.phase = .playing
+    }
+}
