@@ -6,9 +6,9 @@ The project aims to bring one of the company’s upcoming board games to mobile 
 ## About the Project
 
 This app is being built as a digital adaptation of an upcoming Buck Naked Games board game.  
-The goal is to preserve the fun, strategy, and identity of the original tabletop experience while making it easier to play in a mobile format.
+The goal is to preserve the fun, strategy, and identity of the original tabletop experience while making it easier to play on iPhone.
 
-LepreCON is currently being developed in **Swift** for iOS using **SwiftUI** and **SwiftData**.
+LepreCON is currently being developed in **Swift** using **SwiftUI**.
 
 ## Goals
 
@@ -16,13 +16,14 @@ LepreCON is currently being developed in **Swift** for iOS using **SwiftUI** and
 - Create an intuitive and visually engaging iOS interface
 - Build a scalable codebase that supports future features and gameplay updates
 - Keep the design and gameplay aligned with the Buck Naked Games brand
+- Add clear game logic, player flow, and replayable gameplay over time
 
 ## Tech Stack
 
 - **Language:** Swift
 - **Framework:** SwiftUI
-- **Persistence:** SwiftData
 - **IDE:** Xcode
+- **Platform:** iOS
 
 ## Current Project Structure
 
@@ -40,4 +41,3 @@ LepreCON/
 │   │   └── Results/
 │   ├── Theme/
 │   └── Item.swift
-```
