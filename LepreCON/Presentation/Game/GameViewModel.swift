@@ -61,4 +61,12 @@ final class GameViewModel: ObservableObject {
 
         session.phase = .finished
     }
+    
+    /// Starts a gameplay turn using the rolled D12 value.
+    ///
+    /// The ViewModel does not decide turn rules itself.
+    /// It delegates to GameTurnEngine so the Domain layer owns the gameplay logic.
+    func beginTurn(roll: Int) -> Result<Void, GameTurnError> {
+        GameTurnEngine.beginTurn(session: &session, roll: roll)
+    }
 }

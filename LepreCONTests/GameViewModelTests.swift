@@ -99,4 +99,55 @@ final class GameViewModelTests: XCTestCase {
         // Once the game is already playing, it should not be allowed to start again.
         XCTAssertFalse(viewModel.canStartGame)
     }
+    
+    func testBeginTurnDrawsRolledNumberOfGemsIntoHand() {
+        // Create a game and move it into the playing phase.
+        let viewModel = GameViewModel(playerNames: ["Player 1"])
+        viewModel.startGame()
+
+        let startingBagCount = viewModel.session.gemsInBag.count
+
+        // Begin a turn with a roll of 3.
+        let result = viewModel.beginTurn(roll: 3)
+
+        // Result<Void, GameTurnError> cannot be compared directly with XCTAssertEqual,
+        // so we switch on the result and fail only if it returns an error.
+        switch result {
+        case .success:
+            break
+        case .failure(let error):
+            XCTFail("Expected beginTurn to succeed, but got \(error)")
+        }
+
+        XCTAssertEqual(viewModel.session.gemsInHand.count, 3)
+        XCTAssertEqual(viewModel.session.gemsInBag.count, startingBagCount - 3)
+    }
+
+    func testBeginTurnStoresCurrentRoll() {
+        // Create a game and move it into the playing phase.
+        let viewModel = GameViewModel(playerNames: ["Player 1"])
+        viewModel.startGame()
+
+        _ = viewModel.beginTurn(roll: 4)
+
+        XCTAssertEqual(viewModel.session.currentRoll, 4)
+    }
+
+    func testBeginTurnFailsBeforeGameStarts() {
+        // The game starts in setup, so turns should not begin yet.
+        let viewModel = GameViewModel(playerNames: ["Player 1"])
+
+        let result = viewModel.beginTurn(roll: 3)
+
+        // Since the game is not playing yet, the Domain engine should reject the turn.
+        switch result {
+        case .success:
+            XCTFail("Expected beginTurn to fail before the game starts.")
+        case .failure(let error):
+            XCTAssertEqual(error, .gameNotPlaying)
+        }
+
+        XCTAssertNil(viewModel.session.currentRoll)
+        XCTAssertTrue(viewModel.session.gemsInHand.isEmpty)
+    }
 }
