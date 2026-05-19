@@ -80,4 +80,23 @@ final class GameViewModelTests: XCTestCase {
         // Once the game is playing, it should be allowed to end.
         XCTAssertTrue(viewModel.canEndGame)
     }
+    
+    func testCanStartGameIsTrueBeforeGameStarts() {
+        // Create a new game that starts in the setup phase.
+        let viewModel = GameViewModel(playerNames: ["Player 1"])
+
+        // A setup game should be allowed to start.
+        XCTAssertTrue(viewModel.canStartGame)
+    }
+
+    func testCanStartGameIsFalseAfterGameStarts() {
+        // Create a new game that starts in the setup phase.
+        let viewModel = GameViewModel(playerNames: ["Player 1"])
+
+        // Start the game so it moves into the playing phase.
+        viewModel.startGame()
+
+        // Once the game is already playing, it should not be allowed to start again.
+        XCTAssertFalse(viewModel.canStartGame)
+    }
 }
