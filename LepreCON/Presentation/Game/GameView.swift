@@ -34,7 +34,8 @@ struct GameView: View {
             }
             .buttonStyle(.borderedProminent)
 
-            Button("End Game (placeholder)") {
+            Button("End Game") {
+                viewModel.endGame()
                 onFinishGame()
             }
             .buttonStyle(.bordered)
