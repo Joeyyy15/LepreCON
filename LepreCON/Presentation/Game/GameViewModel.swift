@@ -42,7 +42,11 @@ final class GameViewModel: ObservableObject {
         session.phase = .playing
     }
     
+    /// Moves from playing to finished when domain rules allow it.
     func endGame() {
+        // The Domain layer decides whether ending the game is allowed.
+        guard GameRules.canEndGame(session) else { return }
+
         session.phase = .finished
     }
 }

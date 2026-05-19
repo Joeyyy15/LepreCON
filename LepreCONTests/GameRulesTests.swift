@@ -50,4 +50,22 @@ final class GameRulesTests: XCTestCase {
 
         XCTAssertNil(GameRules.currentPlayer(in: session))
     }
+    
+    func testCanEndGameReturnsTrueWhenGameIsPlaying() {
+        // Create a valid game session.
+        var session = GameSessionFactory().makeNewGame(playerNames: ["Player 1"])
+
+        // A game should only be allowed to end after it is actively playing.
+        session.phase = .playing
+
+        XCTAssertTrue(GameRules.canEndGame(session))
+    }
+
+    func testCanEndGameReturnsFalseWhenGameIsInSetup() {
+        // Create a new game, which starts in setup by default.
+        let session = GameSessionFactory().makeNewGame(playerNames: ["Player 1"])
+
+        // A setup game should not be allowed to jump straight to finished.
+        XCTAssertFalse(GameRules.canEndGame(session))
+    }
 }

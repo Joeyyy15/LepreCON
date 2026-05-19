@@ -22,6 +22,11 @@ enum GameRules {
         // Placeholder: add cup layout, bag contents, etc. when setup rules are implemented.
         return true
     }
+    
+    // Only allow the game to end after it has started.
+    static func canEndGame(_ session: GameSession) -> Bool {
+        session.phase == .playing
+    }
 
     /// Returns whether the game has ended.
     /// Placeholder: true when the session phase is finished.
