@@ -109,17 +109,21 @@ final class GameTurnEngineTests: XCTestCase {
     XCTAssertEqual(session.nextPlacementCupIndex, expectedNext)
   }
 
-  func testPlacementWrapsFromLastCupToFirstCup() {
-    let gem = Gem(kind: .clear)
-    var session = makePlayingSession(bag: [])
-    session.gemsInHand = [gem]
-    session.currentRoll = 1
-    session.nextPlacementCupIndex = session.cups.count - 1
+    func testPlacementWrapsFromLastCupToFirstCup() {
+        // Two gems means the first placement is not the final gem in hand.
+        let firstGem = Gem(kind: .clear)
+        let secondGem = Gem(kind: .gold)
 
-    _ = GameTurnEngine.placeGemInCurrentCup(session: &session, gemID: gem.id)
+        var session = makePlayingSession(bag: [])
+        session.gemsInHand = [firstGem, secondGem]
+        session.currentRoll = 2
+        session.nextPlacementCupIndex = session.cups.count - 1
 
-    XCTAssertEqual(session.nextPlacementCupIndex, 0)
-  }
+        _ = GameTurnEngine.placeGemInCurrentCup(session: &session, gemID: firstGem.id)
+
+        // Non-final placements should keep moving clockwise and wrap back to index 0.
+        XCTAssertEqual(session.nextPlacementCupIndex, 0)
+    }
 
   func testPlaceGemInDiscardAddsToDiscardPileWithoutAdvancingCup() {
     let gem = Gem(kind: .pink)
@@ -147,5 +151,85 @@ final class GameTurnEngineTests: XCTestCase {
         if case .failure(let error) = result {
             XCTFail("Expected success, got \(error)", file: file, line: line)
         }
+    }
+    
+    func testFinalGemPlacedInEmptyCupStopsPlacementWithoutAdvancing() {
+        let gem = Gem(kind: .clear)
+
+        var session = makePlayingSession(bag: [])
+        session.gemsInHand = [gem]
+        session.currentRoll = 1
+        session.nextPlacementCupIndex = 0
+
+        // Make sure the target cup is empty before placing the final gem.
+        session.cups[0].gems.removeAll()
+
+        _ = GameTurnEngine.placeGemInCurrentCup(session: &session, gemID: gem.id)
+
+        // Final gem landed in an empty cup, so placement stops on that cup.
+        XCTAssertEqual(session.nextPlacementCupIndex, 0)
+        XCTAssertTrue(session.gemsInHand.isEmpty)
+        XCTAssertEqual(session.cups[0].gems.count, 1)
+    }
+    
+    func testFinalGemPlacedInNonEmptyCupScoopsCupIntoHand() {
+        // One gem in hand means this placement is the final gem.
+        let finalGem = Gem(kind: .clear)
+
+        // This gem is already in the target cup before placement.
+        // Because the cup is non-empty before the final gem lands, it should trigger a scoop.
+        let existingCupGem = Gem(kind: .red)
+
+        var session = makePlayingSession(bag: [])
+        session.gemsInHand = [finalGem]
+        session.currentRoll = 1
+        session.nextPlacementCupIndex = 0
+
+        // Put a gem in the target cup so the final placement lands in a non-empty cup.
+        session.cups[0].gems = [existingCupGem]
+
+        _ = GameTurnEngine.placeGemInCurrentCup(session: &session, gemID: finalGem.id)
+
+        // The cup should be emptied because the final gem triggered the chain reaction scoop.
+        XCTAssertTrue(session.cups[0].gems.isEmpty)
+
+        // The player's hand should now contain both the original cup gem and the gem just placed.
+        XCTAssertEqual(session.gemsInHand.count, 2)
+        XCTAssertTrue(session.gemsInHand.contains(where: { $0.id == existingCupGem.id }))
+        XCTAssertTrue(session.gemsInHand.contains(where: { $0.id == finalGem.id }))
+
+        // After scooping, placement should advance to the next cup.
+        XCTAssertEqual(session.nextPlacementCupIndex, 1)
+    }
+    
+    func testNonFinalGemPlacedInNonEmptyCupDoesNotScoop() {
+        // Two gems in hand means the first placement is not the final gem.
+        let firstGem = Gem(kind: .clear)
+        let secondGem = Gem(kind: .gold)
+
+        // This gem is already in the target cup before placement.
+        let existingCupGem = Gem(kind: .red)
+
+        var session = makePlayingSession(bag: [])
+        session.gemsInHand = [firstGem, secondGem]
+        session.currentRoll = 2
+        session.nextPlacementCupIndex = 0
+
+        // Put a gem in the target cup so the cup is non-empty before placement.
+        session.cups[0].gems = [existingCupGem]
+
+        _ = GameTurnEngine.placeGemInCurrentCup(session: &session, gemID: firstGem.id)
+
+        // Because this was not the final gem, the cup should not be scooped.
+        XCTAssertEqual(session.cups[0].gems.count, 2)
+        XCTAssertTrue(session.cups[0].gems.contains(where: { $0.id == existingCupGem.id }))
+        XCTAssertTrue(session.cups[0].gems.contains(where: { $0.id == firstGem.id }))
+
+        // The second gem should still be waiting in hand.
+        XCTAssertEqual(session.gemsInHand.count, 1)
+        XCTAssertEqual(session.gemsInHand.first?.id, secondGem.id)
+
+        // Non-final placements should advance to the next cup.
+        XCTAssertEqual(session.nextPlacementCupIndex, 1)
     }
 }

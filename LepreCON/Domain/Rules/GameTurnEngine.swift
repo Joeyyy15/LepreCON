@@ -48,10 +48,26 @@ enum GameTurnEngine {
         guard session.cups.indices.contains(session.nextPlacementCupIndex) else {
             return .failure(.invalidPlacementCupIndex)
         }
+        
+        let cupIndex = session.nextPlacementCupIndex
+        
+        // Chain reactions depend on whether the cup had gems before this gem was placed
+        let cupHadGemsBeforePlacement = !session.cups[cupIndex].gems.isEmpty
 
         let gem = session.gemsInHand.remove(at: handIndex)
+        
+        // after removing the gem from hand, an empty hand means this was the final gem.
+        let wasFinalGemInHand = session.gemsInHand.isEmpty
+        
         session.cups[session.nextPlacementCupIndex].gems.append(gem)
-        advancePlacementIndex(session: &session)
+        
+        if wasFinalGemInHand && cupHadGemsBeforePlacement{
+            // The final gem landed in a non-empty cup, so scoop the whole cup and continue.
+            scoopCupIntoHand(session: &session, cupIndex: cupIndex)
+            advancePlacementIndex(session: &session)
+        } else if !wasFinalGemInHand{
+            advancePlacementIndex(session: &session)
+        }
 
         return .success(())
     }
@@ -86,6 +102,15 @@ enum GameTurnEngine {
         let drawn = session.gemsInBag.prefix(drawCount)
         session.gemsInHand.append(contentsOf: drawn)
         session.gemsInBag.removeFirst(drawCount)
+    }
+    
+    /// Moves every gem from a cup into the player's hand and leaves the cup empty.
+    static func scoopCupIntoHand(session: inout GameSession, cupIndex: Int) {
+        guard session.cups.indices.contains(cupIndex) else { return }
+
+        let scoopedGems = session.cups[cupIndex].gems
+        session.gemsInHand.append(contentsOf: scoopedGems)
+        session.cups[cupIndex].gems.removeAll()
     }
 
     /// Moves placement to the next cup clockwise, wrapping from last cup to first.
