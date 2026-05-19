@@ -22,6 +22,10 @@ final class GameViewModel: ObservableObject {
     var currentPlayerName: String? {
         GameRules.currentPlayer(in: session)?.name
     }
+    
+    var phaseDisplayText: String {
+        session.phase.rawValue.capitalized
+    }
 
     /// Creates a new game in setup using default placeholder players until setup UI exists.
     init(

@@ -21,7 +21,7 @@ struct GameView: View {
                 .font(.title2.weight(.semibold))
 
             VStack(spacing: 8) {
-                Text("Game Phase: \(viewModel.session.phase.rawValue)")
+                Text("Game Phase: \(viewModel.phaseDisplayText)")
                     .font(.headline)
 
                 Text("Current Player: \(viewModel.currentPlayerName ?? "Not started")")
