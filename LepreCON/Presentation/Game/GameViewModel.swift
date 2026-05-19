@@ -32,6 +32,12 @@ final class GameViewModel: ObservableObject {
         // Ask the Domain layer instead of duplicating game rules in the ViewModel.
         GameRules.canEndGame(session)
     }
+    
+    /// True when the current game is allowed to start.
+    var canStartGame: Bool {
+        // Ask the Domain layer instead of duplicating game rules in the ViewModel.
+        GameRules.canStartGame(session)
+    }
 
     /// Creates a new game in setup using default placeholder players until setup UI exists.
     init(

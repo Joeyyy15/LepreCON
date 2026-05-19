@@ -33,6 +33,7 @@ struct GameView: View {
                 viewModel.startGame()
             }
             .buttonStyle(.borderedProminent)
+            .disabled(!viewModel.canStartGame)
 
             Button("End Game") {
                 viewModel.endGame()
