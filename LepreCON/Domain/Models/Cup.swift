@@ -2,21 +2,22 @@
 // Cup.swift
 // LepreCON
 //
-// Represents a cup on the board that holds gems. Cups are arranged in a circle;
-// one cup may be the Pot of Gold, and others may match a rainbow color.
+// Represents a cup on the board that holds gems. Cups are arranged in a circle
+// following the physical setup layout (see GameSetup.physicalCupLayout).
 //
 
 import Foundation
 
-/// Which rainbow color a cup is associated with, if any.
+/// Board cup color. Each physical cup on the table has one of these colors.
 enum CupColor: String, CaseIterable, Codable {
+    case white
     case red
     case orange
     case yellow
     case green
     case blue
     case purple
-    case white
+    case black
 }
 
 /// A cup that can hold gems during a game.

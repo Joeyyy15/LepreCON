@@ -13,11 +13,12 @@ import Foundation
 struct GameSessionFactory {
 
     /// Creates a new game in the setup phase from the given player names.
-    /// Does not apply full rules, randomization, or persistence yet.
+    /// Applies physical setup: 11 cups in order, 93 gems, one non-black gem per cup, rest in bag.
     func makeNewGame(playerNames: [String]) -> GameSession {
         let players = playerNames.map { Player(name: $0) }
-        let cups = makeDefaultCups()
-        let gemsInBag = makeDefaultGemBag()
+        var cups = GameSetup.makePhysicalCups()
+        var gemsInBag = GameSetup.makeFullGemBag()
+        GameSetup.placeSetupGemsInCups(cups: &cups, gemsInBag: &gemsInBag)
 
         return GameSession(
             phase: .setup,
@@ -27,35 +28,5 @@ struct GameSessionFactory {
             gemsInBag: gemsInBag,
             unicornCupID: nil
         )
-    }
-
-    // MARK: - Private setup helpers
-
-    /// One cup per board color plus the Pot of Gold. Cups start empty.
-    private func makeDefaultCups() -> [Cup] {
-        var cups = CupColor.allCases.map { color in
-            Cup(color: color)
-        }
-        cups.append(Cup(isPotOfGold: true))
-        return cups
-    }
-
-    /// A fixed, non-random gem bag for now. Counts can be tuned when full rules are added.
-    private func makeDefaultGemBag() -> [Gem] {
-        var gems: [Gem] = []
-
-        let rainbowKinds: [GemKind] = [.red, .orange, .yellow, .green, .blue, .purple]
-        for kind in rainbowKinds {
-            for _ in 0..<5 {
-                gems.append(Gem(kind: kind))
-            }
-        }
-
-        let specialKinds: [GemKind] = [.white, .gold, .black, .clear, .pink]
-        for kind in specialKinds {
-            gems.append(Gem(kind: kind))
-        }
-
-        return gems
     }
 }

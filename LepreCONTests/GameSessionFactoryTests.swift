@@ -31,19 +31,55 @@ final class GameSessionFactoryTests: XCTestCase {
         XCTAssertEqual(session.currentPlayerIndex, 0)
     }
 
-    func testMakeNewGameCreatesCups() {
+    func testMakeNewGameCreatesElevenCups() {
         let session = factory.makeNewGame(playerNames: ["Alex"])
 
-        XCTAssertFalse(session.cups.isEmpty)
-        XCTAssertEqual(session.cups.count, CupColor.allCases.count + 1)
-        XCTAssertTrue(session.cups.contains(where: \.isPotOfGold))
+        XCTAssertEqual(session.cups.count, 11)
     }
 
-    func testMakeNewGameCreatesGemsInBag() {
+    func testMakeNewGameCupsAreInPhysicalLayoutOrder() {
+        let session = factory.makeNewGame(playerNames: ["Alex"])
+        let cupColors = session.cups.compactMap(\.color)
+
+        XCTAssertEqual(cupColors, GameSetup.physicalCupLayout)
+    }
+
+    func testMakeNewGamePlacesExactlyOneGemInEachCup() {
         let session = factory.makeNewGame(playerNames: ["Alex"])
 
-        XCTAssertFalse(session.gemsInBag.isEmpty)
-        // 5 per rainbow color (6) + 5 special kinds = 35
-        XCTAssertEqual(session.gemsInBag.count, 35)
+        for cup in session.cups {
+            XCTAssertEqual(cup.gems.count, 1)
+        }
+    }
+
+    func testMakeNewGameDoesNotPlaceBlackGemsInCups() {
+        let session = factory.makeNewGame(playerNames: ["Alex"])
+
+        let gemsInCups = session.cups.flatMap(\.gems)
+        XCTAssertFalse(gemsInCups.contains(where: { $0.kind == .black }))
+    }
+
+    func testMakeNewGameKeepsAllBlackGemsInBag() {
+        let session = factory.makeNewGame(playerNames: ["Alex"])
+
+        let blackGemsInBag = session.gemsInBag.filter { $0.kind == .black }
+        XCTAssertEqual(blackGemsInBag.count, 3)
+    }
+
+    func testMakeNewGameHasNinetyThreeGemsTotalAcrossCupsAndBag() {
+        let session = factory.makeNewGame(playerNames: ["Alex"])
+
+        let gemsInCups = session.cups.flatMap(\.gems)
+        let totalGems = gemsInCups.count + session.gemsInBag.count
+
+        XCTAssertEqual(totalGems, GameSetup.totalGemCount)
+        XCTAssertEqual(totalGems, 93)
+    }
+
+    func testMakeNewGameLeavesRemainingGemsInBag() {
+        let session = factory.makeNewGame(playerNames: ["Alex"])
+
+        // 93 total gems minus 11 placed in cups during setup
+        XCTAssertEqual(session.gemsInBag.count, 82)
     }
 }
