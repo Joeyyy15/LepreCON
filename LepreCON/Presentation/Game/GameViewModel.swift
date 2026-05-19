@@ -10,6 +10,7 @@
 import Foundation
 import Combine
 
+@MainActor
 final class GameViewModel: ObservableObject {
 
     /// The active game state (players, cups, bag, phase). Updated as the game progresses.
@@ -35,5 +36,9 @@ final class GameViewModel: ObservableObject {
     func startGame() {
         guard GameRules.canStartGame(session) else { return }
         session.phase = .playing
+    }
+    
+    func endGame() {
+        session.phase = .finished
     }
 }

@@ -1,10 +1,16 @@
 import SwiftUI
 
+@MainActor
 struct GameView: View {
     @StateObject var viewModel: GameViewModel
     let onFinishGame: () -> Void
 
-    init(viewModel: GameViewModel = GameViewModel(), onFinishGame: @escaping () -> Void) {
+    init(onFinishGame: @escaping () -> Void) {
+        _viewModel = StateObject(wrappedValue: GameViewModel())
+        self.onFinishGame = onFinishGame
+    }
+
+    init(viewModel: GameViewModel, onFinishGame: @escaping () -> Void) {
         _viewModel = StateObject(wrappedValue: viewModel)
         self.onFinishGame = onFinishGame
     }

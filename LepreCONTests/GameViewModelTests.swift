@@ -8,8 +8,9 @@
 import XCTest
 @testable import LepreCON
 
+@MainActor
 final class GameViewModelTests: XCTestCase {
-
+    
     func testGameViewModelStartsWithSetupSession() {
         // Arrange / Act
         let viewModel = GameViewModel(playerNames: ["Player 1"])
@@ -50,5 +51,14 @@ final class GameViewModelTests: XCTestCase {
         // Assert
         XCTAssertEqual(viewModel.session.phase, .setup)
         XCTAssertNil(viewModel.currentPlayerName)
+    }
+    
+    func testEndGameChangesPhaseToFinished() {
+        let viewModel = GameViewModel(playerNames: ["Player 1"])
+
+        viewModel.startGame()
+        viewModel.endGame()
+
+        XCTAssertEqual(viewModel.session.phase, .finished)
     }
 }
