@@ -150,4 +150,61 @@ final class GameViewModelTests: XCTestCase {
         XCTAssertNil(viewModel.session.currentRoll)
         XCTAssertTrue(viewModel.session.gemsInHand.isEmpty)
     }
+    
+    func testPlaceGemInCurrentCupMovesGemFromHandToCup() {
+        // Create a game, start it, and begin a turn so the hand has gems.
+        let viewModel = GameViewModel(playerNames: ["Player 1"])
+        viewModel.startGame()
+        _ = viewModel.beginTurn(roll: 2)
+
+        guard let gem = viewModel.session.gemsInHand.first else {
+            XCTFail("Expected a gem in hand after beginning a turn.")
+            return
+        }
+
+        let cupIndex = viewModel.session.nextPlacementCupIndex
+        let startingHandCount = viewModel.session.gemsInHand.count
+        let startingCupCount = viewModel.session.cups[cupIndex].gems.count
+
+        let result = viewModel.placeGemInCurrentCup(gemID: gem.id)
+
+        switch result {
+        case .success:
+            break
+        case .failure(let error):
+            XCTFail("Expected placement to succeed, but got \(error)")
+        }
+
+        XCTAssertEqual(viewModel.session.gemsInHand.count, startingHandCount - 1)
+        XCTAssertEqual(viewModel.session.cups[cupIndex].gems.count, startingCupCount + 1)
+        XCTAssertTrue(viewModel.session.cups[cupIndex].gems.contains(where: { $0.id == gem.id }))
+    }
+
+    func testPlaceGemInDiscardMovesGemFromHandToDiscardPile() {
+        // Create a game, start it, and begin a turn so the hand has gems.
+        let viewModel = GameViewModel(playerNames: ["Player 1"])
+        viewModel.startGame()
+        _ = viewModel.beginTurn(roll: 2)
+
+        guard let gem = viewModel.session.gemsInHand.first else {
+            XCTFail("Expected a gem in hand after beginning a turn.")
+            return
+        }
+
+        let startingHandCount = viewModel.session.gemsInHand.count
+        let startingDiscardCount = viewModel.session.discardPile.count
+
+        let result = viewModel.placeGemInDiscard(gemID: gem.id)
+
+        switch result {
+        case .success:
+            break
+        case .failure(let error):
+            XCTFail("Expected discard placement to succeed, but got \(error)")
+        }
+
+        XCTAssertEqual(viewModel.session.gemsInHand.count, startingHandCount - 1)
+        XCTAssertEqual(viewModel.session.discardPile.count, startingDiscardCount + 1)
+        XCTAssertTrue(viewModel.session.discardPile.contains(where: { $0.id == gem.id }))
+    }
 }

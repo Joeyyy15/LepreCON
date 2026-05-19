@@ -69,4 +69,20 @@ final class GameViewModel: ObservableObject {
     func beginTurn(roll: Int) -> Result<Void, GameTurnError> {
         GameTurnEngine.beginTurn(session: &session, roll: roll)
     }
+    
+    /// Places a gem from the player's hand into the current cup.
+    ///
+    /// The ViewModel only coordinates the action.
+    /// GameTurnEngine owns the actual placement and chain-reaction rules.
+    func placeGemInCurrentCup(gemID: UUID) -> Result<Void, GameTurnError> {
+        GameTurnEngine.placeGemInCurrentCup(session: &session, gemID: gemID)
+    }
+
+    /// Places a gem from the player's hand into the discard pile.
+    ///
+    /// Magic is intentionally not handled here yet.
+    /// GameTurnEngine will mark placement complete when the final gem lands in discard.
+    func placeGemInDiscard(gemID: UUID) -> Result<Void, GameTurnError> {
+        GameTurnEngine.placeGemInDiscard(session: &session, gemID: gemID)
+    }
 }
