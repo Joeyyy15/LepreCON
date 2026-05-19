@@ -26,6 +26,12 @@ final class GameViewModel: ObservableObject {
     var phaseDisplayText: String {
         session.phase.rawValue.capitalized
     }
+    
+    /// True when the current game is allowed to end.
+    var canEndGame: Bool {
+        // Ask the Domain layer instead of duplicating game rules in the ViewModel.
+        GameRules.canEndGame(session)
+    }
 
     /// Creates a new game in setup using default placeholder players until setup UI exists.
     init(

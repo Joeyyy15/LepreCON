@@ -39,6 +39,7 @@ struct GameView: View {
                 onFinishGame()
             }
             .buttonStyle(.bordered)
+            .disabled(!viewModel.canEndGame)
         }
         .padding()
     }
