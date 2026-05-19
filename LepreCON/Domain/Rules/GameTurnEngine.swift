@@ -1,10 +1,10 @@
-//
-// GameTurnEngine.swift
-// LepreCON
-//
-// Handles turn flow: D12 roll, drawing gems into hand, and placing gems one at a time
-// around the cup circle. Chain reactions, magic, scoring, and unicorn rules are not here yet.
-//
+/// Places one gem from hand into the current cup.
+///
+/// If this is not the final gem in hand, placement advances to the next cup.
+/// If this is the final gem in hand, the engine checks whether the cup
+/// already had gems before placement:
+/// - Empty before placement: the placement chain stops.
+/// - Not empty before placement: scoop the whole cup into hand and continue.
 
 import Foundation
 
@@ -59,7 +59,7 @@ enum GameTurnEngine {
         // after removing the gem from hand, an empty hand means this was the final gem.
         let wasFinalGemInHand = session.gemsInHand.isEmpty
         
-        session.cups[session.nextPlacementCupIndex].gems.append(gem)
+        session.cups[cupIndex].gems.append(gem)
         
         if wasFinalGemInHand && cupHadGemsBeforePlacement{
             // The final gem landed in a non-empty cup, so scoop the whole cup and continue.
