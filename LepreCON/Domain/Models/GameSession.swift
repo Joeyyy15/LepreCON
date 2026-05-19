@@ -26,6 +26,14 @@ struct GameSession: Identifiable, Equatable, Codable {
     var cups: [Cup]
     /// Gems still available to draw from the bag.
     var gemsInBag: [Gem]
+    /// Gems the active player is holding during the current turn.
+    var gemsInHand: [Gem]
+    /// Gems placed in the discard pile this game. Magic on discard is not implemented yet.
+    var discardPile: [Gem]
+    /// D12 roll for the current turn, if a turn has started.
+    var currentRoll: Int?
+    /// Index into `cups` where the next gem should be placed (moves clockwise each placement).
+    var nextPlacementCupIndex: Int
     /// Whether the unicorn is on the board and which cup holds it, if any.
     var unicornCupID: UUID?
 
@@ -36,6 +44,10 @@ struct GameSession: Identifiable, Equatable, Codable {
         currentPlayerIndex: Int = 0,
         cups: [Cup] = [],
         gemsInBag: [Gem] = [],
+        gemsInHand: [Gem] = [],
+        discardPile: [Gem] = [],
+        currentRoll: Int? = nil,
+        nextPlacementCupIndex: Int = 0,
         unicornCupID: UUID? = nil
     ) {
         self.id = id
@@ -44,6 +56,10 @@ struct GameSession: Identifiable, Equatable, Codable {
         self.currentPlayerIndex = currentPlayerIndex
         self.cups = cups
         self.gemsInBag = gemsInBag
+        self.gemsInHand = gemsInHand
+        self.discardPile = discardPile
+        self.currentRoll = currentRoll
+        self.nextPlacementCupIndex = nextPlacementCupIndex
         self.unicornCupID = unicornCupID
     }
 }

@@ -22,6 +22,15 @@ enum GameSetup {
         .black
     ]
 
+    /// Index of the first white cup in `physicalCupLayout` (reference for turn placement).
+    static let firstWhiteCupIndex = 0
+
+    /// Turn placement starts one cup counter-clockwise from the first white cup.
+    static var firstPlacementCupIndex: Int {
+        let cupCount = physicalCupLayout.count
+        return (firstWhiteCupIndex - 1 + cupCount) % cupCount
+    }
+
     /// How many of each gem kind belong in a full game before any are placed in cups.
     static let standardGemCounts: [GemKind: Int] = [
         .red: 12,
