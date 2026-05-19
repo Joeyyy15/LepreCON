@@ -31,6 +31,11 @@ enum GameTurnEngine {
         guard session.currentRoll == nil else { return .failure(.turnAlreadyInProgress) }
 
         session.currentRoll = roll
+
+        // A new turn starts with placement still active.
+        // This will become true later when the final gem lands in an empty cup or discard pile.
+        session.isTurnPlacementComplete = false
+
         drawGemsIntoHand(session: &session, count: roll)
         session.nextPlacementCupIndex = GameSetup.firstPlacementCupIndex
 
@@ -61,11 +66,16 @@ enum GameTurnEngine {
         
         session.cups[cupIndex].gems.append(gem)
         
-        if wasFinalGemInHand && cupHadGemsBeforePlacement{
+        if wasFinalGemInHand && cupHadGemsBeforePlacement {
             // The final gem landed in a non-empty cup, so scoop the whole cup and continue.
             scoopCupIntoHand(session: &session, cupIndex: cupIndex)
             advancePlacementIndex(session: &session)
-        } else if !wasFinalGemInHand{
+        } else if wasFinalGemInHand {
+            // The final gem landed in an empty cup, so placement stops.
+            // Later resolution rules can run after this flag becomes true.
+            session.isTurnPlacementComplete = true
+        } else {
+            // More gems remain in hand, so keep moving around the cup circle.
             advancePlacementIndex(session: &session)
         }
 
@@ -83,6 +93,12 @@ enum GameTurnEngine {
 
         let gem = session.gemsInHand.remove(at: handIndex)
         session.discardPile.append(gem)
+
+        // Landing the final gem in discard stops placement.
+        // Magic will be handled later during the resolution phase.
+        if session.gemsInHand.isEmpty {
+            session.isTurnPlacementComplete = true
+        }
 
         return .success(())
     }

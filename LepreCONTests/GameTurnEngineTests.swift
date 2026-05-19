@@ -232,4 +232,112 @@ final class GameTurnEngineTests: XCTestCase {
         // Non-final placements should advance to the next cup.
         XCTAssertEqual(session.nextPlacementCupIndex, 1)
     }
+    
+    func testBeginTurnMarksPlacementIncomplete() {
+        // A new turn should always start with placement still active.
+        var session = makePlayingSession(bag: [
+            Gem(kind: .red),
+            Gem(kind: .blue)
+        ])
+
+        // Set this to true first so we can prove beginTurn resets it.
+        session.isTurnPlacementComplete = true
+
+        _ = GameTurnEngine.beginTurn(session: &session, roll: 2)
+
+        XCTAssertFalse(session.isTurnPlacementComplete)
+    }
+
+    func testFinalGemPlacedInEmptyCupMarksPlacementComplete() {
+        // One gem means this placement is the final gem in hand.
+        let gem = Gem(kind: .clear)
+
+        var session = makePlayingSession(bag: [])
+        session.gemsInHand = [gem]
+        session.currentRoll = 1
+        session.nextPlacementCupIndex = 0
+        session.isTurnPlacementComplete = false
+
+        // Make the target cup empty so the final gem stops placement.
+        session.cups[0].gems.removeAll()
+
+        _ = GameTurnEngine.placeGemInCurrentCup(session: &session, gemID: gem.id)
+
+        // Final gem landed in an empty cup, so placement is complete.
+        XCTAssertTrue(session.isTurnPlacementComplete)
+    }
+
+    func testFinalGemPlacedInNonEmptyCupDoesNotMarkPlacementComplete() {
+        // One gem means this placement is the final gem in hand.
+        let finalGem = Gem(kind: .clear)
+
+        // Existing gem makes the cup non-empty before placement,
+        // which should trigger the chain reaction scoop instead of stopping.
+        let existingCupGem = Gem(kind: .red)
+
+        var session = makePlayingSession(bag: [])
+        session.gemsInHand = [finalGem]
+        session.currentRoll = 1
+        session.nextPlacementCupIndex = 0
+        session.isTurnPlacementComplete = false
+
+        session.cups[0].gems = [existingCupGem]
+
+        _ = GameTurnEngine.placeGemInCurrentCup(session: &session, gemID: finalGem.id)
+
+        // Placement should continue because the final gem landed in a non-empty cup.
+        XCTAssertFalse(session.isTurnPlacementComplete)
+    }
+
+    func testNonFinalGemPlacedInCupDoesNotMarkPlacementComplete() {
+        // Two gems means the first placement is not the final gem.
+        let firstGem = Gem(kind: .clear)
+        let secondGem = Gem(kind: .gold)
+
+        var session = makePlayingSession(bag: [])
+        session.gemsInHand = [firstGem, secondGem]
+        session.currentRoll = 2
+        session.nextPlacementCupIndex = 0
+        session.isTurnPlacementComplete = false
+
+        // Make the target cup empty to prove non-final placement still keeps going.
+        session.cups[0].gems.removeAll()
+
+        _ = GameTurnEngine.placeGemInCurrentCup(session: &session, gemID: firstGem.id)
+
+        // Since there is still another gem in hand, placement is not complete.
+        XCTAssertFalse(session.isTurnPlacementComplete)
+    }
+
+    func testFinalGemPlacedInDiscardMarksPlacementComplete() {
+        // One gem means this discard placement is the final gem in hand.
+        let gem = Gem(kind: .pink)
+
+        var session = makePlayingSession(bag: [])
+        session.gemsInHand = [gem]
+        session.currentRoll = 1
+        session.isTurnPlacementComplete = false
+
+        _ = GameTurnEngine.placeGemInDiscard(session: &session, gemID: gem.id)
+
+        // Final gem landed in discard, so placement stops.
+        // Magic will be handled later during resolution.
+        XCTAssertTrue(session.isTurnPlacementComplete)
+    }
+
+    func testNonFinalGemPlacedInDiscardDoesNotMarkPlacementComplete() {
+        // Two gems means the first discard placement is not the final gem.
+        let firstGem = Gem(kind: .pink)
+        let secondGem = Gem(kind: .blue)
+
+        var session = makePlayingSession(bag: [])
+        session.gemsInHand = [firstGem, secondGem]
+        session.currentRoll = 2
+        session.isTurnPlacementComplete = false
+
+        _ = GameTurnEngine.placeGemInDiscard(session: &session, gemID: firstGem.id)
+
+        // Since there is still another gem in hand, placement is not complete yet.
+        XCTAssertFalse(session.isTurnPlacementComplete)
+    }
 }
