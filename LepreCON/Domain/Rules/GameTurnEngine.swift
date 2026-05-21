@@ -1,10 +1,10 @@
-/// Places one gem from hand into the current cup.
-///
-/// If this is not the final gem in hand, placement advances to the next cup.
-/// If this is the final gem in hand, the engine checks whether the cup
-/// already had gems before placement:
-/// - Empty before placement: the placement chain stops.
-/// - Not empty before placement: scoop the whole cup into hand and continue.
+//
+// GameTurnEngine.swift
+// LepreCON
+//
+// Handles turn flow: D12 roll, drawing gems into hand, and placing gems one at a time
+// around the cup circle. Chain reactions, magic, scoring, and unicorn rules are not here yet.
+//
 
 import Foundation
 
@@ -24,69 +24,62 @@ enum GameTurnEngine {
     // MARK: - Turn lifecycle
 
     /// Starts a turn: records the D12 roll, draws gems from the bag into hand, and sets
-    /// the first placement cup (one counter-clockwise from the first white cup).
+    /// the first placement cup (first cloud after the pot of gold).
     static func beginTurn(session: inout GameSession, roll: Int) -> Result<Void, GameTurnError> {
         guard session.phase == .playing else { return .failure(.gameNotPlaying) }
         guard (1...12).contains(roll) else { return .failure(.invalidRoll) }
-        guard session.currentRoll == nil else { return .failure(.turnAlreadyInProgress) }
+        guard !isTurnInProgress(in: session) else { return .failure(.turnAlreadyInProgress) }
 
         session.currentRoll = roll
-
-        // A new turn starts with placement still active.
-        // This will become true later when the final gem lands in an empty cup or discard pile.
         session.isTurnPlacementComplete = false
-
         drawGemsIntoHand(session: &session, count: roll)
         session.nextPlacementCupIndex = GameSetup.firstPlacementCupIndex
 
         return .success(())
     }
 
-    /// Places one gem from hand into the current cup and advances to the next cup clockwise.
-    /// Does not run chain reactions yet.
+    /// Places one gem from hand into the current cup.
+    ///
+    /// If this is not the final gem in hand, placement advances to the next cup.
+    /// If this is the final gem in hand, the engine checks whether the cup
+    /// already had gems before placement:
+    /// - Empty before placement: the placement chain stops.
+    /// - Not empty before placement: scoop the whole cup into hand and continue.
     static func placeGemInCurrentCup(session: inout GameSession, gemID: UUID) -> Result<Void, GameTurnError> {
         guard session.phase == .playing else { return .failure(.gameNotPlaying) }
-        guard hasActiveTurn(in: session) else { return .failure(.noActiveTurn) }
+        guard canPlaceFromHand(in: session) else { return .failure(.noActiveTurn) }
         guard let handIndex = session.gemsInHand.firstIndex(where: { $0.id == gemID }) else {
             return .failure(.gemNotInHand)
         }
         guard session.cups.indices.contains(session.nextPlacementCupIndex) else {
             return .failure(.invalidPlacementCupIndex)
         }
-        
+
         let cupIndex = session.nextPlacementCupIndex
-        
-        // Chain reactions depend on whether the cup had gems before this gem was placed
         let cupHadGemsBeforePlacement = !session.cups[cupIndex].gems.isEmpty
 
         let gem = session.gemsInHand.remove(at: handIndex)
-        
-        // after removing the gem from hand, an empty hand means this was the final gem.
         let wasFinalGemInHand = session.gemsInHand.isEmpty
-        
+
         session.cups[cupIndex].gems.append(gem)
-        
+
         if wasFinalGemInHand && cupHadGemsBeforePlacement {
-            // The final gem landed in a non-empty cup, so scoop the whole cup and continue.
             scoopCupIntoHand(session: &session, cupIndex: cupIndex)
             advancePlacementIndex(session: &session)
         } else if wasFinalGemInHand {
-            // The final gem landed in an empty cup, so placement stops.
-            // Later resolution rules can run after this flag becomes true.
             session.isTurnPlacementComplete = true
         } else {
-            // More gems remain in hand, so keep moving around the cup circle.
             advancePlacementIndex(session: &session)
         }
 
         return .success(())
     }
 
-    /// Places one gem from hand into the discard pile. Magic when landing in discard is not implemented.
-    // TODO: Trigger magic resolution when the final gem of a turn lands in the discard pile.
+    /// Places one gem from hand into the discard pile.
+    /// TODO: Trigger magic resolution when the final gem of a turn lands in the discard pile.
     static func placeGemInDiscard(session: inout GameSession, gemID: UUID) -> Result<Void, GameTurnError> {
         guard session.phase == .playing else { return .failure(.gameNotPlaying) }
-        guard hasActiveTurn(in: session) else { return .failure(.noActiveTurn) }
+        guard canPlaceFromHand(in: session) else { return .failure(.noActiveTurn) }
         guard let handIndex = session.gemsInHand.firstIndex(where: { $0.id == gemID }) else {
             return .failure(.gemNotInHand)
         }
@@ -94,21 +87,27 @@ enum GameTurnEngine {
         let gem = session.gemsInHand.remove(at: handIndex)
         session.discardPile.append(gem)
 
-        // Landing the final gem in discard stops placement.
-        // Magic will be handled later during the resolution phase.
         if session.gemsInHand.isEmpty {
             session.isTurnPlacementComplete = true
+            // TODO: Resolve magic when final gem lands in discard.
         }
 
         return .success(())
     }
 
-    // MARK: - Helpers
+    // MARK: - Turn state queries
 
-    /// True when a roll is recorded and the player still has gems to place.
-    static func hasActiveTurn(in session: GameSession) -> Bool {
-        session.currentRoll != nil && !session.gemsInHand.isEmpty
+    /// True while a turn roll is active and placement has not finished.
+    static func isTurnInProgress(in session: GameSession) -> Bool {
+        session.currentRoll != nil && !session.isTurnPlacementComplete
     }
+
+    /// True when the player may place gems from hand (turn active and hand not empty).
+    static func canPlaceFromHand(in session: GameSession) -> Bool {
+        isTurnInProgress(in: session) && !session.gemsInHand.isEmpty
+    }
+
+    // MARK: - Helpers
 
     /// Draws up to `count` gems from the bag into the player's hand (never exceeds bag size).
     static func drawGemsIntoHand(session: inout GameSession, count: Int) {
@@ -119,7 +118,7 @@ enum GameTurnEngine {
         session.gemsInHand.append(contentsOf: drawn)
         session.gemsInBag.removeFirst(drawCount)
     }
-    
+
     /// Moves every gem from a cup into the player's hand and leaves the cup empty.
     static func scoopCupIntoHand(session: inout GameSession, cupIndex: Int) {
         guard session.cups.indices.contains(cupIndex) else { return }

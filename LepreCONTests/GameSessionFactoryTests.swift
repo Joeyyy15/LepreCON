@@ -37,11 +37,20 @@ final class GameSessionFactoryTests: XCTestCase {
         XCTAssertEqual(session.cups.count, 11)
     }
 
-    func testMakeNewGameCupsAreInPhysicalLayoutOrder() {
+    func testMakeNewGameBoardLayoutMatchesRulebookOrder() {
         let session = factory.makeNewGame(playerNames: ["Alex"])
-        let cupColors = session.cups.compactMap(\.color)
 
-        XCTAssertEqual(cupColors, GameSetup.physicalCupLayout)
+        XCTAssertEqual(session.cups[0].color, .white)
+        XCTAssertEqual(session.cups[1].color, .white)
+        XCTAssertEqual(session.cups[2].color, .red)
+        XCTAssertEqual(session.cups[3].color, .orange)
+        XCTAssertEqual(session.cups[4].color, .yellow)
+        XCTAssertEqual(session.cups[5].color, .green)
+        XCTAssertEqual(session.cups[6].color, .blue)
+        XCTAssertEqual(session.cups[7].color, .purple)
+        XCTAssertEqual(session.cups[8].color, .white)
+        XCTAssertEqual(session.cups[9].color, .white)
+        XCTAssertTrue(session.cups[10].isPotOfGold)
     }
 
     func testMakeNewGamePlacesExactlyOneGemInEachCup() {
@@ -79,7 +88,11 @@ final class GameSessionFactoryTests: XCTestCase {
     func testMakeNewGameLeavesRemainingGemsInBag() {
         let session = factory.makeNewGame(playerNames: ["Alex"])
 
-        // 93 total gems minus 11 placed in cups during setup
         XCTAssertEqual(session.gemsInBag.count, 82)
+    }
+
+    func testFirstPlacementCupIndexIsFirstCloudAfterPot() {
+        XCTAssertEqual(GameSetup.firstPlacementCupIndex, 0)
+        XCTAssertEqual(GameSetup.potOfGoldCupIndex, 10)
     }
 }

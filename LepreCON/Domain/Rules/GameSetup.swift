@@ -8,28 +8,32 @@
 
 import Foundation
 
+/// Describes one board position when building cups (colored cup or pot of gold).
+enum BoardSlotDefinition: Equatable {
+    case colored(CupColor)
+    case potOfGold
+}
+
 enum GameSetup {
 
     /// Total gems in a standard LepreCON game.
     static let totalGemCount = 93
 
-    /// Eleven cups in circle order (setup diagram): White, White, Red, Orange, Yellow,
-    /// Green, Blue, Purple, White, White, Black.
-    static let physicalCupLayout: [CupColor] = [
-        .white, .white,
-        .red, .orange, .yellow, .green, .blue, .purple,
-        .white, .white,
-        .black
+    /// Eleven board positions in circle order:
+    /// cloud, cloud, red, orange, yellow, green, blue, purple, cloud, cloud, pot of gold.
+    static let boardSlotLayout: [BoardSlotDefinition] = [
+        .colored(.white), .colored(.white),
+        .colored(.red), .colored(.orange), .colored(.yellow),
+        .colored(.green), .colored(.blue), .colored(.purple),
+        .colored(.white), .colored(.white),
+        .potOfGold
     ]
 
-    /// Index of the first white cup in `physicalCupLayout` (reference for turn placement).
-    static let firstWhiteCupIndex = 0
+    /// Index of the pot of gold cup in `boardSlotLayout` (last position).
+    static let potOfGoldCupIndex = 10
 
-    /// Turn placement starts one cup counter-clockwise from the first white cup.
-    static var firstPlacementCupIndex: Int {
-        let cupCount = physicalCupLayout.count
-        return (firstWhiteCupIndex - 1 + cupCount) % cupCount
-    }
+    /// First placement cup: first cloud immediately after the pot (index 0 in board order).
+    static let firstPlacementCupIndex = 0
 
     /// How many of each gem kind belong in a full game before any are placed in cups.
     static let standardGemCounts: [GemKind: Int] = [
@@ -48,7 +52,14 @@ enum GameSetup {
 
     /// Creates the 11 board cups in rulebook order, empty and ready for setup gems.
     static func makePhysicalCups() -> [Cup] {
-        physicalCupLayout.map { Cup(color: $0) }
+        boardSlotLayout.map { slot in
+            switch slot {
+            case .colored(let color):
+                return Cup(color: color)
+            case .potOfGold:
+                return Cup(isPotOfGold: true)
+            }
+        }
     }
 
     /// Builds the full 93-gem bag with rulebook counts. Gems are not shuffled yet.

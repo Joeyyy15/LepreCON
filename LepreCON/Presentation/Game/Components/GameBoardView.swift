@@ -1,26 +1,44 @@
 //
-//  GameBoardView.swift
-//  LepreCON
+// GameBoardView.swift
+// LepreCON
 //
-//  Main visual gameplay board.
-//  This is the real board component that will eventually connect to GameViewModel.
+// Main visual gameplay board. Renders GameBoardDisplayState from the live session.
+// Layout matches the rulebook image; domain cup indices are unchanged.
 //
 
 import SwiftUI
 
 struct GameBoardView: View {
+    let displayState: GameBoardDisplayState
+
+    /// Natural design size before scaling to fit the device.
+    private static let designBoardWidth: CGFloat = 340
+    private static let designBoardHeight: CGFloat = 360
+
     var body: some View {
-        ZStack {
-            boardBackground
+        GeometryReader { geometry in
+            let scale = boardScale(for: geometry.size)
+            let metrics = BoardLayoutMetrics(scale: scale)
 
-            VStack(spacing: 18) {
-                rainbowLanes
+            ZStack {
+                boardBackground
 
-                bottomContainers
+                VStack(spacing: metrics.verticalSpacing) {
+                    rainbowLanes(metrics: metrics)
+                    bottomRow(metrics: metrics)
+                }
+                .frame(width: Self.designBoardWidth, height: Self.designBoardHeight)
+                .scaleEffect(scale)
+                .frame(width: geometry.size.width, height: geometry.size.height, alignment: .center)
             }
-            .padding(.horizontal, 18)
-            .padding(.vertical, 24)
         }
+        .frame(minHeight: Self.designBoardHeight * 0.85)
+    }
+
+    private func boardScale(for containerSize: CGSize) -> CGFloat {
+        let widthScale = (containerSize.width - 8) / Self.designBoardWidth
+        let heightScale = (containerSize.height - 8) / Self.designBoardHeight
+        return min(widthScale, heightScale, 1.0)
     }
 
     private var boardBackground: some View {
@@ -34,94 +52,77 @@ struct GameBoardView: View {
             startPoint: .top,
             endPoint: .bottom
         )
-        .ignoresSafeArea()
     }
 
-    private var rainbowLanes: some View {
-        HStack(alignment: .bottom, spacing: 8) {
-            RainbowLaneView(
-                laneColor: .red,
-                gemImageNames: ["gem_red", "gem_red", "gem_red", "gem_red"],
-                width: 42,
-                height: 260
-            )
-
-            RainbowLaneView(
-                laneColor: .orange,
-                gemImageNames: ["gem_orange", "gem_orange", "gem_orange"],
-                width: 42,
-                height: 260
-            )
-
-            RainbowLaneView(
-                laneColor: .yellow,
-                gemImageNames: ["gem_yellow", "gem_yellow", "gem_yellow", "gem_yellow"],
-                width: 42,
-                height: 260
-            )
-
-            RainbowLaneView(
-                laneColor: .green,
-                gemImageNames: ["gem_green", "gem_green", "gem_green"],
-                width: 42,
-                height: 260
-            )
-
-            RainbowLaneView(
-                laneColor: .blue,
-                gemImageNames: ["gem_blue", "gem_blue", "gem_blue"],
-                width: 42,
-                height: 260
-            )
-
-            RainbowLaneView(
-                laneColor: .purple,
-                gemImageNames: ["gem_purple", "gem_purple", "gem_purple", "gem_purple"],
-                width: 42,
-                height: 260
-            )
+    private func rainbowLanes(metrics: BoardLayoutMetrics) -> some View {
+        HStack(alignment: .bottom, spacing: metrics.laneSpacing) {
+            ForEach(displayState.rainbowLanes) { lane in
+                RainbowLaneView(
+                    laneColor: lane.laneColor,
+                    gemImageNames: lane.gemImageNames,
+                    width: metrics.laneWidth,
+                    height: metrics.laneHeight,
+                    isHighlighted: lane.isHighlighted
+                )
+            }
         }
     }
 
-    private var bottomContainers: some View {
-        HStack(alignment: .center, spacing: 6) {
-            CloudSlotView(
-                cloudNumber: 1,
-                gemImageNames: ["gem_red", "gem_red", "gem_red"],
-                width: 74,
-                height: 58
-            )
-
-            CloudSlotView(
-                cloudNumber: 2,
-                gemImageNames: ["gem_orange", "gem_orange"],
-                width: 74,
-                height: 58
-            )
-
-            PotSlotView(
-                gemImageNames: ["gem_yellow", "gem_white"],
-                width: 92,
-                height: 78
-            )
-
-            CloudSlotView(
-                cloudNumber: 3,
-                gemImageNames: ["gem_green", "gem_blue"],
-                width: 74,
-                height: 58
-            )
-
-            CloudSlotView(
-                cloudNumber: 4,
-                gemImageNames: ["gem_purple", "gem_black"],
-                width: 74,
-                height: 58
-            )
+    private func bottomRow(metrics: BoardLayoutMetrics) -> some View {
+        HStack(alignment: .center, spacing: metrics.bottomSpacing) {
+            ForEach(displayState.bottomRow) { slot in
+                switch slot.kind {
+                case .cloud(let number):
+                    CloudSlotView(
+                        cloudNumber: number,
+                        gemImageNames: slot.cupSlot.gemImageNames,
+                        width: metrics.cloudWidth,
+                        height: metrics.cloudHeight,
+                        isHighlighted: slot.cupSlot.isHighlighted
+                    )
+                case .pot:
+                    PotSlotView(
+                        gemImageNames: slot.cupSlot.gemImageNames,
+                        width: metrics.potWidth,
+                        height: metrics.potHeight,
+                        isHighlighted: slot.cupSlot.isHighlighted
+                    )
+                }
+            }
         }
     }
 }
 
+// MARK: - Responsive sizing
+
+private struct BoardLayoutMetrics {
+    let laneWidth: CGFloat
+    let laneHeight: CGFloat
+    let laneSpacing: CGFloat
+    let cloudWidth: CGFloat
+    let cloudHeight: CGFloat
+    let potWidth: CGFloat
+    let potHeight: CGFloat
+    let bottomSpacing: CGFloat
+    let verticalSpacing: CGFloat
+
+    init(scale: CGFloat) {
+        laneWidth = 42 * scale
+        laneHeight = 260 * scale
+        laneSpacing = 8 * scale
+        cloudWidth = 68 * scale
+        cloudHeight = 54 * scale
+        potWidth = 88 * scale
+        potHeight = 72 * scale
+        bottomSpacing = 5 * scale
+        verticalSpacing = 16 * scale
+    }
+}
+
 #Preview("Game Board") {
-    GameBoardView()
+    GameBoardView(displayState: GameBoardDisplayState.from(
+        session: GameSessionFactory().makeNewGame(playerNames: ["Player 1"])
+    ))
+    .padding()
+    .frame(height: 400)
 }

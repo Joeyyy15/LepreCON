@@ -4,7 +4,6 @@
 //
 // Owns the current game session and coordinates domain logic for the game screen.
 // SwiftUI views read from here; they do not create GameSession values directly.
-// Full turn/scoring rules are not implemented yet.
 //
 
 import Foundation
@@ -18,28 +17,36 @@ final class GameViewModel: ObservableObject {
 
     private let factory: GameSessionFactory
 
+    /// Presentation adapter for the board and controls. Recomputed when session changes.
+    var boardDisplayState: GameBoardDisplayState {
+        GameBoardDisplayState.from(session: session)
+    }
+
     /// Display name for whoever's turn it is, when the game is in the playing phase.
     var currentPlayerName: String? {
         GameRules.currentPlayer(in: session)?.name
     }
-    
+
     var phaseDisplayText: String {
         session.phase.rawValue.capitalized
     }
-    
-    /// True when the current game is allowed to end.
+
     var canEndGame: Bool {
-        // Ask the Domain layer instead of duplicating game rules in the ViewModel.
         GameRules.canEndGame(session)
     }
-    
-    /// True when the current game is allowed to start.
+
     var canStartGame: Bool {
-        // Ask the Domain layer instead of duplicating game rules in the ViewModel.
         GameRules.canStartGame(session)
     }
 
-    /// Creates a new game in setup using default placeholder players until setup UI exists.
+    var canRollD12: Bool {
+        boardDisplayState.canRollD12
+    }
+
+    var canPlaceFromHand: Bool {
+        boardDisplayState.canPlaceFromHand
+    }
+
     init(
         factory: GameSessionFactory = GameSessionFactory(),
         playerNames: [String] = ["Player 1"]
@@ -48,40 +55,31 @@ final class GameViewModel: ObservableObject {
         self.session = factory.makeNewGame(playerNames: playerNames)
     }
 
-    /// Moves from setup to playing when domain rules allow it.
     func startGame() {
         guard GameRules.canStartGame(session) else { return }
         session.phase = .playing
     }
-    
-    /// Moves from playing to finished when domain rules allow it.
-    func endGame() {
-        // The Domain layer decides whether ending the game is allowed.
-        guard GameRules.canEndGame(session) else { return }
 
+    func endGame() {
+        guard GameRules.canEndGame(session) else { return }
         session.phase = .finished
     }
-    
-    /// Starts a gameplay turn using the rolled D12 value.
-    ///
-    /// The ViewModel does not decide turn rules itself.
-    /// It delegates to GameTurnEngine so the Domain layer owns the gameplay logic.
-    func beginTurn(roll: Int) -> Result<Void, GameTurnError> {
-        GameTurnEngine.beginTurn(session: &session, roll: roll)
+
+    /// Rolls D12 (1–12) and begins a turn via the domain engine.
+    func rollD12AndBeginTurn() -> Result<Void, GameTurnError> {
+        let roll = Int.random(in: 1...12)
+        return beginTurn(roll: roll)
     }
-    
-    /// Places a gem from the player's hand into the current cup.
-    ///
-    /// The ViewModel only coordinates the action.
-    /// GameTurnEngine owns the actual placement and chain-reaction rules.
+
+    func beginTurn(roll: Int) -> Result<Void, GameTurnError> {
+        let result = GameTurnEngine.beginTurn(session: &session, roll: roll)
+        return result
+    }
+
     func placeGemInCurrentCup(gemID: UUID) -> Result<Void, GameTurnError> {
         GameTurnEngine.placeGemInCurrentCup(session: &session, gemID: gemID)
     }
 
-    /// Places a gem from the player's hand into the discard pile.
-    ///
-    /// Magic is intentionally not handled here yet.
-    /// GameTurnEngine will mark placement complete when the final gem lands in discard.
     func placeGemInDiscard(gemID: UUID) -> Result<Void, GameTurnError> {
         GameTurnEngine.placeGemInDiscard(session: &session, gemID: gemID)
     }

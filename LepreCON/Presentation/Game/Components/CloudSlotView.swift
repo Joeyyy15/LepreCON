@@ -12,6 +12,7 @@ struct CloudSlotView: View {
     let gemImageNames: [String]
     let width: CGFloat
     let height: CGFloat
+    var isHighlighted: Bool = false
 
     var body: some View {
         VStack(spacing: 6) {
@@ -28,6 +29,7 @@ struct CloudSlotView: View {
                 }
             }
             .frame(width: width, height: height)
+            .overlay(highlightBorder)
 
             Text("Cloud \(cloudNumber)")
                 .font(.caption2)
@@ -79,6 +81,15 @@ struct CloudSlotView: View {
             }
         }
         .offset(y: height * 0.05)
+    }
+
+    @ViewBuilder
+    private var highlightBorder: some View {
+        if isHighlighted {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(Color.yellow, lineWidth: 3)
+                .padding(2)
+        }
     }
 }
 

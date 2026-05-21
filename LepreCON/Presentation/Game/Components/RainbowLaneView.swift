@@ -13,6 +13,7 @@ struct RainbowLaneView: View {
     let gemImageNames: [String]
     let width: CGFloat
     let height: CGFloat
+    var isHighlighted: Bool = false
 
     var body: some View {
         VStack(spacing: 6) {
@@ -26,6 +27,7 @@ struct RainbowLaneView: View {
                             .stroke(.white.opacity(0.55), lineWidth: 2)
                     )
                     .shadow(color: .black.opacity(0.18), radius: 4, x: 0, y: 3)
+                    .overlay(highlightBorder)
 
                 // Gems stack upward from the bottom of the lane.
                 VStack(spacing: -4) {
@@ -56,6 +58,14 @@ struct RainbowLaneView: View {
             return .blue
         case .purple:
             return .purple
+        }
+    }
+
+    @ViewBuilder
+    private var highlightBorder: some View {
+        if isHighlighted {
+            RoundedRectangle(cornerRadius: width * 0.45, style: .continuous)
+                .stroke(Color.yellow, lineWidth: 3)
         }
     }
 }

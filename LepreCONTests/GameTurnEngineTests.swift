@@ -141,11 +141,27 @@ final class GameTurnEngineTests: XCTestCase {
     XCTAssertEqual(session.nextPlacementCupIndex, cupIndexBefore)
   }
 
-  func testFirstPlacementCupIndexIsOneLeftOfFirstWhiteCup() {
-    XCTAssertEqual(GameSetup.firstPlacementCupIndex, 10)
-    XCTAssertEqual(GameSetup.physicalCupLayout[0], .white)
-    XCTAssertEqual(GameSetup.physicalCupLayout[10], .black)
-  }
+    func testFirstPlacementCupIndexIsFirstCloudAfterPot() {
+        XCTAssertEqual(GameSetup.firstPlacementCupIndex, 0)
+        XCTAssertEqual(GameSetup.potOfGoldCupIndex, 10)
+    }
+
+    func testCanRollAgainAfterPlacementCompletes() {
+        var session = makePlayingSession(bag: [Gem(kind: .red), Gem(kind: .green)])
+        session.cups[0].gems.removeAll()
+        _ = GameTurnEngine.beginTurn(session: &session, roll: 1)
+
+        let gemID = session.gemsInHand[0].id
+        _ = GameTurnEngine.placeGemInCurrentCup(session: &session, gemID: gemID)
+
+        XCTAssertTrue(session.isTurnPlacementComplete)
+        XCTAssertFalse(GameTurnEngine.isTurnInProgress(in: session))
+
+        let result = GameTurnEngine.beginTurn(session: &session, roll: 2)
+        assertSuccess(result)
+        XCTAssertFalse(session.isTurnPlacementComplete)
+        XCTAssertEqual(session.gemsInHand.count, 2)
+    }
 
     private func assertSuccess(_ result: Result<Void, GameTurnError>, file: StaticString = #file, line: UInt = #line) {
         if case .failure(let error) = result {

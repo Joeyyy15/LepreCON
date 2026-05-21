@@ -3,7 +3,7 @@
 // LepreCON
 //
 // Represents a cup on the board that holds gems. Cups are arranged in a circle
-// following the physical setup layout (see GameSetup.physicalCupLayout).
+// following the physical setup layout (see GameSetup.boardSlotLayout).
 //
 
 import Foundation

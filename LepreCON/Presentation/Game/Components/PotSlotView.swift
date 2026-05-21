@@ -12,6 +12,7 @@ struct PotSlotView: View {
     let gemImageNames: [String]
     let width: CGFloat
     let height: CGFloat
+    var isHighlighted: Bool = false
 
     var body: some View {
         VStack(spacing: 6) {
@@ -29,6 +30,7 @@ struct PotSlotView: View {
                 }
             }
             .frame(width: width, height: height)
+            .overlay(highlightBorder)
 
             Text("Pot")
                 .font(.caption2)
@@ -93,6 +95,15 @@ struct PotSlotView: View {
                         y: CGFloat(index % 3) * height * 0.07 - height * 0.10
                     )
             }
+        }
+    }
+
+    @ViewBuilder
+    private var highlightBorder: some View {
+        if isHighlighted {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color.yellow, lineWidth: 3)
+                .padding(2)
         }
     }
 }
