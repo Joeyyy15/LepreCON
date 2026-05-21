@@ -105,13 +105,18 @@ struct GameBoardDisplayState: Equatable {
         }
 
         // Visual bottom row matches setup diagram (domain indices in parentheses):
-        // cloud2 (1) | cloud1 (0) | pot (10) | cloud3 (8) | cloud4 (9)
+        // cloud2 (1) | cloud1 (0) | pot (10) | cloud4 (9) | cloud3 (8)
+        //
+        // Important:
+        // The visual order is different from the logical placement order.
+        // Logical placement still follows domain/circle order:
+        // cloud1 → cloud2 → red → orange → yellow → green → blue → purple → cloud3 → cloud4 → pot
         let bottomRow: [BottomRowSlotDisplay] = [
             BottomRowSlotDisplay(cupSlot: cupSlot(at: 1), kind: .cloud(number: 2)),
             BottomRowSlotDisplay(cupSlot: cupSlot(at: 0), kind: .cloud(number: 1)),
             BottomRowSlotDisplay(cupSlot: cupSlot(at: GameSetup.potOfGoldCupIndex), kind: .pot),
-            BottomRowSlotDisplay(cupSlot: cupSlot(at: 8), kind: .cloud(number: 3)),
-            BottomRowSlotDisplay(cupSlot: cupSlot(at: 9), kind: .cloud(number: 4))
+            BottomRowSlotDisplay(cupSlot: cupSlot(at: 9), kind: .cloud(number: 4)),
+            BottomRowSlotDisplay(cupSlot: cupSlot(at: 8), kind: .cloud(number: 3))
         ]
 
         return GameBoardDisplayState(
