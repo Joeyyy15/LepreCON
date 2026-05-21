@@ -147,7 +147,13 @@ final class GameTurnEngineTests: XCTestCase {
     }
 
     func testCanRollAgainAfterPlacementCompletes() {
-        var session = makePlayingSession(bag: [Gem(kind: .red), Gem(kind: .green)])
+        var session = makePlayingSession(
+            bag: [
+                Gem(kind: .red),
+                Gem(kind: .green),
+                Gem(kind: .blue)
+            ]
+        )
         session.cups[0].gems.removeAll()
         _ = GameTurnEngine.beginTurn(session: &session, roll: 1)
 
