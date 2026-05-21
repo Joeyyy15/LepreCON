@@ -56,13 +56,36 @@ LepreCON/
 ├── LepreCON.xcodeproj
 ├── LepreCON/
 │   ├── App/
+│   │   └── App entry point and app-level setup
+│   │
+│   ├── Domain/
+│   │   ├── Models/
+│   │   │   └── Core game objects such as GameSession, Cup, Gem, and Player
+│   │   ├── Rules/
+│   │   │   └── Game setup, turn rules, placement rules, and gameplay logic
+│   │   └── Services/
+│   │       └── Game session creation and domain-level helpers
+│   │
 │   ├── Presentation/
 │   │   ├── Common/
 │   │   ├── Components/
 │   │   ├── Game/
+│   │   │   └── Gameplay screen, board view, hand view, and display state mapping
 │   │   ├── Home/
 │   │   ├── HowToPlay/
 │   │   └── Results/
+│   │
+│   ├── Data/
+│   │   └── Persistence and future saved-game/data handling
+│   │
 │   ├── Theme/
-│   └── Item.swift
+│   │   └── Shared colors, styling, and visual design tokens
+│   │
+│   └── Assets.xcassets/
+│       └── App images, gem images, colors, and visual assets
+│
+├── LepreCONTests/
+│   └── Unit tests for game setup, turn flow, placement, and domain rules
+├── .gitignore
+└── README.md
 ```
