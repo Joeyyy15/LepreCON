@@ -201,9 +201,8 @@ final class GameViewModelTests: XCTestCase {
         }
     }
 
-    func testPlaceGemInDiscardMovesGemFromHandToDiscardPile() async {
+    func testPlaceGemInCurrentCupDoesNotAddToDiscardPile() async {
         await MainActor.run {
-            // Create a game, start it, and begin a turn so the hand has gems.
             let viewModel = GameViewModel(playerNames: ["Player 1"])
             viewModel.startGame()
             _ = viewModel.beginTurn(roll: 2)
@@ -213,21 +212,36 @@ final class GameViewModelTests: XCTestCase {
                 return
             }
 
-            let startingHandCount = viewModel.session.gemsInHand.count
-            let startingDiscardCount = viewModel.session.discardPile.count
+            let discardCountBefore = viewModel.session.discardPile.count
+            _ = viewModel.placeGemInCurrentCup(gemID: gem.id)
 
-            let result = viewModel.placeGemInDiscard(gemID: gem.id)
-
-            switch result {
-            case .success:
-                break
-            case .failure(let error):
-                XCTFail("Expected discard placement to succeed, but got \(error)")
-            }
-
-            XCTAssertEqual(viewModel.session.gemsInHand.count, startingHandCount - 1)
-            XCTAssertEqual(viewModel.session.discardPile.count, startingDiscardCount + 1)
-            XCTAssertTrue(viewModel.session.discardPile.contains(where: { $0.id == gem.id }))
+            XCTAssertEqual(viewModel.session.discardPile.count, discardCountBefore)
         }
     }
+
+    func testPlacementCompletesAfterFinalGemInEmptyCup() async {
+        await MainActor.run {
+            var session = GameSessionFactory().makeNewGame(playerNames: ["Player 1"])
+            session.phase = .playing
+            session.gemsInBag = []
+            session.gemsInHand = [Gem(kind: .red)]
+            session.currentRoll = 1
+            session.nextPlacementCupIndex = GameSetup.firstPlacementCupIndex
+            session.cups[0].gems = []
+
+            let viewModel = GameViewModel(session: session)
+
+            guard let gem = viewModel.session.gemsInHand.first else {
+                XCTFail("Expected gem in hand")
+                return
+            }
+
+            _ = viewModel.placeGemInCurrentCup(gemID: gem.id)
+
+            XCTAssertTrue(viewModel.session.isTurnPlacementComplete)
+            XCTAssertTrue(viewModel.session.gemsInHand.isEmpty)
+            XCTAssertTrue(viewModel.canRollD12)
+        }
+    }
+
 }

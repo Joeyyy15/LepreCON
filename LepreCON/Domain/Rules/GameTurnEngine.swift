@@ -68,6 +68,7 @@ enum GameTurnEngine {
             advancePlacementIndex(session: &session)
         } else if wasFinalGemInHand {
             session.isTurnPlacementComplete = true
+            // TODO: End-of-turn resolution order — Unicorn → Poop → Score.
         } else {
             advancePlacementIndex(session: &session)
         }
@@ -75,8 +76,11 @@ enum GameTurnEngine {
         return .success(())
     }
 
-    /// Places one gem from hand into the discard pile.
-    /// TODO: Trigger magic resolution when the final gem of a turn lands in the discard pile.
+    /// Moves a gem from hand into the discard pile.
+    ///
+    /// **Not a current player action.** After rolling the D12, the player chooses which gem to
+    /// place on the board path; they cannot manually discard from hand. Reserved for future
+    /// rules (e.g. magic when the final gem of a turn resolves to the discard pile).
     static func placeGemInDiscard(session: inout GameSession, gemID: UUID) -> Result<Void, GameTurnError> {
         guard session.phase == .playing else { return .failure(.gameNotPlaying) }
         guard canPlaceFromHand(in: session) else { return .failure(.noActiveTurn) }
@@ -89,7 +93,7 @@ enum GameTurnEngine {
 
         if session.gemsInHand.isEmpty {
             session.isTurnPlacementComplete = true
-            // TODO: Resolve magic when final gem lands in discard.
+            // TODO: End-of-turn resolution order — Unicorn → Poop → Score (magic on discard).
         }
 
         return .success(())

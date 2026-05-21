@@ -96,32 +96,11 @@ struct GameView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 12) {
-                        ForEach(viewModel.boardDisplayState.handGems) { gem in
-                            Button {
-                                placeHandGemInCurrentCup(gemID: gem.id)
-                            } label: {
-                                GemView(imageName: gem.imageName, size: 52)
-                                    .padding(8)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                            .fill(Color.white.opacity(0.12))
-                                    )
-                            }
-                            .buttonStyle(.plain)
-                            .disabled(!viewModel.canPlaceFromHand)
-                            .contextMenu {
-                                Button("Place in Current Cup") {
-                                    placeHandGemInCurrentCup(gemID: gem.id)
-                                }
-                                Button("Place in Discard") {
-                                    placeHandGemInDiscard(gemID: gem.id)
-                                }
-                            }
-                        }
-                    }
-                }
+                HandGemsView(
+                    gems: viewModel.boardDisplayState.handGems,
+                    canPlace: viewModel.canPlaceFromHand,
+                    onTapGem: placeHandGemInCurrentCup
+                )
             }
 
             if viewModel.canPlaceFromHand {
@@ -143,17 +122,10 @@ struct GameView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {
-                HStack(spacing: 8) {
-                    ForEach(viewModel.boardDisplayState.discardGems) { gem in
-                        GemView(imageName: gem.imageName, size: 36)
-                    }
-                }
-            }
-
-            if viewModel.canPlaceFromHand {
-                Text("Long-press a hand gem for discard option")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                HandGemsView(
+                    gems: viewModel.boardDisplayState.discardGems,
+                    isInteractive: false
+                )
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -185,17 +157,6 @@ struct GameView: View {
             } else {
                 lastActionMessage = "Gem placed. Continue placing from your hand."
             }
-        case .failure(let error):
-            lastActionMessage = turnErrorMessage(error)
-        }
-    }
-
-    private func placeHandGemInDiscard(gemID: UUID) {
-        switch viewModel.placeGemInDiscard(gemID: gemID) {
-        case .success:
-            lastActionMessage = viewModel.session.isTurnPlacementComplete
-                ? "Final gem discarded. Roll D12 for your next turn."
-                : "Gem discarded."
         case .failure(let error):
             lastActionMessage = turnErrorMessage(error)
         }

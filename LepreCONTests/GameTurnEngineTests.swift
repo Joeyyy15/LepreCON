@@ -125,6 +125,8 @@ final class GameTurnEngineTests: XCTestCase {
         XCTAssertEqual(session.nextPlacementCupIndex, 0)
     }
 
+    // MARK: - Future discard rules (engine only; not a current player action)
+
   func testPlaceGemInDiscardAddsToDiscardPileWithoutAdvancingCup() {
     let gem = Gem(kind: .pink)
     let cupIndexBefore = 3
@@ -332,7 +334,7 @@ final class GameTurnEngineTests: XCTestCase {
     }
 
     func testFinalGemPlacedInDiscardMarksPlacementComplete() {
-        // One gem means this discard placement is the final gem in hand.
+        // Reserved for future magic/discard resolution — not manual player discard.
         let gem = Gem(kind: .pink)
 
         var session = makePlayingSession(bag: [])
@@ -348,7 +350,7 @@ final class GameTurnEngineTests: XCTestCase {
     }
 
     func testNonFinalGemPlacedInDiscardDoesNotMarkPlacementComplete() {
-        // Two gems means the first discard placement is not the final gem.
+        // Reserved for future magic/discard resolution — not manual player discard.
         let firstGem = Gem(kind: .pink)
         let secondGem = Gem(kind: .blue)
 

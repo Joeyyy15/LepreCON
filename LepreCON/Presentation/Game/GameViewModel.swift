@@ -49,10 +49,11 @@ final class GameViewModel: ObservableObject {
 
     init(
         factory: GameSessionFactory = GameSessionFactory(),
-        playerNames: [String] = ["Player 1"]
+        playerNames: [String] = ["Player 1"],
+        session: GameSession? = nil
     ) {
         self.factory = factory
-        self.session = factory.makeNewGame(playerNames: playerNames)
+        self.session = session ?? factory.makeNewGame(playerNames: playerNames)
     }
 
     func startGame() {
@@ -76,11 +77,8 @@ final class GameViewModel: ObservableObject {
         return result
     }
 
+    /// Places the chosen hand gem into the currently highlighted cup on the board path.
     func placeGemInCurrentCup(gemID: UUID) -> Result<Void, GameTurnError> {
         GameTurnEngine.placeGemInCurrentCup(session: &session, gemID: gemID)
-    }
-
-    func placeGemInDiscard(gemID: UUID) -> Result<Void, GameTurnError> {
-        GameTurnEngine.placeGemInDiscard(session: &session, gemID: gemID)
     }
 }
