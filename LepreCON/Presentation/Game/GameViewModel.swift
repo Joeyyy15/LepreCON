@@ -47,6 +47,24 @@ final class GameViewModel: ObservableObject {
         boardDisplayState.canPlaceFromHand
     }
 
+    var hasPendingScoreChoices: Bool {
+        !session.pendingScoreChoices.isEmpty
+    }
+
+    /// Pending scoring options for one cup, mapped for the UI.
+    func pendingScoreChoicesForCup(cupIndex: Int) -> [PendingScoreOptionDisplay] {
+        GameBoardDisplayState.scoringDisplay(forCupIndex: cupIndex, session: session).pendingOptions
+    }
+
+    /// Player confirms one pending scoring color for a cup.
+    func confirmScore(cupIndex: Int, scoringColor: GemKind) -> Result<Void, ScoreConfirmationError> {
+        ScoreConfirmationEngine.confirmScore(
+            session: &session,
+            cupIndex: cupIndex,
+            scoringColor: scoringColor
+        )
+    }
+
     init(
         factory: GameSessionFactory = GameSessionFactory(),
         playerNames: [String] = ["Player 1"],

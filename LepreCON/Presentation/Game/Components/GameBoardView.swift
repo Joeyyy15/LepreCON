@@ -10,6 +10,7 @@ import SwiftUI
 
 struct GameBoardView: View {
     let displayState: GameBoardDisplayState
+    var onConfirmScore: ((Int, GemKind) -> Void)? = nil
 
     /// Natural design size before scaling to fit the device.
     private static let designBoardWidth: CGFloat = 340
@@ -57,13 +58,25 @@ struct GameBoardView: View {
     private func rainbowLanes(metrics: BoardLayoutMetrics) -> some View {
         HStack(alignment: .bottom, spacing: metrics.laneSpacing) {
             ForEach(displayState.rainbowLanes) { lane in
-                RainbowLaneView(
-                    laneColor: lane.laneColor,
-                    gemImageNames: lane.gemImageNames,
-                    width: metrics.laneWidth,
-                    height: metrics.laneHeight,
-                    isHighlighted: lane.isHighlighted
-                )
+                VStack(spacing: 4) {
+                    RainbowLaneView(
+                        laneColor: lane.laneColor,
+                        gemImageNames: lane.gemImageNames,
+                        width: metrics.laneWidth,
+                        height: metrics.laneHeight,
+                        isHighlighted: lane.isHighlighted
+                    )
+
+                    if lane.scoring.isCompleted || lane.scoring.hasPendingOptions {
+                        CupScoringStatusView(
+                            scoring: lane.scoring,
+                            onConfirmScore: { color in
+                                onConfirmScore?(lane.cupIndex, color)
+                            }
+                        )
+                        .frame(width: metrics.laneWidth)
+                    }
+                }
             }
         }
     }
@@ -71,22 +84,34 @@ struct GameBoardView: View {
     private func bottomRow(metrics: BoardLayoutMetrics) -> some View {
         HStack(alignment: .center, spacing: metrics.bottomSpacing) {
             ForEach(displayState.bottomRow) { slot in
-                switch slot.kind {
-                case .cloud(let number):
-                    CloudSlotView(
-                        cloudNumber: number,
-                        gemImageNames: slot.cupSlot.gemImageNames,
-                        width: metrics.cloudWidth,
-                        height: metrics.cloudHeight,
-                        isHighlighted: slot.cupSlot.isHighlighted
-                    )
-                case .pot:
-                    PotSlotView(
-                        gemImageNames: slot.cupSlot.gemImageNames,
-                        width: metrics.potWidth,
-                        height: metrics.potHeight,
-                        isHighlighted: slot.cupSlot.isHighlighted
-                    )
+                VStack(spacing: 4) {
+                    switch slot.kind {
+                    case .cloud(let number):
+                        CloudSlotView(
+                            cloudNumber: number,
+                            gemImageNames: slot.cupSlot.gemImageNames,
+                            width: metrics.cloudWidth,
+                            height: metrics.cloudHeight,
+                            isHighlighted: slot.cupSlot.isHighlighted
+                        )
+                    case .pot:
+                        PotSlotView(
+                            gemImageNames: slot.cupSlot.gemImageNames,
+                            width: metrics.potWidth,
+                            height: metrics.potHeight,
+                            isHighlighted: slot.cupSlot.isHighlighted
+                        )
+                    }
+
+                    if slot.cupSlot.scoring.isCompleted || slot.cupSlot.scoring.hasPendingOptions {
+                        CupScoringStatusView(
+                            scoring: slot.cupSlot.scoring,
+                            onConfirmScore: { color in
+                                onConfirmScore?(slot.cupSlot.cupIndex, color)
+                            }
+                        )
+                        .frame(width: metrics.cloudWidth)
+                    }
                 }
             }
         }

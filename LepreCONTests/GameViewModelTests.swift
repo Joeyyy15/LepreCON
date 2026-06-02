@@ -244,4 +244,110 @@ final class GameViewModelTests: XCTestCase {
         }
     }
 
+    // MARK: - Score confirmation
+
+    @MainActor
+    private func makeViewModelWithPendingScore(
+        cupIndex: Int,
+        gemKinds: [GemKind]
+    ) -> GameViewModel {
+        var session = GameSessionFactory().makeNewGame(playerNames: ["Player 1"])
+        session.phase = .playing
+        for index in session.cups.indices {
+            session.cups[index].gems = []
+        }
+        session.cups[cupIndex].gems = gemKinds.map { Gem(kind: $0) }
+        session.isTurnPlacementComplete = true
+        PendingScoreDetector.refreshPendingScoreChoices(in: &session)
+        return GameViewModel(session: session)
+    }
+
+    func testConfirmScoreThroughViewModelCompletesCup() async {
+        await MainActor.run {
+            let viewModel = makeViewModelWithPendingScore(cupIndex: 2, gemKinds: Array(repeating: .blue, count: 5))
+
+            let result = viewModel.confirmScore(cupIndex: 2, scoringColor: .blue)
+
+            switch result {
+            case .success: break
+            case .failure(let error):
+                XCTFail("Expected success, got \(error)")
+            }
+
+            XCTAssertTrue(viewModel.session.cups[2].isCompleted)
+            XCTAssertEqual(viewModel.session.cups[2].completion?.scoredColor, .blue)
+            XCTAssertEqual(
+                viewModel.boardDisplayState.rainbowLanes.first { $0.cupIndex == 2 }?.scoring.completedCaption,
+                "Scored Blue"
+            )
+        }
+    }
+
+    func testConfirmScoreMovesGoldToPotOfGold() async {
+        await MainActor.run {
+            let viewModel = makeViewModelWithPendingScore(
+                cupIndex: 2,
+                gemKinds: Array(repeating: .red, count: 5) + [.gold]
+            )
+            let potIndex = GameSetup.potOfGoldCupIndex
+            let potGoldBefore = viewModel.session.cups[potIndex].gems.filter { $0.kind == .gold }.count
+
+            _ = viewModel.confirmScore(cupIndex: 2, scoringColor: .red)
+
+            XCTAssertEqual(
+                viewModel.session.cups[potIndex].gems.filter { $0.kind == .gold }.count,
+                potGoldBefore + 1
+            )
+        }
+    }
+
+    func testConfirmScoreClearsScoredCupGems() async {
+        await MainActor.run {
+            let viewModel = makeViewModelWithPendingScore(cupIndex: 2, gemKinds: Array(repeating: .red, count: 5))
+
+            _ = viewModel.confirmScore(cupIndex: 2, scoringColor: .red)
+
+            XCTAssertTrue(viewModel.session.cups[2].gems.isEmpty)
+        }
+    }
+
+    func testConfirmScoreRefreshesPendingDisplayState() async {
+        await MainActor.run {
+            var session = GameSessionFactory().makeNewGame(playerNames: ["Player 1"])
+            session.phase = .playing
+            for index in session.cups.indices {
+                session.cups[index].gems = []
+            }
+            session.cups[2].gems = Array(repeating: Gem(kind: .red), count: 5)
+            session.cups[6].gems = Array(repeating: Gem(kind: .blue), count: 5)
+            session.isTurnPlacementComplete = true
+            PendingScoreDetector.refreshPendingScoreChoices(in: &session)
+
+            let viewModel = GameViewModel(session: session)
+
+            XCTAssertEqual(viewModel.boardDisplayState.pendingScoringCups.count, 2)
+
+            _ = viewModel.confirmScore(cupIndex: 2, scoringColor: .red)
+
+            XCTAssertEqual(viewModel.boardDisplayState.pendingScoringCups.count, 1)
+            XCTAssertEqual(viewModel.boardDisplayState.pendingScoringCups.first?.cupIndex, 6)
+        }
+    }
+
+    func testMultipleCandidatesRequireExplicitColorChoice() async {
+        await MainActor.run {
+            let viewModel = makeViewModelWithPendingScore(
+                cupIndex: 2,
+                gemKinds: Array(repeating: .clear, count: 5)
+            )
+
+            XCTAssertGreaterThan(viewModel.pendingScoreChoicesForCup(cupIndex: 2).count, 1)
+
+            _ = viewModel.confirmScore(cupIndex: 2, scoringColor: .purple)
+
+            XCTAssertEqual(viewModel.session.cups[2].completion?.scoredColor, .purple)
+            XCTAssertNotEqual(viewModel.session.cups[2].completion?.scoredColor, .red)
+        }
+    }
+
 }

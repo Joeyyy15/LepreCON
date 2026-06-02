@@ -21,6 +21,7 @@ struct CupSlotDisplay: Equatable, Identifiable {
     let cupIndex: Int
     let gemItems: [GemDisplayItem]
     let isHighlighted: Bool
+    let scoring: CupScoringDisplay
 
     var gemImageNames: [String] {
         gemItems.map(\.imageName)
@@ -34,6 +35,7 @@ struct RainbowLaneDisplay: Equatable, Identifiable {
     let laneColor: RainbowLaneColor
     let gemItems: [GemDisplayItem]
     let isHighlighted: Bool
+    let scoring: CupScoringDisplay
 
     var gemImageNames: [String] {
         gemItems.map(\.imageName)
@@ -64,6 +66,8 @@ struct GameBoardDisplayState: Equatable {
     let canRollD12: Bool
     let canPlaceFromHand: Bool
     let isTurnPlacementComplete: Bool
+    /// Cups with pending score options the player can confirm (after placement ends).
+    let pendingScoringCups: [CupScoringRowDisplay]
 
     /// Domain cup index → cloud label (1–4) for white/cloud cups only.
     static func cloudNumber(forCupIndex index: Int) -> Int? {
@@ -89,7 +93,8 @@ struct GameBoardDisplayState: Equatable {
                 id: cup.id,
                 cupIndex: index,
                 gemItems: cup.gems.map { GemDisplayItem(gem: $0) },
-                isHighlighted: highlightIndex == index
+                isHighlighted: highlightIndex == index,
+                scoring: scoringDisplay(forCupIndex: index, session: session)
             )
         }
 
@@ -100,7 +105,8 @@ struct GameBoardDisplayState: Equatable {
                 cupIndex: cupIndex,
                 laneColor: color,
                 gemItems: cup.gems.map { GemDisplayItem(gem: $0) },
-                isHighlighted: highlightIndex == cupIndex
+                isHighlighted: highlightIndex == cupIndex,
+                scoring: scoringDisplay(forCupIndex: cupIndex, session: session)
             )
         }
 
@@ -119,6 +125,14 @@ struct GameBoardDisplayState: Equatable {
             BottomRowSlotDisplay(cupSlot: cupSlot(at: 8), kind: .cloud(number: 3))
         ]
 
+        let pendingScoringCups = session.pendingScoreChoices.map { choice in
+            CupScoringRowDisplay(
+                cupIndex: choice.cupIndex,
+                cupLabel: cupLabel(forCupIndex: choice.cupIndex, cups: cups),
+                pendingOptions: choice.candidates.map { PendingScoreOptionDisplay(candidate: $0) }
+            )
+        }
+
         return GameBoardDisplayState(
             rainbowLanes: [
                 rainbowLane(cupIndex: 2, color: .red),
@@ -134,8 +148,39 @@ struct GameBoardDisplayState: Equatable {
             currentRoll: session.currentRoll,
             canRollD12: session.phase == .playing && !GameTurnEngine.isTurnInProgress(in: session),
             canPlaceFromHand: GameTurnEngine.canPlaceFromHand(in: session),
-            isTurnPlacementComplete: session.isTurnPlacementComplete
+            isTurnPlacementComplete: session.isTurnPlacementComplete,
+            pendingScoringCups: pendingScoringCups
         )
+    }
+
+    /// Maps domain scoring state for one cup into presentation models.
+    static func scoringDisplay(forCupIndex index: Int, session: GameSession) -> CupScoringDisplay {
+        let cup = session.cups[index]
+
+        if let completion = cup.completion {
+            return CupScoringDisplay(
+                pendingOptions: [],
+                completedCaption: "Scored \(completion.scoredColor.scoringDisplayName)"
+            )
+        }
+
+        if let pending = session.pendingScoreChoices.first(where: { $0.cupIndex == index }) {
+            return CupScoringDisplay(
+                pendingOptions: pending.candidates.map { PendingScoreOptionDisplay(candidate: $0) },
+                completedCaption: nil
+            )
+        }
+
+        return .none
+    }
+
+    private static func cupLabel(forCupIndex index: Int, cups: [Cup]) -> String {
+        guard cups.indices.contains(index) else { return "Cup \(index)" }
+        let cup = cups[index]
+        if cup.isPotOfGold { return "Pot of Gold" }
+        if let cloud = cloudNumber(forCupIndex: index) { return "Cloud \(cloud)" }
+        if let color = cup.color { return color.rawValue.capitalized }
+        return "Cup \(index)"
     }
 }
 

@@ -28,11 +28,21 @@ struct GameView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
-                GameBoardView(displayState: viewModel.boardDisplayState)
+                GameBoardView(
+                    displayState: viewModel.boardDisplayState,
+                    onConfirmScore: confirmScore
+                )
                     .frame(maxWidth: .infinity)
                     .frame(height: 380)
                     .clipShape(RoundedRectangle(cornerRadius: 24))
                     .shadow(color: .black.opacity(0.18), radius: 10, x: 0, y: 6)
+
+                if !viewModel.boardDisplayState.pendingScoringCups.isEmpty {
+                    CupScoringControlsSection(
+                        rows: viewModel.boardDisplayState.pendingScoringCups,
+                        onConfirmScore: confirmScore
+                    )
+                }
 
                 statusSection
                 turnControlsSection
@@ -66,9 +76,15 @@ struct GameView: View {
             }
 
             if viewModel.boardDisplayState.isTurnPlacementComplete {
-                Text("Placement complete — roll again to start next turn")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                if viewModel.hasPendingScoreChoices {
+                    Text("Placement complete — score a cup below, or roll again for the next turn")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("Placement complete — roll again to start next turn")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
         }
     }
@@ -153,12 +169,36 @@ struct GameView: View {
         switch viewModel.placeGemInCurrentCup(gemID: gemID) {
         case .success:
             if viewModel.session.isTurnPlacementComplete {
-                lastActionMessage = "Placement finished. Roll D12 for your next turn."
+                if viewModel.hasPendingScoreChoices {
+                    lastActionMessage = "Placement finished. Score a cup below if you want."
+                } else {
+                    lastActionMessage = "Placement finished. Roll D12 for your next turn."
+                }
             } else {
                 lastActionMessage = "Gem placed. Continue placing from your hand."
             }
         case .failure(let error):
             lastActionMessage = turnErrorMessage(error)
+        }
+    }
+
+    private func confirmScore(cupIndex: Int, scoringColor: GemKind) {
+        switch viewModel.confirmScore(cupIndex: cupIndex, scoringColor: scoringColor) {
+        case .success:
+            lastActionMessage = "Scored \(scoringColor.scoringDisplayName)."
+        case .failure(let error):
+            lastActionMessage = scoreConfirmationErrorMessage(error)
+        }
+    }
+
+    private func scoreConfirmationErrorMessage(_ error: ScoreConfirmationError) -> String {
+        switch error {
+        case .invalidCupIndex: return "Invalid cup."
+        case .cupAlreadyCompleted: return "That cup is already scored."
+        case .potOfGoldCannotScore: return "The Pot of Gold cannot be scored."
+        case .noPendingScoreChoiceForCup: return "That cup has no pending score option."
+        case .scoringCandidateNotAvailable: return "That scoring color is not available for this cup."
+        case .potOfGoldMissing: return "Pot of Gold is missing from the board."
         }
     }
 
