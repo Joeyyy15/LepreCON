@@ -5,7 +5,7 @@
 // Runs end-of-turn resolution in rulebook order after placement ends:
 // Unicorn → Poop → Score detection.
 //
-// Unicorn resolution is wired. Poop is still a stub.
+// Unicorn and poop resolution are wired.
 //
 
 import Foundation
@@ -27,8 +27,7 @@ enum EndOfTurnResolver {
     }
 
     private static func resolvePoop(in session: inout GameSession) {
-        // TODO: Implement black gem / poop resolution later (runs before scoring).
-        _ = session
+        PoopResolver.resolve(in: &session)
     }
 
     /// Refreshes pending score choices from the current board. Player confirms scoring later.
