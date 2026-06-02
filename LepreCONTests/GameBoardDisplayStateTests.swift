@@ -87,4 +87,86 @@ final class GameBoardDisplayStateTests: XCTestCase {
         XCTAssertEqual(blueLane?.hasUnicorn, true)
         XCTAssertEqual(display.rainbowLanes.filter(\.hasUnicorn).count, 1)
     }
+
+    // MARK: - Grouped gem counts
+
+    func testCupWithMultipleSameKindGemsProducesOneGroupedCount() {
+        var session = GameSessionFactory().makeNewGame(playerNames: ["Alex"])
+        session.phase = .playing
+        for index in session.cups.indices {
+            session.cups[index].gems = []
+        }
+        session.cups[2].gems = gems(Array(repeating: .red, count: 3))
+
+        let display = GameBoardDisplayState.from(session: session)
+        let lane = display.rainbowLanes.first { $0.cupIndex == 2 }
+
+        XCTAssertEqual(lane?.gemCounts.count, 1)
+        XCTAssertEqual(lane?.gemCounts.first?.kind, .red)
+        XCTAssertEqual(lane?.gemCounts.first?.count, 3)
+    }
+
+    func testGroupingIsByGemKindNotImageName() {
+        var session = GameSessionFactory().makeNewGame(playerNames: ["Alex"])
+        session.phase = .playing
+        for index in session.cups.indices {
+            session.cups[index].gems = []
+        }
+        session.cups[4].gems = [
+            Gem(kind: .yellow),
+            Gem(kind: .yellow),
+            Gem(kind: .gold),
+            Gem(kind: .gold)
+        ]
+
+        let display = GameBoardDisplayState.from(session: session)
+        let lane = display.rainbowLanes.first { $0.cupIndex == 4 }
+        let kinds = lane?.gemCounts.map(\.kind) ?? []
+
+        XCTAssertEqual(lane?.gemCounts.count, 2)
+        XCTAssertEqual(Set(kinds), Set([.yellow, .gold]))
+        XCTAssertEqual(lane?.gemCounts.first { $0.kind == .yellow }?.imageName, "gem_yellow")
+        XCTAssertEqual(lane?.gemCounts.first { $0.kind == .gold }?.imageName, "gem_yellow")
+    }
+
+    func testClearAndWhiteAreSeparateGroupsDespiteSharedAsset() {
+        var session = GameSessionFactory().makeNewGame(playerNames: ["Alex"])
+        session.phase = .playing
+        for index in session.cups.indices {
+            session.cups[index].gems = []
+        }
+        session.cups[0].gems = [Gem(kind: .white), Gem(kind: .clear)]
+
+        let display = GameBoardDisplayState.from(session: session)
+        let cloud = display.bottomRow.first { $0.cupSlot.cupIndex == 0 }
+
+        XCTAssertEqual(cloud?.cupSlot.gemCounts.count, 2)
+        XCTAssertEqual(cloud?.cupSlot.gemCounts.map(\.kind), [.white, .clear])
+        XCTAssertEqual(cloud?.cupSlot.gemCounts.first { $0.kind == .white }?.shortLabel, "W")
+        XCTAssertEqual(cloud?.cupSlot.gemCounts.first { $0.kind == .clear }?.shortLabel, "C")
+    }
+
+    func testPinkAndPurpleAreSeparateGroupsDespiteSharedAsset() {
+        var session = GameSessionFactory().makeNewGame(playerNames: ["Alex"])
+        session.phase = .playing
+        for index in session.cups.indices {
+            session.cups[index].gems = []
+        }
+        session.cups[7].gems = [Gem(kind: .purple), Gem(kind: .pink)]
+
+        let display = GameBoardDisplayState.from(session: session)
+        let lane = display.rainbowLanes.first { $0.cupIndex == 7 }
+
+        XCTAssertEqual(lane?.gemCounts.count, 2)
+        XCTAssertEqual(Set(lane?.gemCounts.map(\.kind) ?? []), Set([.purple, .pink]))
+    }
+
+    func testAllGemKindsHaveNonEmptyDisplayMetadata() {
+        for kind in GemKind.allCases {
+            let item = GemCountDisplayItem(kind: kind, count: 1)
+            XCTAssertFalse(item.imageName.isEmpty, "\(kind)")
+            XCTAssertFalse(item.displayName.isEmpty, "\(kind)")
+            XCTAssertEqual(item.imageName, kind.imageAssetName)
+        }
+    }
 }

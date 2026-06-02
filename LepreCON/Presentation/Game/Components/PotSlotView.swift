@@ -9,7 +9,7 @@
 import SwiftUI
 
 struct PotSlotView: View {
-    let gemImageNames: [String]
+    let gemCounts: [GemCountDisplayItem]
     let width: CGFloat
     let height: CGFloat
     var isHighlighted: Bool = false
@@ -19,14 +19,17 @@ struct PotSlotView: View {
             ZStack {
                 potShape
 
-                if gemImageNames.isEmpty {
+                if gemCounts.isEmpty {
                     Text("Pot")
                         .font(.caption)
                         .bold()
                         .foregroundStyle(.white.opacity(0.75))
                         .offset(y: height * 0.08)
                 } else {
-                    gemPile
+                    GemCountListView(items: gemCounts, gemSize: height * 0.22)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                        .padding(.horizontal, 4)
+                        .offset(y: -height * 0.06)
                 }
             }
             .frame(width: width, height: height)
@@ -86,18 +89,6 @@ struct PotSlotView: View {
         .shadow(color: .black.opacity(0.25), radius: 6, x: 0, y: 4)
     }
 
-    private var gemPile: some View {
-        ZStack {
-            ForEach(Array(gemImageNames.prefix(6).enumerated()), id: \.offset) { index, imageName in
-                GemView(imageName: imageName, size: height * 0.24)
-                    .offset(
-                        x: CGFloat(index - 2) * width * 0.08,
-                        y: CGFloat(index % 3) * height * 0.07 - height * 0.10
-                    )
-            }
-        }
-    }
-
     @ViewBuilder
     private var highlightBorder: some View {
         if isHighlighted {
@@ -111,18 +102,15 @@ struct PotSlotView: View {
 #Preview("Pot Slot") {
     HStack(spacing: 32) {
         PotSlotView(
-            gemImageNames: [],
+            gemCounts: [],
             width: 130,
             height: 110
         )
 
         PotSlotView(
-            gemImageNames: [
-                "gem_red",
-                "gem_blue",
-                "gem_green",
-                "gem_yellow",
-                "gem_purple"
+            gemCounts: [
+                GemCountDisplayItem(kind: .gold, count: 3),
+                GemCountDisplayItem(kind: .red, count: 1)
             ],
             width: 130,
             height: 110

@@ -9,7 +9,7 @@ import SwiftUI
 
 struct CloudSlotView: View {
     let cloudNumber: Int
-    let gemImageNames: [String]
+    let gemCounts: [GemCountDisplayItem]
     let width: CGFloat
     let height: CGFloat
     var isHighlighted: Bool = false
@@ -20,13 +20,15 @@ struct CloudSlotView: View {
             ZStack {
                 cloudShape
 
-                if gemImageNames.isEmpty {
-                    Text("Cloud \(cloudNumber)")
+                if gemCounts.isEmpty {
+                    Text("C\(cloudNumber)")
                         .font(.caption2)
                         .bold()
                         .foregroundStyle(.black.opacity(0.45))
                 } else {
-                    gemPile
+                    GemCountListView(items: gemCounts, gemSize: height * 0.28)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                        .padding(.horizontal, 4)
                 }
 
                 if hasUnicorn {
@@ -38,7 +40,7 @@ struct CloudSlotView: View {
             .frame(width: width, height: height)
             .overlay(highlightBorder)
 
-            Text("Cloud \(cloudNumber)")
+            Text("C\(cloudNumber)")
                 .font(.caption2)
                 .bold()
         }
@@ -77,19 +79,6 @@ struct CloudSlotView: View {
         )
     }
 
-    private var gemPile: some View {
-        ZStack {
-            ForEach(Array(gemImageNames.prefix(5).enumerated()), id: \.offset) { index, imageName in
-                GemView(imageName: imageName, size: height * 0.34)
-                    .offset(
-                        x: CGFloat(index - 2) * width * 0.10,
-                        y: CGFloat(index % 2) * height * 0.08
-                    )
-            }
-        }
-        .offset(y: height * 0.05)
-    }
-
     @ViewBuilder
     private var highlightBorder: some View {
         if isHighlighted {
@@ -105,14 +94,17 @@ struct CloudSlotView: View {
         HStack(spacing: 18) {
             CloudSlotView(
                 cloudNumber: 1,
-                gemImageNames: ["gem_red", "gem_blue"],
+                gemCounts: [
+                    GemCountDisplayItem(kind: .red, count: 1),
+                    GemCountDisplayItem(kind: .blue, count: 1)
+                ],
                 width: 120,
                 height: 80
             )
 
             CloudSlotView(
                 cloudNumber: 2,
-                gemImageNames: [],
+                gemCounts: [],
                 width: 120,
                 height: 80
             )
@@ -121,14 +113,20 @@ struct CloudSlotView: View {
         HStack(spacing: 18) {
             CloudSlotView(
                 cloudNumber: 3,
-                gemImageNames: ["gem_green", "gem_yellow", "gem_purple"],
+                gemCounts: [
+                    GemCountDisplayItem(kind: .green, count: 1),
+                    GemCountDisplayItem(kind: .yellow, count: 1)
+                ],
                 width: 120,
                 height: 80
             )
 
             CloudSlotView(
                 cloudNumber: 4,
-                gemImageNames: ["gem_black", "gem_white"],
+                gemCounts: [
+                    GemCountDisplayItem(kind: .black, count: 1),
+                    GemCountDisplayItem(kind: .white, count: 1)
+                ],
                 width: 120,
                 height: 80
             )

@@ -187,15 +187,20 @@ struct GameView: View {
             Text("Discard Pile")
                 .font(.headline)
 
-            if viewModel.boardDisplayState.discardGems.isEmpty {
+            if viewModel.boardDisplayState.discardGemCounts.isEmpty {
                 Text("Empty")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {
-                HandGemsView(
-                    gems: viewModel.boardDisplayState.discardGems,
-                    isInteractive: false
-                )
+                LazyVGrid(
+                    columns: [GridItem(.adaptive(minimum: 72, maximum: 120), spacing: 8)],
+                    alignment: .leading,
+                    spacing: 8
+                ) {
+                    ForEach(viewModel.boardDisplayState.discardGemCounts) { item in
+                        GemCountBadgeView(item: item, gemSize: 28)
+                    }
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

@@ -10,7 +10,7 @@ import SwiftUI
 
 struct RainbowLaneView: View {
     let laneColor: RainbowLaneColor
-    let gemImageNames: [String]
+    let gemCounts: [GemCountDisplayItem]
     let width: CGFloat
     let height: CGFloat
     var isHighlighted: Bool = false
@@ -30,13 +30,11 @@ struct RainbowLaneView: View {
                     .shadow(color: .black.opacity(0.18), radius: 4, x: 0, y: 3)
                     .overlay(highlightBorder)
 
-                // Gems stack upward from the bottom of the lane.
-                VStack(spacing: -4) {
-                    ForEach(Array(gemImageNames.enumerated()), id: \.offset) { _, imageName in
-                        GemView(imageName: imageName, size: width * 0.85)
-                    }
-                }
-                .padding(.bottom, 6)
+                // Grouped gem counts stay inside a fixed lane height.
+                GemCountListView(items: gemCounts, gemSize: width * 0.38)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+                    .padding(.horizontal, 3)
+                    .padding(.bottom, 5)
 
                 if hasUnicorn {
                     UnicornIndicatorView()
@@ -81,42 +79,45 @@ struct RainbowLaneView: View {
     HStack(alignment: .bottom, spacing: 10) {
         RainbowLaneView(
             laneColor: .red,
-            gemImageNames: ["gem_red", "gem_red", "gem_red"],
+            gemCounts: [
+                GemCountDisplayItem(kind: .red, count: 3),
+                GemCountDisplayItem(kind: .gold, count: 1)
+            ],
             width: 42,
             height: 180
         )
 
         RainbowLaneView(
             laneColor: .orange,
-            gemImageNames: ["gem_orange", "gem_orange"],
+            gemCounts: [GemCountDisplayItem(kind: .orange, count: 2)],
             width: 42,
             height: 180
         )
 
         RainbowLaneView(
             laneColor: .yellow,
-            gemImageNames: ["gem_yellow"],
+            gemCounts: [GemCountDisplayItem(kind: .yellow, count: 1)],
             width: 42,
             height: 180
         )
 
         RainbowLaneView(
             laneColor: .green,
-            gemImageNames: ["gem_green", "gem_green", "gem_green", "gem_green"],
+            gemCounts: [GemCountDisplayItem(kind: .green, count: 4)],
             width: 42,
             height: 180
         )
 
         RainbowLaneView(
             laneColor: .blue,
-            gemImageNames: ["gem_blue", "gem_blue"],
+            gemCounts: [GemCountDisplayItem(kind: .blue, count: 2)],
             width: 42,
             height: 180
         )
 
         RainbowLaneView(
             laneColor: .purple,
-            gemImageNames: ["gem_purple", "gem_purple", "gem_purple"],
+            gemCounts: [GemCountDisplayItem(kind: .purple, count: 3)],
             width: 42,
             height: 180
         )

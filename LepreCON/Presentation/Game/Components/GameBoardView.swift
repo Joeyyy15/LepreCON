@@ -61,7 +61,7 @@ struct GameBoardView: View {
                 VStack(spacing: 4) {
                     RainbowLaneView(
                         laneColor: lane.laneColor,
-                        gemImageNames: lane.gemImageNames,
+                        gemCounts: lane.gemCounts,
                         width: metrics.laneWidth,
                         height: metrics.laneHeight,
                         isHighlighted: lane.isHighlighted,
@@ -90,7 +90,7 @@ struct GameBoardView: View {
                     case .cloud(let number):
                         CloudSlotView(
                             cloudNumber: number,
-                            gemImageNames: slot.cupSlot.gemImageNames,
+                            gemCounts: slot.cupSlot.gemCounts,
                             width: metrics.cloudWidth,
                             height: metrics.cloudHeight,
                             isHighlighted: slot.cupSlot.isHighlighted,
@@ -98,7 +98,7 @@ struct GameBoardView: View {
                         )
                     case .pot:
                         PotSlotView(
-                            gemImageNames: slot.cupSlot.gemImageNames,
+                            gemCounts: slot.cupSlot.gemCounts,
                             width: metrics.potWidth,
                             height: metrics.potHeight,
                             isHighlighted: slot.cupSlot.isHighlighted

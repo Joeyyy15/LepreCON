@@ -19,14 +19,10 @@ struct GemDisplayItem: Identifiable, Equatable {
 struct CupSlotDisplay: Equatable, Identifiable {
     let id: UUID
     let cupIndex: Int
-    let gemItems: [GemDisplayItem]
+    let gemCounts: [GemCountDisplayItem]
     let isHighlighted: Bool
     let scoring: CupScoringDisplay
     let hasUnicorn: Bool
-
-    var gemImageNames: [String] {
-        gemItems.map(\.imageName)
-    }
 }
 
 /// One rainbow lane (colored cup) in the top row of the board.
@@ -34,14 +30,10 @@ struct RainbowLaneDisplay: Equatable, Identifiable {
     let id: UUID
     let cupIndex: Int
     let laneColor: RainbowLaneColor
-    let gemItems: [GemDisplayItem]
+    let gemCounts: [GemCountDisplayItem]
     let isHighlighted: Bool
     let scoring: CupScoringDisplay
     let hasUnicorn: Bool
-
-    var gemImageNames: [String] {
-        gemItems.map(\.imageName)
-    }
 }
 
 /// One slot in the bottom row (cloud or pot), in left-to-right screen order.
@@ -85,7 +77,7 @@ struct GameBoardDisplayState: Equatable {
     /// Bottom row left → right per rulebook image: cloud2, cloud1, pot, cloud3, cloud4.
     let bottomRow: [BottomRowSlotDisplay]
     let handGems: [GemDisplayItem]
-    let discardGems: [GemDisplayItem]
+    let discardGemCounts: [GemCountDisplayItem]
     let currentRoll: Int?
     let canRollD12: Bool
     let canPlaceFromHand: Bool
@@ -119,7 +111,7 @@ struct GameBoardDisplayState: Equatable {
             return CupSlotDisplay(
                 id: cup.id,
                 cupIndex: index,
-                gemItems: cup.gems.map { GemDisplayItem(gem: $0) },
+                gemCounts: GemCountDisplayBuilder.groupedCounts(from: cup.gems),
                 isHighlighted: highlightIndex == index,
                 scoring: scoringDisplay(forCupIndex: index, session: session),
                 hasUnicorn: session.unicornCupIndex == index
@@ -132,7 +124,7 @@ struct GameBoardDisplayState: Equatable {
                 id: cup.id,
                 cupIndex: cupIndex,
                 laneColor: color,
-                gemItems: cup.gems.map { GemDisplayItem(gem: $0) },
+                gemCounts: GemCountDisplayBuilder.groupedCounts(from: cup.gems),
                 isHighlighted: highlightIndex == cupIndex,
                 scoring: scoringDisplay(forCupIndex: cupIndex, session: session),
                 hasUnicorn: session.unicornCupIndex == cupIndex
@@ -186,7 +178,7 @@ struct GameBoardDisplayState: Equatable {
             ],
             bottomRow: bottomRow,
             handGems: session.gemsInHand.map { GemDisplayItem(gem: $0) },
-            discardGems: session.discardPile.map { GemDisplayItem(gem: $0) },
+            discardGemCounts: GemCountDisplayBuilder.groupedCounts(from: session.discardPile),
             currentRoll: session.currentRoll,
             canRollD12: GameTurnEngine.canRollD12(in: session),
             canPlaceFromHand: GameTurnEngine.canPlaceFromHand(in: session),
@@ -249,38 +241,18 @@ struct GameBoardDisplayState: Equatable {
         guard cups.indices.contains(index) else { return "Cup \(index)" }
         let cup = cups[index]
         if cup.isPotOfGold { return "Pot of Gold" }
-        if let cloud = cloudNumber(forCupIndex: index) { return "Cloud \(cloud)" }
+        if let cloud = cloudNumber(forCupIndex: index) { return "C\(cloud)" }
         if let color = cup.color { return color.rawValue.capitalized }
         return "Cup \(index)"
     }
 }
 
-// MARK: - Gem asset mapping
+// MARK: - Hand gem mapping
 
 extension GemDisplayItem {
     init(gem: Gem) {
         id = gem.id
         kind = gem.kind
         imageName = gem.kind.imageAssetName
-    }
-}
-
-extension GemKind {
-    /// Asset catalog image name for this gem kind.
-    var imageAssetName: String {
-        switch self {
-        case .red: return "gem_red"
-        case .orange: return "gem_orange"
-        case .yellow: return "gem_yellow"
-        case .green: return "gem_green"
-        case .blue: return "gem_blue"
-        case .purple: return "gem_purple"
-        case .white: return "gem_white"
-        case .black: return "gem_black"
-        case .gold: return "gem_yellow"
-        // Clear and white are separate gem types; both use the white asset until a clear image exists.
-        case .clear: return "gem_white"
-        case .pink: return "gem_purple"
-        }
     }
 }
