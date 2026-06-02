@@ -78,9 +78,20 @@ enum ScoreConfirmationEngine {
         potIndex: Int,
         candidate: CupScoreCandidate
     ) {
+        captureUnicornIfOnCup(session: &session, cupIndex: cupIndex)
+
         let goldGems = session.cups[cupIndex].gems.filter { $0.kind == .gold }
         session.cups[potIndex].gems.append(contentsOf: goldGems)
         session.cups[cupIndex].gems.removeAll()
         session.cups[cupIndex].completion = CupCompletion(from: candidate)
+    }
+
+    /// Scoring a cup that holds the unicorn captures it (+3 at end if rainbow is complete).
+    private static func captureUnicornIfOnCup(session: inout GameSession, cupIndex: Int) {
+        guard session.unicornCupIndex == cupIndex else { return }
+
+        session.unicornCaptured = true
+        session.unicornCupIndex = nil
+        session.unicornCupID = nil
     }
 }

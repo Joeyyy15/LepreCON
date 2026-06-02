@@ -21,7 +21,8 @@ final class ScoreConfirmationEngineTests: XCTestCase {
     private func sessionWithPendingScore(
         cupIndex: Int,
         gemKinds: [GemKind],
-        extraPendingCups: [(Int, [GemKind])] = []
+        extraPendingCups: [(Int, [GemKind])] = [],
+        unicornCupIndex: Int? = nil
     ) -> GameSession {
         var cups = makeBoardCups()
         cups[cupIndex].gems = gems(gemKinds)
@@ -29,6 +30,10 @@ final class ScoreConfirmationEngineTests: XCTestCase {
             cups[index].gems = gems(kinds)
         }
         var session = GameSession(phase: .playing, cups: cups)
+        if let unicornCupIndex {
+            session.unicornCupIndex = unicornCupIndex
+            session.unicornCupID = cups[unicornCupIndex].id
+        }
         PendingScoreDetector.refreshPendingScoreChoices(in: &session)
         return session
     }
@@ -172,6 +177,148 @@ final class ScoreConfirmationEngineTests: XCTestCase {
         XCTAssertNotEqual(session.cups[2].completion?.scoredColor, pending?.candidates.first?.scoringColor)
     }
 
+    // MARK: - Unicorn capture
+
+    func testConfirmingScoreInUnicornCupSetsUnicornCaptured() {
+        var session = sessionWithPendingScore(
+            cupIndex: 2,
+            gemKinds: Array(repeating: .red, count: 5),
+            unicornCupIndex: 2
+        )
+
+        _ = ScoreConfirmationEngine.confirmScore(session: &session, cupIndex: 2, scoringColor: .red)
+
+        XCTAssertTrue(session.unicornCaptured)
+    }
+
+    func testConfirmingScoreInUnicornCupClearsUnicornCupIndex() {
+        var session = sessionWithPendingScore(
+            cupIndex: 6,
+            gemKinds: Array(repeating: .blue, count: 5),
+            unicornCupIndex: 6
+        )
+
+        _ = ScoreConfirmationEngine.confirmScore(session: &session, cupIndex: 6, scoringColor: .blue)
+
+        XCTAssertNil(session.unicornCupIndex)
+    }
+
+    func testConfirmingScoreInUnicornCupClearsUnicornCupID() {
+        var session = sessionWithPendingScore(
+            cupIndex: 0,
+            gemKinds: Array(repeating: .green, count: 5),
+            unicornCupIndex: 0
+        )
+        let originalCupID = session.cups[0].id
+
+        _ = ScoreConfirmationEngine.confirmScore(session: &session, cupIndex: 0, scoringColor: .green)
+
+        XCTAssertNil(session.unicornCupID)
+        XCTAssertEqual(session.cups[0].id, originalCupID)
+    }
+
+    func testConfirmingScoreInDifferentCupDoesNotCaptureUnicorn() {
+        var session = sessionWithPendingScore(
+            cupIndex: 2,
+            gemKinds: Array(repeating: .red, count: 5),
+            unicornCupIndex: 6
+        )
+
+        _ = ScoreConfirmationEngine.confirmScore(session: &session, cupIndex: 2, scoringColor: .red)
+
+        XCTAssertFalse(session.unicornCaptured)
+        XCTAssertEqual(session.unicornCupIndex, 6)
+        XCTAssertEqual(session.unicornCupID, session.cups[6].id)
+    }
+
+    func testFailedScoreConfirmationDoesNotCaptureUnicorn() {
+        var session = sessionWithPendingScore(
+            cupIndex: 2,
+            gemKinds: Array(repeating: .red, count: 5),
+            unicornCupIndex: 2
+        )
+
+        _ = ScoreConfirmationEngine.confirmScore(session: &session, cupIndex: 2, scoringColor: .blue)
+
+        XCTAssertFalse(session.unicornCaptured)
+    }
+
+    func testFailedScoreConfirmationDoesNotClearUnicornLocation() {
+        var session = sessionWithPendingScore(
+            cupIndex: 2,
+            gemKinds: Array(repeating: .red, count: 5),
+            unicornCupIndex: 2
+        )
+        let unicornID = session.unicornCupID
+
+        _ = ScoreConfirmationEngine.confirmScore(session: &session, cupIndex: 2, scoringColor: .blue)
+
+        XCTAssertEqual(session.unicornCupIndex, 2)
+        XCTAssertEqual(session.unicornCupID, unicornID)
+    }
+
+    func testConfirmingScoreInUnicornCupStillCompletesCupNormally() {
+        var session = sessionWithPendingScore(
+            cupIndex: 2,
+            gemKinds: Array(repeating: .red, count: 5),
+            unicornCupIndex: 2
+        )
+
+        _ = ScoreConfirmationEngine.confirmScore(session: &session, cupIndex: 2, scoringColor: .red)
+
+        XCTAssertTrue(session.cups[2].isCompleted)
+        XCTAssertEqual(session.cups[2].completion?.scoredColor, .red)
+        XCTAssertTrue(session.cups[2].gems.isEmpty)
+    }
+
+    func testCaptureEnablesUnicornBonusWhenRainbowIsComplete() {
+        var session = sessionWithPendingScore(
+            cupIndex: 2,
+            gemKinds: Array(repeating: .red, count: 5),
+            unicornCupIndex: 2
+        )
+        markAllSixColorsMatchingExceptRed(&session)
+
+        _ = ScoreConfirmationEngine.confirmScore(session: &session, cupIndex: 2, scoringColor: .red)
+
+        let result = FinalScoreEvaluator.evaluate(session: session)
+        XCTAssertTrue(result.isRainbowComplete)
+        XCTAssertTrue(result.unicornCaptured)
+        XCTAssertEqual(result.unicornPoints, 3)
+    }
+
+    func testCaptureDoesNotGiveUnicornBonusWhenRainbowIsIncomplete() {
+        var session = sessionWithPendingScore(
+            cupIndex: 2,
+            gemKinds: Array(repeating: .red, count: 5),
+            unicornCupIndex: 2
+        )
+
+        _ = ScoreConfirmationEngine.confirmScore(session: &session, cupIndex: 2, scoringColor: .red)
+
+        let result = FinalScoreEvaluator.evaluate(session: session)
+        XCTAssertFalse(result.isRainbowComplete)
+        XCTAssertTrue(result.unicornCaptured)
+        XCTAssertEqual(result.unicornPoints, 0)
+    }
+
+    func testDisplayStateNoLongerMarksUnicornAfterCapture() {
+        var session = sessionWithPendingScore(
+            cupIndex: 2,
+            gemKinds: Array(repeating: .red, count: 5),
+            unicornCupIndex: 2
+        )
+
+        _ = ScoreConfirmationEngine.confirmScore(session: &session, cupIndex: 2, scoringColor: .red)
+
+        let display = GameBoardDisplayState.from(session: session)
+        let unicornCupCount =
+            display.rainbowLanes.filter(\.hasUnicorn).count
+            + display.bottomRow.filter { $0.cupSlot.hasUnicorn }.count
+
+        XCTAssertEqual(unicornCupCount, 0)
+    }
+
     // MARK: - Errors
 
     func testInvalidCupIndexReturnsError() {
@@ -238,5 +385,23 @@ final class ScoreConfirmationEngineTests: XCTestCase {
         XCTAssertFalse(session.cups[2].isCompleted)
         XCTAssertEqual(session.cups[2].gems.map(\.id), gemsBefore.map(\.id))
         XCTAssertEqual(session.pendingScoreChoices, pendingBefore)
+    }
+
+    // MARK: - Unicorn capture helpers
+
+    private func markAllSixColorsMatchingExceptRed(_ session: inout GameSession) {
+        let placements: [(Int, GemKind)] = [
+            (3, .orange), (4, .yellow), (5, .green), (6, .blue), (7, .purple)
+        ]
+        for (cupIndex, color) in placements {
+            session.cups[cupIndex].completion = CupCompletion(
+                scoredColor: color,
+                wasMatchingCupColor: true,
+                goodCount: 5,
+                passCount: 0,
+                blemishCount: 0,
+                adjustedGoodCount: 5
+            )
+        }
     }
 }
