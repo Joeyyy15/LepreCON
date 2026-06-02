@@ -19,3 +19,17 @@ struct CupCompletion: Equatable, Codable {
     let blemishCount: Int
     let adjustedGoodCount: Int
 }
+
+extension CupCompletion {
+    /// Builds completion from a player-selected pending score candidate.
+    init(from candidate: CupScoreCandidate) {
+        self.init(
+            scoredColor: candidate.scoringColor,
+            wasMatchingCupColor: candidate.isMatchingCupColor,
+            goodCount: candidate.goodCount,
+            passCount: candidate.passCount,
+            blemishCount: candidate.blemishCount,
+            adjustedGoodCount: candidate.adjustedGoodCount
+        )
+    }
+}
