@@ -29,16 +29,23 @@ struct Cup: Identifiable, Equatable, Codable {
     let isPotOfGold: Bool
     /// Gems currently in this cup.
     var gems: [Gem]
+    /// Set when this cup has scored. Completed cups stay visible but are skipped during placement.
+    var completion: CupCompletion?
+
+    /// True when this cup has scored and should be treated as removed for placement.
+    var isCompleted: Bool { completion != nil }
 
     init(
         id: UUID = UUID(),
         color: CupColor? = nil,
         isPotOfGold: Bool = false,
-        gems: [Gem] = []
+        gems: [Gem] = [],
+        completion: CupCompletion? = nil
     ) {
         self.id = id
         self.color = color
         self.isPotOfGold = isPotOfGold
         self.gems = gems
+        self.completion = completion
     }
 }

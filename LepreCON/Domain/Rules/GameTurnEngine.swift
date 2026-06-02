@@ -33,7 +33,8 @@ enum GameTurnEngine {
         session.currentRoll = roll
         session.isTurnPlacementComplete = false
         drawGemsIntoHand(session: &session, count: roll)
-        session.nextPlacementCupIndex = GameSetup.firstPlacementCupIndex
+        session.nextPlacementCupIndex = firstAvailablePlacementCupIndex(in: session)
+            ?? GameSetup.firstPlacementCupIndex
 
         return .success(())
     }
@@ -56,6 +57,10 @@ enum GameTurnEngine {
         }
 
         let cupIndex = session.nextPlacementCupIndex
+        guard !session.cups[cupIndex].isCompleted else {
+            return .failure(.invalidPlacementCupIndex)
+        }
+
         let cupHadGemsBeforePlacement = !session.cups[cupIndex].gems.isEmpty
 
         let gem = session.gemsInHand.remove(at: handIndex)
@@ -132,10 +137,39 @@ enum GameTurnEngine {
         session.cups[cupIndex].gems.removeAll()
     }
 
-    /// Moves placement to the next cup clockwise, wrapping from last cup to first.
+    /// Moves placement to the next available cup clockwise, skipping completed cups.
     static func advancePlacementIndex(session: inout GameSession) {
         let cupCount = session.cups.count
         guard cupCount > 0 else { return }
-        session.nextPlacementCupIndex = (session.nextPlacementCupIndex + 1) % cupCount
+
+        let nextStart = (session.nextPlacementCupIndex + 1) % cupCount
+        guard let nextIndex = nextAvailablePlacementCupIndex(in: session, startingFrom: nextStart) else {
+            // Every cup is completed — leave the index unchanged to avoid an infinite loop.
+            return
+        }
+        session.nextPlacementCupIndex = nextIndex
+    }
+
+    /// First placement cup for a new turn, skipping any completed cups from the rulebook start index.
+    static func firstAvailablePlacementCupIndex(in session: GameSession) -> Int? {
+        nextAvailablePlacementCupIndex(in: session, startingFrom: GameSetup.firstPlacementCupIndex)
+    }
+
+    /// Next cup index that accepts gems, searching clockwise from `startingFrom` (inclusive).
+    /// Returns nil when every cup on the board is completed.
+    static func nextAvailablePlacementCupIndex(
+        in session: GameSession,
+        startingFrom: Int
+    ) -> Int? {
+        let cupCount = session.cups.count
+        guard cupCount > 0 else { return nil }
+
+        for offset in 0..<cupCount {
+            let index = (startingFrom + offset) % cupCount
+            if !session.cups[index].isCompleted {
+                return index
+            }
+        }
+        return nil
     }
 }

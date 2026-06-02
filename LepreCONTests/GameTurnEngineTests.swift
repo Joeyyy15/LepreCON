@@ -364,4 +364,90 @@ final class GameTurnEngineTests: XCTestCase {
         // Since there is still another gem in hand, placement is not complete yet.
         XCTAssertFalse(session.isTurnPlacementComplete)
     }
+
+    // MARK: - Completed cup placement skipping
+
+    private func markCompleted(_ session: inout GameSession, cupIndex: Int, scoredColor: GemKind = .red) {
+        session.cups[cupIndex].completion = CupCompletion(
+            scoredColor: scoredColor,
+            wasMatchingCupColor: false,
+            goodCount: 5,
+            passCount: 0,
+            blemishCount: 0,
+            adjustedGoodCount: 5
+        )
+    }
+
+    func testBeginTurnSkipsCompletedFirstPlacementCup() {
+        var session = makePlayingSession()
+        markCompleted(&session, cupIndex: 0)
+
+        _ = GameTurnEngine.beginTurn(session: &session, roll: 1)
+
+        XCTAssertEqual(session.nextPlacementCupIndex, 1)
+    }
+
+    func testPlacementSkipsCompletedCup() {
+        var session = makePlayingSession(bag: [])
+        markCompleted(&session, cupIndex: 2) // red cup
+        session.gemsInHand = [Gem(kind: .yellow), Gem(kind: .green)]
+        session.currentRoll = 2
+        session.nextPlacementCupIndex = 1 // cloud2
+
+        _ = GameTurnEngine.placeGemInCurrentCup(session: &session, gemID: session.gemsInHand[0].id)
+
+        // After cloud2, skip completed red (2) and land on orange (3).
+        XCTAssertEqual(session.nextPlacementCupIndex, 3)
+    }
+
+    func testPlacementSkipsMultipleCompletedCupsInARow() {
+        var session = makePlayingSession(bag: [])
+        markCompleted(&session, cupIndex: 0)
+        markCompleted(&session, cupIndex: 1)
+        markCompleted(&session, cupIndex: 2)
+        session.nextPlacementCupIndex = 2
+
+        GameTurnEngine.advancePlacementIndex(session: &session)
+
+        XCTAssertEqual(session.nextPlacementCupIndex, 3)
+    }
+
+    func testPlacementStillIncludesPotOfGoldWhenNotCompleted() {
+        var session = makePlayingSession(bag: [])
+        for index in 0..<GameSetup.potOfGoldCupIndex {
+            markCompleted(&session, cupIndex: index)
+        }
+        session.nextPlacementCupIndex = 9 // cloud4
+
+        GameTurnEngine.advancePlacementIndex(session: &session)
+
+        XCTAssertEqual(session.nextPlacementCupIndex, GameSetup.potOfGoldCupIndex)
+        XCTAssertTrue(session.cups[GameSetup.potOfGoldCupIndex].isPotOfGold)
+        XCTAssertFalse(session.cups[GameSetup.potOfGoldCupIndex].isCompleted)
+    }
+
+    func testPlacementDoesNotInfiniteLoopWhenMostCupsAreCompleted() {
+        var session = makePlayingSession(bag: [])
+        for index in session.cups.indices where index != GameSetup.potOfGoldCupIndex {
+            markCompleted(&session, cupIndex: index)
+        }
+        session.nextPlacementCupIndex = GameSetup.potOfGoldCupIndex
+
+        GameTurnEngine.advancePlacementIndex(session: &session)
+
+        // Only the pot remains — index stays on the pot instead of looping forever.
+        XCTAssertEqual(session.nextPlacementCupIndex, GameSetup.potOfGoldCupIndex)
+    }
+
+    func testPlacementDoesNotInfiniteLoopWhenEveryCupIsCompleted() {
+        var session = makePlayingSession(bag: [])
+        for index in session.cups.indices {
+            markCompleted(&session, cupIndex: index)
+        }
+        session.nextPlacementCupIndex = 4
+
+        GameTurnEngine.advancePlacementIndex(session: &session)
+
+        XCTAssertEqual(session.nextPlacementCupIndex, 4)
+    }
 }
