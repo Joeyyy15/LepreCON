@@ -19,6 +19,7 @@ struct GameSessionFactory {
         var cups = GameSetup.makePhysicalCups()
         var gemsInBag = GameSetup.makeFullGemBag()
         GameSetup.placeSetupGemsInCups(cups: &cups, gemsInBag: &gemsInBag)
+        let unicornCupIndex = GameSetup.assignUnicornCupIndex(cups: cups)
 
         return GameSession(
             phase: .setup,
@@ -26,7 +27,8 @@ struct GameSessionFactory {
             currentPlayerIndex: 0,
             cups: cups,
             gemsInBag: gemsInBag,
-            unicornCupID: nil
+            unicornCupIndex: unicornCupIndex,
+            unicornCupID: cups[unicornCupIndex].id
         )
     }
 }

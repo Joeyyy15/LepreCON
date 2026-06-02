@@ -56,4 +56,35 @@ final class GameBoardDisplayStateTests: XCTestCase {
         let options = display.rainbowLanes.first { $0.cupIndex == 2 }?.scoring.pendingOptions ?? []
         XCTAssertGreaterThan(options.count, 1)
     }
+
+    func testDisplayStateMarksExactlyOneCupWithUnicorn() {
+        let session = GameSessionFactory().makeNewGame(playerNames: ["Alex"])
+        let display = GameBoardDisplayState.from(session: session)
+
+        let unicornCupCount =
+            display.rainbowLanes.filter(\.hasUnicorn).count
+            + display.bottomRow.filter { $0.cupSlot.hasUnicorn }.count
+
+        XCTAssertEqual(unicornCupCount, 1)
+        guard let unicornCupIndex = session.unicornCupIndex else {
+            XCTFail("Expected unicornCupIndex on new game")
+            return
+        }
+
+        let laneMatch = display.rainbowLanes.first { $0.cupIndex == unicornCupIndex }?.hasUnicorn == true
+        let bottomMatch = display.bottomRow.first { $0.cupSlot.cupIndex == unicornCupIndex }?.cupSlot.hasUnicorn == true
+        XCTAssertTrue(laneMatch || bottomMatch)
+    }
+
+    func testDisplayedUnicornCupMatchesSessionIndex() {
+        var session = GameSessionFactory().makeNewGame(playerNames: ["Alex"])
+        session.unicornCupIndex = 6
+        session.unicornCupID = session.cups[6].id
+
+        let display = GameBoardDisplayState.from(session: session)
+        let blueLane = display.rainbowLanes.first { $0.cupIndex == 6 }
+
+        XCTAssertEqual(blueLane?.hasUnicorn, true)
+        XCTAssertEqual(display.rainbowLanes.filter(\.hasUnicorn).count, 1)
+    }
 }

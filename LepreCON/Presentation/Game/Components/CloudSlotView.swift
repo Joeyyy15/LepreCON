@@ -13,6 +13,7 @@ struct CloudSlotView: View {
     let width: CGFloat
     let height: CGFloat
     var isHighlighted: Bool = false
+    var hasUnicorn: Bool = false
 
     var body: some View {
         VStack(spacing: 6) {
@@ -26,6 +27,12 @@ struct CloudSlotView: View {
                         .foregroundStyle(.black.opacity(0.45))
                 } else {
                     gemPile
+                }
+
+                if hasUnicorn {
+                    UnicornIndicatorView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                        .padding(4)
                 }
             }
             .frame(width: width, height: height)

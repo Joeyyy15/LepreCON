@@ -22,6 +22,7 @@ struct CupSlotDisplay: Equatable, Identifiable {
     let gemItems: [GemDisplayItem]
     let isHighlighted: Bool
     let scoring: CupScoringDisplay
+    let hasUnicorn: Bool
 
     var gemImageNames: [String] {
         gemItems.map(\.imageName)
@@ -36,6 +37,7 @@ struct RainbowLaneDisplay: Equatable, Identifiable {
     let gemItems: [GemDisplayItem]
     let isHighlighted: Bool
     let scoring: CupScoringDisplay
+    let hasUnicorn: Bool
 
     var gemImageNames: [String] {
         gemItems.map(\.imageName)
@@ -94,7 +96,8 @@ struct GameBoardDisplayState: Equatable {
                 cupIndex: index,
                 gemItems: cup.gems.map { GemDisplayItem(gem: $0) },
                 isHighlighted: highlightIndex == index,
-                scoring: scoringDisplay(forCupIndex: index, session: session)
+                scoring: scoringDisplay(forCupIndex: index, session: session),
+                hasUnicorn: session.unicornCupIndex == index
             )
         }
 
@@ -106,7 +109,8 @@ struct GameBoardDisplayState: Equatable {
                 laneColor: color,
                 gemItems: cup.gems.map { GemDisplayItem(gem: $0) },
                 isHighlighted: highlightIndex == cupIndex,
-                scoring: scoringDisplay(forCupIndex: cupIndex, session: session)
+                scoring: scoringDisplay(forCupIndex: cupIndex, session: session),
+                hasUnicorn: session.unicornCupIndex == cupIndex
             )
         }
 

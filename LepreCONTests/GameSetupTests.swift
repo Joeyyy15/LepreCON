@@ -86,4 +86,34 @@ final class GameSetupTests: XCTestCase {
     }
     XCTAssertEqual(bag.count, GameSetup.totalGemCount - cups.count)
   }
+
+  // MARK: - Unicorn setup
+
+  func testValidUnicornCupIndicesExcludePot() {
+    let cups = GameSetup.makePhysicalCups()
+    let valid = GameSetup.validUnicornCupIndices(cups: cups)
+
+    XCTAssertEqual(valid.count, 10)
+    XCTAssertFalse(valid.contains(GameSetup.potOfGoldCupIndex))
+  }
+
+  func testUnicornCupIndexReturnsNilForDiscardAndPotRolls() {
+    let cups = GameSetup.makePhysicalCups()
+
+    XCTAssertNil(GameSetup.unicornCupIndex(forPlacementRoll: 12, cups: cups))
+    XCTAssertNil(GameSetup.unicornCupIndex(forPlacementRoll: 11, cups: cups))
+    XCTAssertEqual(GameSetup.unicornCupIndex(forPlacementRoll: 1, cups: cups), 0)
+    XCTAssertEqual(GameSetup.unicornCupIndex(forPlacementRoll: 10, cups: cups), 9)
+  }
+
+  func testAssignUnicornCupIndexRerollsDiscardAndPotRolls() {
+    let cups = GameSetup.makePhysicalCups()
+    var rolls = [12, 11, 3].makeIterator()
+
+    let index = GameSetup.assignUnicornCupIndex(cups: cups) {
+      rolls.next() ?? 3
+    }
+
+    XCTAssertEqual(index, 2)
+  }
 }

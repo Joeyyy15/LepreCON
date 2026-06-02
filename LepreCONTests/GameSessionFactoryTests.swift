@@ -95,4 +95,18 @@ final class GameSessionFactoryTests: XCTestCase {
         XCTAssertEqual(GameSetup.firstPlacementCupIndex, 0)
         XCTAssertEqual(GameSetup.potOfGoldCupIndex, 10)
     }
+
+    func testMakeNewGameAssignsUnicornToValidCup() {
+        let session = factory.makeNewGame(playerNames: ["Alex"])
+
+        guard let unicornCupIndex = session.unicornCupIndex else {
+            XCTFail("Expected unicornCupIndex to be assigned during setup")
+            return
+        }
+
+        XCTAssertTrue(GameSetup.validUnicornCupIndices(cups: session.cups).contains(unicornCupIndex))
+        XCTAssertNotEqual(unicornCupIndex, GameSetup.potOfGoldCupIndex)
+        XCTAssertFalse(session.cups[unicornCupIndex].isPotOfGold)
+        XCTAssertEqual(session.unicornCupID, session.cups[unicornCupIndex].id)
+    }
 }

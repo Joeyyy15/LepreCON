@@ -14,6 +14,7 @@ struct RainbowLaneView: View {
     let width: CGFloat
     let height: CGFloat
     var isHighlighted: Bool = false
+    var hasUnicorn: Bool = false
 
     var body: some View {
         VStack(spacing: 6) {
@@ -36,6 +37,12 @@ struct RainbowLaneView: View {
                     }
                 }
                 .padding(.bottom, 6)
+
+                if hasUnicorn {
+                    UnicornIndicatorView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                        .padding(.top, 4)
+                }
             }
 
             Text(laneColor.displayName)

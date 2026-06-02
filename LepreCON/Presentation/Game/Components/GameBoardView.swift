@@ -64,7 +64,8 @@ struct GameBoardView: View {
                         gemImageNames: lane.gemImageNames,
                         width: metrics.laneWidth,
                         height: metrics.laneHeight,
-                        isHighlighted: lane.isHighlighted
+                        isHighlighted: lane.isHighlighted,
+                        hasUnicorn: lane.hasUnicorn
                     )
 
                     if lane.scoring.isCompleted || lane.scoring.hasPendingOptions {
@@ -92,7 +93,8 @@ struct GameBoardView: View {
                             gemImageNames: slot.cupSlot.gemImageNames,
                             width: metrics.cloudWidth,
                             height: metrics.cloudHeight,
-                            isHighlighted: slot.cupSlot.isHighlighted
+                            isHighlighted: slot.cupSlot.isHighlighted,
+                            hasUnicorn: slot.cupSlot.hasUnicorn
                         )
                     case .pot:
                         PotSlotView(
