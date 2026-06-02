@@ -57,6 +57,15 @@ struct BottomRowSlotDisplay: Equatable, Identifiable {
     var id: UUID { cupSlot.id }
 }
 
+/// Results shown when the game is over.
+struct GameOverDisplay: Equatable {
+    let didWin: Bool
+    let isRainbowComplete: Bool
+    let finalScore: FinalScoreDisplay
+    let completedCupCount: Int
+    let requiredCupCount: Int
+}
+
 /// Minimal final-score summary for the game screen.
 struct FinalScoreDisplay: Equatable {
     let completedColorCount: Int
@@ -84,6 +93,8 @@ struct GameBoardDisplayState: Equatable {
     /// Cups with pending score options the player can confirm (after placement ends).
     let pendingScoringCups: [CupScoringRowDisplay]
     let finalScore: FinalScoreDisplay
+    let isGameOver: Bool
+    let gameOver: GameOverDisplay?
 
     /// Domain cup index → cloud label (1–4) for white/cloud cups only.
     static func cloudNumber(forCupIndex index: Int) -> Int? {
@@ -152,6 +163,17 @@ struct GameBoardDisplayState: Equatable {
         }
 
         let finalScoreResult = FinalScoreEvaluator.evaluate(session: session)
+        let completion = GameCompletionDetector.status(for: session)
+        let finalScore = finalScoreDisplay(from: finalScoreResult)
+        let gameOver: GameOverDisplay? = completion.isGameOver
+            ? GameOverDisplay(
+                didWin: completion.didWin,
+                isRainbowComplete: completion.isRainbowComplete,
+                finalScore: finalScore,
+                completedCupCount: GameCompletionDetector.completedScoreableCupCount(in: session),
+                requiredCupCount: GameCompletionDetector.scoreableCupCount
+            )
+            : nil
 
         return GameBoardDisplayState(
             rainbowLanes: [
@@ -170,7 +192,9 @@ struct GameBoardDisplayState: Equatable {
             canPlaceFromHand: GameTurnEngine.canPlaceFromHand(in: session),
             isTurnPlacementComplete: session.isTurnPlacementComplete,
             pendingScoringCups: pendingScoringCups,
-            finalScore: finalScoreDisplay(from: finalScoreResult)
+            finalScore: finalScore,
+            isGameOver: completion.isGameOver,
+            gameOver: gameOver
         )
     }
 
@@ -195,7 +219,7 @@ struct GameBoardDisplayState: Equatable {
             totalPoints: result.totalPoints,
             goldPoints: result.goldPoints,
             unicornPoints: result.unicornPoints,
-            rankDisplayName: result.isRainbowComplete ? result.rank.displayName : nil,
+            rankDisplayName: result.rank.displayName,
             summaryLine: summaryLine
         )
     }

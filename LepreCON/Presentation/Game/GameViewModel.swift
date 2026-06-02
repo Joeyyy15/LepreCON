@@ -56,9 +56,20 @@ final class GameViewModel: ObservableObject {
         FinalScoreEvaluator.evaluate(session: session)
     }
 
-    /// True when all six rainbow colors have been scored at least once.
-    var isGameComplete: Bool {
-        GameCompletionDetector.isGameComplete(session: session)
+    var gameCompletionStatus: GameCompletionStatus {
+        GameCompletionDetector.status(for: session)
+    }
+
+    var isGameOver: Bool {
+        gameCompletionStatus.isGameOver
+    }
+
+    var isRainbowComplete: Bool {
+        gameCompletionStatus.isRainbowComplete
+    }
+
+    var didWin: Bool {
+        gameCompletionStatus.didWin
     }
 
     /// True after placement when the player must score or skip before rolling again.
@@ -67,12 +78,13 @@ final class GameViewModel: ObservableObject {
     }
 
     var canSkipScoring: Bool {
-        isInScoringChoicePhase
+        isInScoringChoicePhase && !isGameOver
     }
 
     /// Clears pending score choices so the player can roll again without confirming a score.
     func skipScoringChoices() {
         PendingScoreDetector.clearPendingScoreChoices(in: &session)
+        applyGameOverIfNeeded()
     }
 
     /// Pending scoring options for one cup, mapped for the UI.
@@ -82,11 +94,15 @@ final class GameViewModel: ObservableObject {
 
     /// Player confirms one pending scoring color for a cup.
     func confirmScore(cupIndex: Int, scoringColor: GemKind) -> Result<Void, ScoreConfirmationError> {
-        ScoreConfirmationEngine.confirmScore(
+        let result = ScoreConfirmationEngine.confirmScore(
             session: &session,
             cupIndex: cupIndex,
             scoringColor: scoringColor
         )
+        if case .success = result {
+            applyGameOverIfNeeded()
+        }
+        return result
     }
 
     init(
@@ -121,6 +137,14 @@ final class GameViewModel: ObservableObject {
 
     /// Places the chosen hand gem into the currently highlighted cup on the board path.
     func placeGemInCurrentCup(gemID: UUID) -> Result<Void, GameTurnError> {
-        GameTurnEngine.placeGemInCurrentCup(session: &session, gemID: gemID)
+        let result = GameTurnEngine.placeGemInCurrentCup(session: &session, gemID: gemID)
+        if case .success = result {
+            applyGameOverIfNeeded()
+        }
+        return result
+    }
+
+    private func applyGameOverIfNeeded() {
+        GameCompletionDetector.applyGameOverIfNeeded(to: &session)
     }
 }

@@ -29,6 +29,7 @@ enum GameTurnEngine {
     /// True when the player may roll D12 (no active turn and no unresolved score choices).
     static func canRollD12(in session: GameSession) -> Bool {
         session.phase == .playing
+            && !GameCompletionDetector.isGameOver(session: session)
             && !isTurnInProgress(in: session)
             && session.pendingScoreChoices.isEmpty
     }
@@ -37,6 +38,7 @@ enum GameTurnEngine {
     /// the first placement cup (first cloud after the pot of gold).
     static func beginTurn(session: inout GameSession, roll: Int) -> Result<Void, GameTurnError> {
         guard session.phase == .playing else { return .failure(.gameNotPlaying) }
+        guard !GameCompletionDetector.isGameOver(session: session) else { return .failure(.gameNotPlaying) }
         guard (1...12).contains(roll) else { return .failure(.invalidRoll) }
         guard !isTurnInProgress(in: session) else { return .failure(.turnAlreadyInProgress) }
         guard session.pendingScoreChoices.isEmpty else { return .failure(.pendingScoreChoicesUnresolved) }
@@ -131,7 +133,10 @@ enum GameTurnEngine {
 
     /// True when the player may place gems from hand (turn active and hand not empty).
     static func canPlaceFromHand(in session: GameSession) -> Bool {
-        isTurnInProgress(in: session) && !session.gemsInHand.isEmpty
+        session.phase == .playing
+            && !GameCompletionDetector.isGameOver(session: session)
+            && isTurnInProgress(in: session)
+            && !session.gemsInHand.isEmpty
     }
 
     // MARK: - Helpers

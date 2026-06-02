@@ -223,11 +223,13 @@ final class GameViewModelTests: XCTestCase {
         await MainActor.run {
             var session = GameSessionFactory().makeNewGame(playerNames: ["Player 1"])
             session.phase = .playing
-            session.gemsInBag = []
+            session.gemsInBag = [Gem(kind: .blue)]
             session.gemsInHand = [Gem(kind: .red)]
             session.currentRoll = 1
             session.nextPlacementCupIndex = GameSetup.firstPlacementCupIndex
             session.cups[0].gems = []
+            session.unicornCupIndex = 9
+            session.unicornCupID = session.cups[9].id
 
             let viewModel = GameViewModel(session: session)
 
@@ -240,6 +242,7 @@ final class GameViewModelTests: XCTestCase {
 
             XCTAssertTrue(viewModel.session.isTurnPlacementComplete)
             XCTAssertTrue(viewModel.session.gemsInHand.isEmpty)
+            XCTAssertFalse(viewModel.isGameOver)
             XCTAssertTrue(viewModel.canRollD12)
         }
     }
@@ -421,7 +424,8 @@ final class GameViewModelTests: XCTestCase {
 
             XCTAssertEqual(viewModel.finalScoreResult.colorPoints, 2)
             XCTAssertEqual(viewModel.finalScoreResult.completedColorScores.count, 1)
-            XCTAssertFalse(viewModel.isGameComplete)
+            XCTAssertFalse(viewModel.isGameOver)
+            XCTAssertFalse(viewModel.isRainbowComplete)
         }
     }
 
@@ -437,6 +441,28 @@ final class GameViewModelTests: XCTestCase {
             XCTAssertEqual(viewModel.boardDisplayState.finalScore.completedColorCount, 1)
             XCTAssertEqual(viewModel.boardDisplayState.finalScore.colorPoints, 2)
             XCTAssertTrue(viewModel.boardDisplayState.finalScore.missingColorNames.contains("Orange"))
+        }
+    }
+
+    func testSkipScoringWithEmptyBagEndsGame() async {
+        await MainActor.run {
+            var session = GameSessionFactory().makeNewGame(playerNames: ["Player 1"])
+            session.phase = .playing
+            for index in session.cups.indices {
+                session.cups[index].gems = []
+            }
+            session.gemsInBag = []
+            session.gemsInHand = []
+            session.isTurnPlacementComplete = true
+            session.cups[2].gems = Array(repeating: Gem(kind: .red), count: 5)
+            PendingScoreDetector.refreshPendingScoreChoices(in: &session)
+
+            let viewModel = GameViewModel(session: session)
+            viewModel.skipScoringChoices()
+
+            XCTAssertEqual(viewModel.session.phase, .finished)
+            XCTAssertTrue(viewModel.isGameOver)
+            XCTAssertFalse(viewModel.canRollD12)
         }
     }
 

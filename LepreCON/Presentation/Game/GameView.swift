@@ -37,7 +37,8 @@ struct GameView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 24))
                     .shadow(color: .black.opacity(0.18), radius: 10, x: 0, y: 6)
 
-                if !viewModel.boardDisplayState.pendingScoringCups.isEmpty {
+                if !viewModel.isGameOver,
+                   !viewModel.boardDisplayState.pendingScoringCups.isEmpty {
                     CupScoringControlsSection(
                         rows: viewModel.boardDisplayState.pendingScoringCups,
                         onConfirmScore: confirmScore,
@@ -46,7 +47,10 @@ struct GameView: View {
                 }
 
                 statusSection
-                turnControlsSection
+
+                if !viewModel.isGameOver {
+                    turnControlsSection
+                }
                 handSection
                 discardSection
                 gameControlsSection
@@ -76,7 +80,8 @@ struct GameView: View {
                     .font(.subheadline.weight(.semibold))
             }
 
-            if viewModel.boardDisplayState.isTurnPlacementComplete {
+            if !viewModel.isGameOver,
+               viewModel.boardDisplayState.isTurnPlacementComplete {
                 if viewModel.isInScoringChoicePhase {
                     Text("Score a cup below or choose Skip Scoring to continue.")
                         .font(.caption)
@@ -88,15 +93,54 @@ struct GameView: View {
                 }
             }
 
-            Text(viewModel.boardDisplayState.finalScore.summaryLine)
+            if let gameOver = viewModel.boardDisplayState.gameOver {
+                gameOverResultsSection(gameOver)
+            } else {
+                Text(viewModel.boardDisplayState.finalScore.summaryLine)
+                    .font(.subheadline.weight(.semibold))
+
+                if viewModel.isRainbowComplete {
+                    Text("Rainbow complete — keep playing until the game ends.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    private func gameOverResultsSection(_ gameOver: GameOverDisplay) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Game Over")
+                .font(.headline)
+
+            Text("Final Score: \(gameOver.finalScore.totalPoints)")
                 .font(.subheadline.weight(.semibold))
 
-            if viewModel.isGameComplete {
-                Text("Game complete — all rainbow colors collected.")
+            Text("Rank: \(gameOver.finalScore.rankDisplayName ?? gameOver.finalScore.summaryLine)")
+                .font(.subheadline)
+
+            Text("Rainbow Complete: \(gameOver.isRainbowComplete ? "Yes" : "No")")
+                .font(.subheadline)
+
+            if gameOver.didWin {
+                Text("You collected the full rainbow!")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else if !gameOver.finalScore.missingColorNames.isEmpty {
+                Text("Missing: \(gameOver.finalScore.missingColorNames.joined(separator: ", "))")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+
+            Text("Color: \(gameOver.finalScore.colorPoints) · Gold: \(gameOver.finalScore.goldPoints) · Unicorn: \(gameOver.finalScore.unicornPoints)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            Text("Completed cups: \(gameOver.completedCupCount)/\(gameOver.requiredCupCount)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var turnControlsSection: some View {

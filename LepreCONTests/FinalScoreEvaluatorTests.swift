@@ -242,11 +242,12 @@ final class FinalScoreEvaluatorTests: XCTestCase {
 
     // MARK: - Game completion
 
-    func testGameCompletionDetectorMatchesRainbowComplete() {
+    func testRainbowCompleteAloneDoesNotMakeGameOver() {
         var session = makeSession()
         markAllSixColorsNonMatching(&session)
 
-        XCTAssertTrue(GameCompletionDetector.isGameComplete(session: session))
+        XCTAssertTrue(GameCompletionDetector.isRainbowComplete(session: session))
+        XCTAssertFalse(GameCompletionDetector.isGameOver(session: session))
     }
 
     // MARK: - Helpers
