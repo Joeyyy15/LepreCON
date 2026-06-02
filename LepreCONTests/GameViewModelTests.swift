@@ -350,4 +350,84 @@ final class GameViewModelTests: XCTestCase {
         }
     }
 
+    func testCanRollD12IsFalseWhenPendingScoreChoicesExist() async {
+        await MainActor.run {
+            let viewModel = makeViewModelWithPendingScore(cupIndex: 2, gemKinds: Array(repeating: .red, count: 5))
+
+            XCTAssertFalse(viewModel.canRollD12)
+            XCTAssertTrue(viewModel.isInScoringChoicePhase)
+        }
+    }
+
+    func testSkipScoringChoicesClearsPendingAndEnablesRoll() async {
+        await MainActor.run {
+            let viewModel = makeViewModelWithPendingScore(cupIndex: 2, gemKinds: Array(repeating: .red, count: 5))
+
+            viewModel.skipScoringChoices()
+
+            XCTAssertTrue(viewModel.session.pendingScoreChoices.isEmpty)
+            XCTAssertTrue(viewModel.boardDisplayState.pendingScoringCups.isEmpty)
+            XCTAssertFalse(viewModel.isInScoringChoicePhase)
+            XCTAssertTrue(viewModel.canRollD12)
+        }
+    }
+
+    func testConfirmingOneScoreKeepsRollDisabledWhenOtherPendingChoicesRemain() async {
+        await MainActor.run {
+            var session = GameSessionFactory().makeNewGame(playerNames: ["Player 1"])
+            session.phase = .playing
+            for index in session.cups.indices {
+                session.cups[index].gems = []
+            }
+            session.cups[2].gems = Array(repeating: Gem(kind: .red), count: 5)
+            session.cups[6].gems = Array(repeating: Gem(kind: .blue), count: 5)
+            session.isTurnPlacementComplete = true
+            PendingScoreDetector.refreshPendingScoreChoices(in: &session)
+
+            let viewModel = GameViewModel(session: session)
+            _ = viewModel.confirmScore(cupIndex: 2, scoringColor: .red)
+
+            XCTAssertFalse(viewModel.canRollD12)
+            XCTAssertTrue(viewModel.isInScoringChoicePhase)
+        }
+    }
+
+    func testConfirmingLastPendingScoreEnablesRoll() async {
+        await MainActor.run {
+            let viewModel = makeViewModelWithPendingScore(cupIndex: 2, gemKinds: Array(repeating: .red, count: 5))
+
+            _ = viewModel.confirmScore(cupIndex: 2, scoringColor: .red)
+
+            XCTAssertTrue(viewModel.session.pendingScoreChoices.isEmpty)
+            XCTAssertTrue(viewModel.canRollD12)
+            XCTAssertFalse(viewModel.isInScoringChoicePhase)
+        }
+    }
+
+    func testBeginTurnFailsWhilePendingScoreChoicesExist() async {
+        await MainActor.run {
+            var session = GameSessionFactory().makeNewGame(playerNames: ["Player 1"])
+            session.phase = .playing
+            for index in session.cups.indices {
+                session.cups[index].gems = []
+            }
+            session.cups[2].gems = Array(repeating: Gem(kind: .red), count: 5)
+            session.isTurnPlacementComplete = true
+            session.gemsInBag = [Gem(kind: .green)]
+            PendingScoreDetector.refreshPendingScoreChoices(in: &session)
+
+            let viewModel = GameViewModel(session: session)
+
+            let result = viewModel.beginTurn(roll: 1)
+
+            switch result {
+            case .success:
+                XCTFail("Expected beginTurn to fail while pending score choices exist")
+            case .failure(let error):
+                XCTAssertEqual(error, .pendingScoreChoicesUnresolved)
+            }
+            XCTAssertFalse(viewModel.session.pendingScoreChoices.isEmpty)
+        }
+    }
+
 }

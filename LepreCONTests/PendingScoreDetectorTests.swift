@@ -178,7 +178,7 @@ final class PendingScoreDetectorTests: XCTestCase {
         XCTAssertNil(session.cups[6].completion)
     }
 
-    func testStartingNewTurnClearsStalePendingScoreChoices() {
+    func testStartingNewTurnRequiresSkippingOrConfirmingPendingScoresFirst() {
         var session = makePlayingSession()
         session.pendingScoreChoices = [
             PendingScoreChoice(
@@ -199,8 +199,26 @@ final class PendingScoreDetectorTests: XCTestCase {
         session.currentRoll = 1
         session.gemsInBag = [Gem(kind: .green)]
 
-        _ = GameTurnEngine.beginTurn(session: &session, roll: 1)
+        let blockedResult = GameTurnEngine.beginTurn(session: &session, roll: 1)
+        if case .failure(let error) = blockedResult {
+            XCTAssertEqual(error, .pendingScoreChoicesUnresolved)
+        } else {
+            XCTFail("Expected beginTurn to fail while pending score choices exist")
+        }
+        XCTAssertFalse(session.pendingScoreChoices.isEmpty)
 
+        PendingScoreDetector.clearPendingScoreChoices(in: &session)
+        assertSuccess(GameTurnEngine.beginTurn(session: &session, roll: 1))
         XCTAssertTrue(session.pendingScoreChoices.isEmpty)
+    }
+
+    private func assertSuccess(
+        _ result: Result<Void, GameTurnError>,
+        file: StaticString = #file,
+        line: UInt = #line
+    ) {
+        if case .failure(let error) = result {
+            XCTFail("Expected success, got \(error)", file: file, line: line)
+        }
     }
 }

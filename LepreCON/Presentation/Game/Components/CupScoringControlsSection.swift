@@ -10,13 +10,14 @@ import SwiftUI
 struct CupScoringControlsSection: View {
     let rows: [CupScoringRowDisplay]
     let onConfirmScore: (Int, GemKind) -> Void
+    let onSkipScoring: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Score a Cup")
                 .font(.headline)
 
-            Text("Choose which color to score. Matching the cup color scores more later.")
+            Text("Score a cup below or choose Skip Scoring to continue.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -36,6 +37,11 @@ struct CupScoringControlsSection: View {
                     }
                 }
             }
+
+            Button("Skip Scoring") {
+                onSkipScoring()
+            }
+            .buttonStyle(.bordered)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

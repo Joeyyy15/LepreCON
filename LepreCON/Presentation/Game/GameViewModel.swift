@@ -40,7 +40,7 @@ final class GameViewModel: ObservableObject {
     }
 
     var canRollD12: Bool {
-        boardDisplayState.canRollD12
+        GameTurnEngine.canRollD12(in: session)
     }
 
     var canPlaceFromHand: Bool {
@@ -49,6 +49,20 @@ final class GameViewModel: ObservableObject {
 
     var hasPendingScoreChoices: Bool {
         !session.pendingScoreChoices.isEmpty
+    }
+
+    /// True after placement when the player must score or skip before rolling again.
+    var isInScoringChoicePhase: Bool {
+        session.isTurnPlacementComplete && hasPendingScoreChoices
+    }
+
+    var canSkipScoring: Bool {
+        isInScoringChoicePhase
+    }
+
+    /// Clears pending score choices so the player can roll again without confirming a score.
+    func skipScoringChoices() {
+        PendingScoreDetector.clearPendingScoreChoices(in: &session)
     }
 
     /// Pending scoring options for one cup, mapped for the UI.

@@ -17,6 +17,8 @@ enum GameTurnError: Error, Equatable {
     case noActiveTurn
     case gemNotInHand
     case invalidPlacementCupIndex
+    /// Placement finished but the player must confirm or skip pending score choices first.
+    case pendingScoreChoicesUnresolved
 }
 
 /// Turn placement and drawing logic for LepreCON.
@@ -24,12 +26,20 @@ enum GameTurnEngine {
 
     // MARK: - Turn lifecycle
 
+    /// True when the player may roll D12 (no active turn and no unresolved score choices).
+    static func canRollD12(in session: GameSession) -> Bool {
+        session.phase == .playing
+            && !isTurnInProgress(in: session)
+            && session.pendingScoreChoices.isEmpty
+    }
+
     /// Starts a turn: records the D12 roll, draws gems from the bag into hand, and sets
     /// the first placement cup (first cloud after the pot of gold).
     static func beginTurn(session: inout GameSession, roll: Int) -> Result<Void, GameTurnError> {
         guard session.phase == .playing else { return .failure(.gameNotPlaying) }
         guard (1...12).contains(roll) else { return .failure(.invalidRoll) }
         guard !isTurnInProgress(in: session) else { return .failure(.turnAlreadyInProgress) }
+        guard session.pendingScoreChoices.isEmpty else { return .failure(.pendingScoreChoicesUnresolved) }
 
         session.currentRoll = roll
         session.isTurnPlacementComplete = false

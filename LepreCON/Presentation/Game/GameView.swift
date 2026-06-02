@@ -40,7 +40,8 @@ struct GameView: View {
                 if !viewModel.boardDisplayState.pendingScoringCups.isEmpty {
                     CupScoringControlsSection(
                         rows: viewModel.boardDisplayState.pendingScoringCups,
-                        onConfirmScore: confirmScore
+                        onConfirmScore: confirmScore,
+                        onSkipScoring: skipScoring
                     )
                 }
 
@@ -76,8 +77,8 @@ struct GameView: View {
             }
 
             if viewModel.boardDisplayState.isTurnPlacementComplete {
-                if viewModel.hasPendingScoreChoices {
-                    Text("Placement complete — score a cup below, or roll again for the next turn")
+                if viewModel.isInScoringChoicePhase {
+                    Text("Score a cup below or choose Skip Scoring to continue.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else {
@@ -169,8 +170,8 @@ struct GameView: View {
         switch viewModel.placeGemInCurrentCup(gemID: gemID) {
         case .success:
             if viewModel.session.isTurnPlacementComplete {
-                if viewModel.hasPendingScoreChoices {
-                    lastActionMessage = "Placement finished. Score a cup below if you want."
+                if viewModel.isInScoringChoicePhase {
+                    lastActionMessage = "Placement finished. Score a cup or choose Skip Scoring."
                 } else {
                     lastActionMessage = "Placement finished. Roll D12 for your next turn."
                 }
@@ -185,10 +186,19 @@ struct GameView: View {
     private func confirmScore(cupIndex: Int, scoringColor: GemKind) {
         switch viewModel.confirmScore(cupIndex: cupIndex, scoringColor: scoringColor) {
         case .success:
-            lastActionMessage = "Scored \(scoringColor.scoringDisplayName)."
+            if viewModel.isInScoringChoicePhase {
+                lastActionMessage = "Scored \(scoringColor.scoringDisplayName). Score another cup or choose Skip Scoring."
+            } else {
+                lastActionMessage = "Scored \(scoringColor.scoringDisplayName). Roll D12 when ready."
+            }
         case .failure(let error):
             lastActionMessage = scoreConfirmationErrorMessage(error)
         }
+    }
+
+    private func skipScoring() {
+        viewModel.skipScoringChoices()
+        lastActionMessage = "Scoring skipped. Roll D12 when ready."
     }
 
     private func scoreConfirmationErrorMessage(_ error: ScoreConfirmationError) -> String {
@@ -210,6 +220,7 @@ struct GameView: View {
         case .noActiveTurn: return "Roll D12 and draw gems before placing."
         case .gemNotInHand: return "That gem is not in your hand."
         case .invalidPlacementCupIndex: return "Invalid cup for placement."
+        case .pendingScoreChoicesUnresolved: return "Score a cup or choose Skip Scoring before rolling again."
         }
     }
 }

@@ -146,7 +146,7 @@ struct GameBoardDisplayState: Equatable {
             handGems: session.gemsInHand.map { GemDisplayItem(gem: $0) },
             discardGems: session.discardPile.map { GemDisplayItem(gem: $0) },
             currentRoll: session.currentRoll,
-            canRollD12: session.phase == .playing && !GameTurnEngine.isTurnInProgress(in: session),
+            canRollD12: GameTurnEngine.canRollD12(in: session),
             canPlaceFromHand: GameTurnEngine.canPlaceFromHand(in: session),
             isTurnPlacementComplete: session.isTurnPlacementComplete,
             pendingScoringCups: pendingScoringCups
