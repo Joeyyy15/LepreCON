@@ -34,10 +34,11 @@ struct GameSession: Identifiable, Equatable, Codable {
     var currentRoll: Int?
     /// Index into `cups` where the next gem should be placed (moves clockwise each placement).
     var nextPlacementCupIndex: Int
-    /// Whether the unicorn is on the board and which cup holds it, if any.
-    var isTurnPlacementComplete: Bool
     /// True after placement stops and the game is ready for resolution rules.
-    /// Later this will let us run unicorn, poop, scoring, and magic cleanup in order.
+    var isTurnPlacementComplete: Bool
+    /// Cups the player may choose to score after placement ends. Cleared when a new turn starts.
+    var pendingScoreChoices: [PendingScoreChoice]
+    /// Whether the unicorn is on the board and which cup holds it, if any.
     var unicornCupID: UUID?
 
     init(
@@ -52,6 +53,7 @@ struct GameSession: Identifiable, Equatable, Codable {
         currentRoll: Int? = nil,
         nextPlacementCupIndex: Int = 0,
         isTurnPlacementComplete: Bool = false,
+        pendingScoreChoices: [PendingScoreChoice] = [],
         unicornCupID: UUID? = nil
     ) {
         self.id = id
@@ -65,6 +67,7 @@ struct GameSession: Identifiable, Equatable, Codable {
         self.currentRoll = currentRoll
         self.nextPlacementCupIndex = nextPlacementCupIndex
         self.isTurnPlacementComplete = isTurnPlacementComplete
+        self.pendingScoreChoices = pendingScoreChoices
         self.unicornCupID = unicornCupID
     }
 }

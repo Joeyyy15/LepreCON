@@ -32,6 +32,7 @@ enum GameTurnEngine {
 
         session.currentRoll = roll
         session.isTurnPlacementComplete = false
+        PendingScoreDetector.clearPendingScoreChoices(in: &session)
         drawGemsIntoHand(session: &session, count: roll)
         session.nextPlacementCupIndex = firstAvailablePlacementCupIndex(in: session)
             ?? GameSetup.firstPlacementCupIndex
@@ -72,8 +73,7 @@ enum GameTurnEngine {
             scoopCupIntoHand(session: &session, cupIndex: cupIndex)
             advancePlacementIndex(session: &session)
         } else if wasFinalGemInHand {
-            session.isTurnPlacementComplete = true
-            // TODO: End-of-turn resolution order — Unicorn → Poop → Score.
+            finishPlacementPhase(session: &session)
         } else {
             advancePlacementIndex(session: &session)
         }
@@ -97,11 +97,19 @@ enum GameTurnEngine {
         session.discardPile.append(gem)
 
         if session.gemsInHand.isEmpty {
-            session.isTurnPlacementComplete = true
-            // TODO: End-of-turn resolution order — Unicorn → Poop → Score (magic on discard).
+            finishPlacementPhase(session: &session)
         }
 
         return .success(())
+    }
+
+    // MARK: - Placement phase completion
+
+    /// Marks placement finished and refreshes pending score choices for player review.
+    private static func finishPlacementPhase(session: inout GameSession) {
+        session.isTurnPlacementComplete = true
+        PendingScoreDetector.refreshPendingScoreChoices(in: &session)
+        // TODO: End-of-turn resolution order — Unicorn → Poop → Score (player confirms score).
     }
 
     // MARK: - Turn state queries

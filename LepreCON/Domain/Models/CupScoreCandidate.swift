@@ -9,7 +9,7 @@
 import Foundation
 
 /// A single scoring possibility for one cup and one rainbow color.
-struct CupScoreCandidate: Equatable {
+struct CupScoreCandidate: Equatable, Codable {
     /// The rainbow color being scored (red through purple).
     let scoringColor: GemKind
     /// Gems of the scoring color plus clear gems (clear counts as the chosen color).
