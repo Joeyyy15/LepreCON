@@ -49,14 +49,16 @@ enum ScoreConfirmationEngine {
             return .failure(.scoringCandidateNotAvailable)
         }
 
-        session.cups[cupIndex].completion = CupCompletion(from: candidate)
-
-        let moveGoldResult = moveGoldToPotOfGold(session: &session, fromCupIndex: cupIndex)
-        if case .failure(let error) = moveGoldResult {
-            return .failure(error)
+        guard let potIndex = potOfGoldIndex(in: session) else {
+            return .failure(.potOfGoldMissing)
         }
 
-        session.cups[cupIndex].gems.removeAll()
+        applyConfirmedScore(
+            session: &session,
+            cupIndex: cupIndex,
+            potIndex: potIndex,
+            candidate: candidate
+        )
 
         PendingScoreDetector.refreshPendingScoreChoices(in: &session)
 
@@ -65,18 +67,20 @@ enum ScoreConfirmationEngine {
 
     // MARK: - Helpers
 
-    private static func moveGoldToPotOfGold(
-        session: inout GameSession,
-        fromCupIndex cupIndex: Int
-    ) -> Result<Void, ScoreConfirmationError> {
-        guard let potIndex = session.cups.firstIndex(where: { $0.isPotOfGold }) else {
-            return .failure(.potOfGoldMissing)
-        }
+    private static func potOfGoldIndex(in session: GameSession) -> Int? {
+        session.cups.firstIndex(where: { $0.isPotOfGold })
+    }
 
+    /// Applies score mutations after all validation passes. Pot index is guaranteed valid.
+    private static func applyConfirmedScore(
+        session: inout GameSession,
+        cupIndex: Int,
+        potIndex: Int,
+        candidate: CupScoreCandidate
+    ) {
         let goldGems = session.cups[cupIndex].gems.filter { $0.kind == .gold }
         session.cups[potIndex].gems.append(contentsOf: goldGems)
-        session.cups[cupIndex].gems.removeAll { $0.kind == .gold }
-
-        return .success(())
+        session.cups[cupIndex].gems.removeAll()
+        session.cups[cupIndex].completion = CupCompletion(from: candidate)
     }
 }

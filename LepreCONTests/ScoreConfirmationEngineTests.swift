@@ -220,4 +220,23 @@ final class ScoreConfirmationEngineTests: XCTestCase {
 
         assertFailure(result, equals: .scoringCandidateNotAvailable)
     }
+
+    func testMissingPotOfGoldDoesNotPartiallyMutateScoredCup() {
+        var session = sessionWithPendingScore(
+            cupIndex: 2,
+            gemKinds: Array(repeating: .red, count: 5) + [.gold]
+        )
+        let gemsBefore = session.cups[2].gems
+        let pendingBefore = session.pendingScoreChoices
+
+        session.cups[GameSetup.potOfGoldCupIndex] = Cup(color: .yellow, gems: [])
+
+        let result = ScoreConfirmationEngine.confirmScore(session: &session, cupIndex: 2, scoringColor: .red)
+
+        assertFailure(result, equals: .potOfGoldMissing)
+        XCTAssertNil(session.cups[2].completion)
+        XCTAssertFalse(session.cups[2].isCompleted)
+        XCTAssertEqual(session.cups[2].gems.map(\.id), gemsBefore.map(\.id))
+        XCTAssertEqual(session.pendingScoreChoices, pendingBefore)
+    }
 }
