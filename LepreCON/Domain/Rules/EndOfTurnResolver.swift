@@ -5,7 +5,7 @@
 // Runs end-of-turn resolution in rulebook order after placement ends:
 // Unicorn → Poop → Score detection.
 //
-// Only score detection is wired today. Unicorn and poop are intentional stubs.
+// Unicorn resolution is wired. Poop is still a stub.
 //
 
 import Foundation
@@ -23,8 +23,7 @@ enum EndOfTurnResolver {
     // MARK: - Resolution steps (rulebook order)
 
     private static func resolveUnicorn(in session: inout GameSession) {
-        // TODO: Implement unicorn resolution later (runs before poop and scoring).
-        _ = session
+        UnicornResolver.resolve(in: &session)
     }
 
     private static func resolvePoop(in session: inout GameSession) {
