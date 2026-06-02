@@ -162,6 +162,7 @@ extension GemKind {
         case .white: return "gem_white"
         case .black: return "gem_black"
         case .gold: return "gem_yellow"
+        // Clear and white are separate gem types; both use the white asset until a clear image exists.
         case .clear: return "gem_white"
         case .pink: return "gem_purple"
         }

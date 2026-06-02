@@ -36,6 +36,7 @@ enum GameSetup {
     static let firstPlacementCupIndex = 0
 
     /// How many of each gem kind belong in a full game before any are placed in cups.
+    /// Includes 3 white and 3 clear as separate types (93 gems total).
     static let standardGemCounts: [GemKind: Int] = [
         .red: 12,
         .orange: 12,
@@ -75,7 +76,10 @@ enum GameSetup {
     }
 
     /// Mixes the bag, then places exactly one non-black gem in each cup.
-    /// Black gems drawn during setup are returned to the bag and redrawn.
+    ///
+    /// Black gems are never left in cups during setup. If a black gem is drawn,
+    /// it goes back into the bag and another gem is drawn. All 3 black gems stay
+    /// available in the bag for normal play after setup finishes.
     static func placeSetupGemsInCups(cups: inout [Cup], gemsInBag: inout [Gem]) {
         gemsInBag.shuffle()
 

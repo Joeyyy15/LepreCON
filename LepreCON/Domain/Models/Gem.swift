@@ -9,6 +9,12 @@
 import Foundation
 
 /// The kind of gem in the game. Matches the physical gem types described in the rules.
+///
+/// **White and clear are different gems.** Do not treat them as the same type.
+/// - **White:** does not hold color; can stop chain reactions and calm the unicorn;
+///   scoring treats white as a pass (not a blemish). See rulebook for full behavior.
+/// - **Clear:** becomes the color of choice; holds color and affects color piles;
+///   scoring can count clear as the chosen color. See rulebook for full behavior.
 enum GemKind: String, CaseIterable, Codable {
     case red
     case orange
@@ -19,7 +25,7 @@ enum GemKind: String, CaseIterable, Codable {
     case white
     case gold
     case black   // "poop" in the rules
-    case clear   // can count as any rainbow color when scoring
+    case clear
     case pink
 }
 
