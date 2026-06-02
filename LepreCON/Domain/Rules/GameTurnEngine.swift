@@ -3,7 +3,8 @@
 // LepreCON
 //
 // Handles turn flow: D12 roll, drawing gems into hand, and placing gems one at a time
-// around the cup circle. Chain reactions, magic, scoring, and unicorn rules are not here yet.
+// around the cup circle. End-of-turn resolution is delegated to EndOfTurnResolver.
+// Magic, unicorn behavior, poop behavior, and player-confirmed scoring are not fully implemented yet.
 //
 
 import Foundation
