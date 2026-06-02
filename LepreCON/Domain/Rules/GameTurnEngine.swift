@@ -105,11 +105,10 @@ enum GameTurnEngine {
 
     // MARK: - Placement phase completion
 
-    /// Marks placement finished and refreshes pending score choices for player review.
+    /// Marks placement finished and runs end-of-turn resolution (Unicorn → Poop → Score detection).
     private static func finishPlacementPhase(session: inout GameSession) {
         session.isTurnPlacementComplete = true
-        PendingScoreDetector.refreshPendingScoreChoices(in: &session)
-        // TODO: End-of-turn resolution order — Unicorn → Poop → Score (player confirms score).
+        EndOfTurnResolver.resolveAfterPlacementEnds(session: &session)
     }
 
     // MARK: - Turn state queries
