@@ -20,6 +20,9 @@ final class EndOfTurnResolverTests: XCTestCase {
         for index in session.cups.indices {
             session.cups[index].gems = []
         }
+        // Pin unicorn away from cups used in scoring tests (unicorn/poop run before score detection).
+        session.unicornCupIndex = 9
+        session.unicornCupID = session.cups[9].id
         return session
     }
 

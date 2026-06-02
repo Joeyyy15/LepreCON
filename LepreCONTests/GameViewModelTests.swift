@@ -404,6 +404,42 @@ final class GameViewModelTests: XCTestCase {
         }
     }
 
+    func testGameViewModelExposesFinalScoreResult() async {
+        await MainActor.run {
+            var session = GameSessionFactory().makeNewGame(playerNames: ["Player 1"])
+            session.phase = .playing
+            session.cups[6].completion = CupCompletion(
+                scoredColor: .blue,
+                wasMatchingCupColor: true,
+                goodCount: 5,
+                passCount: 0,
+                blemishCount: 0,
+                adjustedGoodCount: 5
+            )
+
+            let viewModel = GameViewModel(session: session)
+
+            XCTAssertEqual(viewModel.finalScoreResult.colorPoints, 2)
+            XCTAssertEqual(viewModel.finalScoreResult.completedColorScores.count, 1)
+            XCTAssertFalse(viewModel.isGameComplete)
+        }
+    }
+
+    func testFinalScoreDisplayUpdatesAfterConfirmingScore() async {
+        await MainActor.run {
+            let viewModel = makeViewModelWithPendingScore(cupIndex: 2, gemKinds: Array(repeating: .red, count: 5))
+
+            XCTAssertEqual(viewModel.boardDisplayState.finalScore.completedColorCount, 0)
+            XCTAssertEqual(viewModel.boardDisplayState.finalScore.colorPoints, 0)
+
+            _ = viewModel.confirmScore(cupIndex: 2, scoringColor: .red)
+
+            XCTAssertEqual(viewModel.boardDisplayState.finalScore.completedColorCount, 1)
+            XCTAssertEqual(viewModel.boardDisplayState.finalScore.colorPoints, 2)
+            XCTAssertTrue(viewModel.boardDisplayState.finalScore.missingColorNames.contains("Orange"))
+        }
+    }
+
     func testBeginTurnFailsWhilePendingScoreChoicesExist() async {
         await MainActor.run {
             var session = GameSessionFactory().makeNewGame(playerNames: ["Player 1"])

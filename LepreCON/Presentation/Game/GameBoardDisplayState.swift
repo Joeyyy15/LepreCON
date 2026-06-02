@@ -57,6 +57,19 @@ struct BottomRowSlotDisplay: Equatable, Identifiable {
     var id: UUID { cupSlot.id }
 }
 
+/// Minimal final-score summary for the game screen.
+struct FinalScoreDisplay: Equatable {
+    let completedColorCount: Int
+    let colorPoints: Int
+    let missingColorNames: [String]
+    let isRainbowComplete: Bool
+    let totalPoints: Int
+    let goldPoints: Int
+    let unicornPoints: Int
+    let rankDisplayName: String?
+    let summaryLine: String
+}
+
 /// Snapshot of everything GameBoardView and the game controls need to render.
 struct GameBoardDisplayState: Equatable {
     let rainbowLanes: [RainbowLaneDisplay]
@@ -70,6 +83,7 @@ struct GameBoardDisplayState: Equatable {
     let isTurnPlacementComplete: Bool
     /// Cups with pending score options the player can confirm (after placement ends).
     let pendingScoringCups: [CupScoringRowDisplay]
+    let finalScore: FinalScoreDisplay
 
     /// Domain cup index → cloud label (1–4) for white/cloud cups only.
     static func cloudNumber(forCupIndex index: Int) -> Int? {
@@ -137,6 +151,8 @@ struct GameBoardDisplayState: Equatable {
             )
         }
 
+        let finalScoreResult = FinalScoreEvaluator.evaluate(session: session)
+
         return GameBoardDisplayState(
             rainbowLanes: [
                 rainbowLane(cupIndex: 2, color: .red),
@@ -153,7 +169,34 @@ struct GameBoardDisplayState: Equatable {
             canRollD12: GameTurnEngine.canRollD12(in: session),
             canPlaceFromHand: GameTurnEngine.canPlaceFromHand(in: session),
             isTurnPlacementComplete: session.isTurnPlacementComplete,
-            pendingScoringCups: pendingScoringCups
+            pendingScoringCups: pendingScoringCups,
+            finalScore: finalScoreDisplay(from: finalScoreResult)
+        )
+    }
+
+    private static func finalScoreDisplay(from result: FinalScoreResult) -> FinalScoreDisplay {
+        let missingNames = result.missingColors.map(\.scoringDisplayName)
+        let completedCount = result.completedColorScores.count
+
+        let summaryLine: String
+        if result.isRainbowComplete {
+            summaryLine = "Rainbow complete — \(result.totalPoints) pts (\(result.rank.displayName))"
+        } else if missingNames.isEmpty {
+            summaryLine = "Colors: \(completedCount)/6 · \(result.colorPoints) pts"
+        } else {
+            summaryLine = "Colors: \(completedCount)/6 · \(result.colorPoints) pts · Missing: \(missingNames.joined(separator: ", "))"
+        }
+
+        return FinalScoreDisplay(
+            completedColorCount: completedCount,
+            colorPoints: result.colorPoints,
+            missingColorNames: missingNames,
+            isRainbowComplete: result.isRainbowComplete,
+            totalPoints: result.totalPoints,
+            goldPoints: result.goldPoints,
+            unicornPoints: result.unicornPoints,
+            rankDisplayName: result.isRainbowComplete ? result.rank.displayName : nil,
+            summaryLine: summaryLine
         )
     }
 

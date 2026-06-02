@@ -42,6 +42,8 @@ struct GameSession: Identifiable, Equatable, Codable {
     var unicornCupIndex: Int?
     /// Cup id for the unicorn location. Kept in sync with `unicornCupIndex` for stable identity.
     var unicornCupID: UUID?
+    /// True when the unicorn was captured in a scoring cup (+3 at end if rainbow is complete).
+    var unicornCaptured: Bool
 
     init(
         id: UUID = UUID(),
@@ -57,7 +59,8 @@ struct GameSession: Identifiable, Equatable, Codable {
         isTurnPlacementComplete: Bool = false,
         pendingScoreChoices: [PendingScoreChoice] = [],
         unicornCupIndex: Int? = nil,
-        unicornCupID: UUID? = nil
+        unicornCupID: UUID? = nil,
+        unicornCaptured: Bool = false
     ) {
         self.id = id
         self.phase = phase
@@ -73,5 +76,6 @@ struct GameSession: Identifiable, Equatable, Codable {
         self.pendingScoreChoices = pendingScoreChoices
         self.unicornCupIndex = unicornCupIndex
         self.unicornCupID = unicornCupID
+        self.unicornCaptured = unicornCaptured
     }
 }

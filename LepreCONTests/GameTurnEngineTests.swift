@@ -27,6 +27,8 @@ final class GameTurnEngineTests: XCTestCase {
                 session.cups[index].gems = []
             }
         }
+        session.unicornCupIndex = 9
+        session.unicornCupID = session.cups[9].id
         return session
     }
 

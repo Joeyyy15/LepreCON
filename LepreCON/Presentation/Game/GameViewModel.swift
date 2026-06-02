@@ -51,6 +51,16 @@ final class GameViewModel: ObservableObject {
         !session.pendingScoreChoices.isEmpty
     }
 
+    /// Current final score breakdown from completed cups and the Pot of Gold.
+    var finalScoreResult: FinalScoreResult {
+        FinalScoreEvaluator.evaluate(session: session)
+    }
+
+    /// True when all six rainbow colors have been scored at least once.
+    var isGameComplete: Bool {
+        GameCompletionDetector.isGameComplete(session: session)
+    }
+
     /// True after placement when the player must score or skip before rolling again.
     var isInScoringChoicePhase: Bool {
         session.isTurnPlacementComplete && hasPendingScoreChoices

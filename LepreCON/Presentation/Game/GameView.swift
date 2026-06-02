@@ -87,6 +87,15 @@ struct GameView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+
+            Text(viewModel.boardDisplayState.finalScore.summaryLine)
+                .font(.subheadline.weight(.semibold))
+
+            if viewModel.isGameComplete {
+                Text("Game complete — all rainbow colors collected.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 
