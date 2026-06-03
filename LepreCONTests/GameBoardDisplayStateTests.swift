@@ -197,10 +197,14 @@ final class GameBoardDisplayStateTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(display.hud.totalScore, 0)
     }
 
-    func testHUDTurnLabelUsesSetupWhenNotPlaying() {
+    func testHUDMapsRainbowBagGoldAndScoreFromNewGameSession() {
         let session = GameSessionFactory().makeNewGame(playerNames: ["Alex"])
         let display = GameBoardDisplayState.from(session: session)
-        XCTAssertEqual(display.hud.turnLabel, "Setup")
+
+        XCTAssertEqual(display.hud.rainbowTotal, 6)
+        XCTAssertEqual(display.hud.goldCapacity, 9)
+        XCTAssertGreaterThan(display.hud.gemsInBag, 0)
+        XCTAssertGreaterThanOrEqual(display.hud.totalScore, 0)
     }
 
     // MARK: - Hand grouped counts

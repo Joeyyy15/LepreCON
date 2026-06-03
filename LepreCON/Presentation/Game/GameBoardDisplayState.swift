@@ -69,17 +69,12 @@ struct GameOverDisplay: Equatable {
 
 /// Compact gameplay HUD values mapped from the live session.
 struct GameHUDDisplay: Equatable {
-    let turnLabel: String
     let rainbowCompleted: Int
     let rainbowTotal: Int
     let gemsInBag: Int
     let goldInPot: Int
     let goldCapacity: Int
     let totalScore: Int
-
-    var compactSummaryLine: String {
-        "Turn \(turnLabel) | Rainbow \(rainbowCompleted)/\(rainbowTotal) | Bag \(gemsInBag) | Gold \(goldInPot)/\(goldCapacity) | Score \(totalScore)"
-    }
 }
 
 /// Minimal final-score summary for the game screen.
@@ -231,7 +226,6 @@ struct GameBoardDisplayState: Equatable {
         let goldCapacity = GameSetup.standardGemCounts[.gold] ?? 9
 
         return GameHUDDisplay(
-            turnLabel: hudTurnLabel(session: session),
             rainbowCompleted: finalScore.completedColorScores.count,
             rainbowTotal: ScoreEvaluator.rainbowScoringColors.count,
             gemsInBag: session.gemsInBag.count,
@@ -239,28 +233,6 @@ struct GameBoardDisplayState: Equatable {
             goldCapacity: goldCapacity,
             totalScore: finalScore.totalPoints
         )
-    }
-
-    /// Turn number is not tracked in the domain yet; uses phase and roll as a stand-in.
-    private static func hudTurnLabel(session: GameSession) -> String {
-        // TODO: Show a real turn count when GameSession tracks completed player turns.
-        switch session.phase {
-        case .setup:
-            return "Setup"
-        case .finished:
-            return "End"
-        case .playing:
-            if session.isTurnPlacementComplete, !session.pendingScoreChoices.isEmpty {
-                return "Score"
-            }
-            if session.isTurnPlacementComplete {
-                return "—"
-            }
-            if let roll = session.currentRoll {
-                return "·\(roll)"
-            }
-            return "—"
-        }
     }
 
     static func unicornStatusDisplay(
