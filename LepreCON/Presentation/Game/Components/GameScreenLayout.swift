@@ -9,7 +9,7 @@ import SwiftUI
 
 enum GameScreenLayout {
     /// Set true locally to outline HUD, board, and dock bounds.
-    static let showLayoutDebug = true
+    static let showLayoutDebug = false
 
     static let topBarHeight: CGFloat = 52
     static let hudToBoardGap: CGFloat = 4
@@ -40,23 +40,6 @@ enum GameScreenLayout {
 
     static func bottomContentPadding(in geometry: GeometryProxy) -> CGFloat {
         bottomPadding
-    }
-}
-
-/// Centers HUD, board, and dock in one shared content column (width only, no extra horizontal padding).
-struct GameScreenContentColumn<Content: View>: View {
-    let geometry: GeometryProxy
-    @ViewBuilder let content: () -> Content
-
-    var body: some View {
-        content()
-            .frame(width: GameScreenLayout.contentWidth(in: geometry))
-            .frame(
-                width: geometry.size.width,
-                height: geometry.size.height,
-                alignment: .center
-            )
-            .gameScreenDebugBorder(.cyan)
     }
 }
 
