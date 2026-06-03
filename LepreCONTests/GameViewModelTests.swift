@@ -520,4 +520,213 @@ final class GameViewModelTests: XCTestCase {
         }
     }
 
+    // MARK: - Undo last placement
+
+    @MainActor
+    private func makeViewModelReadyToPlace(
+        handGems: [GemKind] = [.red, .blue],
+        cupIndex: Int = GameSetup.firstPlacementCupIndex
+    ) -> GameViewModel {
+        var session = GameSessionFactory().makeNewGame(playerNames: ["Player 1"])
+        session.phase = .playing
+        for index in session.cups.indices {
+            session.cups[index].gems = []
+        }
+        session.gemsInBag = []
+        session.gemsInHand = handGems.map { Gem(kind: $0) }
+        session.currentRoll = handGems.count
+        session.nextPlacementCupIndex = cupIndex
+        session.isTurnPlacementComplete = false
+        session.unicornCupIndex = 9
+        session.unicornCupID = session.cups[9].id
+        return GameViewModel(session: session)
+    }
+
+    func testUndoNotAvailableBeforeAnyPlacement() async {
+        await MainActor.run {
+            let viewModel = makeViewModelReadyToPlace()
+            XCTAssertFalse(viewModel.canUndoLastPlacement)
+        }
+    }
+
+    func testUndoAvailableAfterSuccessfulPlacement() async {
+        await MainActor.run {
+            let viewModel = makeViewModelReadyToPlace()
+            let gem = viewModel.session.gemsInHand[0]
+            _ = viewModel.placeGemInCurrentCup(gemID: gem.id)
+            XCTAssertTrue(viewModel.canUndoLastPlacement)
+        }
+    }
+
+    func testUndoRestoresGemToHandAndRemovesFromCup() async {
+        await MainActor.run {
+            let viewModel = makeViewModelReadyToPlace()
+            let cupIndex = viewModel.session.nextPlacementCupIndex
+            let gem = viewModel.session.gemsInHand[0]
+            let handCountBefore = viewModel.session.gemsInHand.count
+
+            _ = viewModel.placeGemInCurrentCup(gemID: gem.id)
+            viewModel.undoLastPlacement()
+
+            XCTAssertEqual(viewModel.session.gemsInHand.count, handCountBefore)
+            XCTAssertTrue(viewModel.session.gemsInHand.contains(where: { $0.id == gem.id }))
+            XCTAssertFalse(viewModel.session.cups[cupIndex].gems.contains(where: { $0.id == gem.id }))
+        }
+    }
+
+    func testUndoRestoresNextPlacementCupIndex() async {
+        await MainActor.run {
+            let viewModel = makeViewModelReadyToPlace(handGems: [.red, .blue])
+            let indexBefore = viewModel.session.nextPlacementCupIndex
+            let firstGem = viewModel.session.gemsInHand[0]
+
+            _ = viewModel.placeGemInCurrentCup(gemID: firstGem.id)
+            let indexAfterPlace = viewModel.session.nextPlacementCupIndex
+            XCTAssertNotEqual(indexAfterPlace, indexBefore)
+
+            viewModel.undoLastPlacement()
+
+            XCTAssertEqual(viewModel.session.nextPlacementCupIndex, indexBefore)
+        }
+    }
+
+    func testUndoClearsItselfAfterUse() async {
+        await MainActor.run {
+            let viewModel = makeViewModelReadyToPlace()
+            let gem = viewModel.session.gemsInHand[0]
+            _ = viewModel.placeGemInCurrentCup(gemID: gem.id)
+            viewModel.undoLastPlacement()
+
+            XCTAssertFalse(viewModel.canUndoLastPlacement)
+            viewModel.undoLastPlacement()
+            XCTAssertEqual(viewModel.session.gemsInHand.count, 1)
+        }
+    }
+
+    func testBeginTurnClearsUndo() async {
+        await MainActor.run {
+            let viewModel = GameViewModel(playerNames: ["Player 1"])
+            viewModel.startGame()
+            _ = viewModel.beginTurn(roll: 1)
+            let gem = viewModel.session.gemsInHand[0]
+            _ = viewModel.placeGemInCurrentCup(gemID: gem.id)
+            XCTAssertTrue(viewModel.canUndoLastPlacement)
+
+            _ = viewModel.beginTurn(roll: 1)
+
+            XCTAssertFalse(viewModel.canUndoLastPlacement)
+        }
+    }
+
+    func testConfirmScoreClearsUndo() async {
+        await MainActor.run {
+            var session = GameSessionFactory().makeNewGame(playerNames: ["Player 1"])
+            session.phase = .playing
+            for index in session.cups.indices {
+                session.cups[index].gems = []
+            }
+            session.gemsInBag = []
+            session.gemsInHand = [Gem(kind: .green)]
+            session.currentRoll = 1
+            session.nextPlacementCupIndex = 0
+            session.cups[2].gems = Array(repeating: Gem(kind: .red), count: 5)
+            session.unicornCupIndex = 9
+            session.unicornCupID = session.cups[9].id
+
+            let viewModel = GameViewModel(session: session)
+            let gem = viewModel.session.gemsInHand[0]
+            _ = viewModel.placeGemInCurrentCup(gemID: gem.id)
+            XCTAssertTrue(viewModel.canUndoLastPlacement)
+
+            _ = viewModel.confirmScore(cupIndex: 2, scoringColor: .red)
+
+            XCTAssertFalse(viewModel.canUndoLastPlacement)
+        }
+    }
+
+    func testSkipScoringClearsUndo() async {
+        await MainActor.run {
+            var session = GameSessionFactory().makeNewGame(playerNames: ["Player 1"])
+            session.phase = .playing
+            for index in session.cups.indices {
+                session.cups[index].gems = []
+            }
+            session.gemsInBag = []
+            session.gemsInHand = [Gem(kind: .green)]
+            session.currentRoll = 1
+            session.nextPlacementCupIndex = 0
+            session.cups[2].gems = Array(repeating: Gem(kind: .blue), count: 5)
+            session.unicornCupIndex = 9
+            session.unicornCupID = session.cups[9].id
+
+            let viewModel = GameViewModel(session: session)
+            let gem = viewModel.session.gemsInHand[0]
+            _ = viewModel.placeGemInCurrentCup(gemID: gem.id)
+            XCTAssertTrue(viewModel.canUndoLastPlacement)
+
+            viewModel.skipScoringChoices()
+
+            XCTAssertFalse(viewModel.canUndoLastPlacement)
+        }
+    }
+
+    func testUndoNotAvailableAfterGameOver() async {
+        await MainActor.run {
+            var session = GameSessionFactory().makeNewGame(playerNames: ["Player 1"])
+            session.phase = .finished
+            let viewModel = GameViewModel(session: session)
+            XCTAssertFalse(viewModel.canUndoLastPlacement)
+        }
+    }
+
+    func testFailedPlacementDoesNotEnableUndo() async {
+        await MainActor.run {
+            let viewModel = makeViewModelReadyToPlace()
+            let badGemID = UUID()
+            let result = viewModel.placeGemInCurrentCup(gemID: badGemID)
+
+            switch result {
+            case .success:
+                XCTFail("Expected placement to fail")
+            case .failure(let error):
+                XCTAssertEqual(error, .gemNotInHand)
+            }
+            XCTAssertFalse(viewModel.canUndoLastPlacement)
+        }
+    }
+
+    func testUndoAfterFinalPlacementRestoresActivePlacementState() async {
+        await MainActor.run {
+            var session = GameSessionFactory().makeNewGame(playerNames: ["Player 1"])
+            session.phase = .playing
+            for index in session.cups.indices {
+                session.cups[index].gems = []
+            }
+            session.gemsInBag = []
+            session.gemsInHand = [Gem(kind: .green)]
+            session.currentRoll = 1
+            session.nextPlacementCupIndex = 0
+            session.cups[2].gems = Array(repeating: Gem(kind: .red), count: 5)
+            session.unicornCupIndex = 9
+            session.unicornCupID = session.cups[9].id
+
+            let viewModel = GameViewModel(session: session)
+            let gem = viewModel.session.gemsInHand[0]
+
+            _ = viewModel.placeGemInCurrentCup(gemID: gem.id)
+
+            XCTAssertTrue(viewModel.session.isTurnPlacementComplete)
+            XCTAssertFalse(viewModel.session.pendingScoreChoices.isEmpty)
+            XCTAssertTrue(viewModel.canUndoLastPlacement)
+
+            viewModel.undoLastPlacement()
+
+            XCTAssertFalse(viewModel.session.isTurnPlacementComplete)
+            XCTAssertTrue(viewModel.session.pendingScoreChoices.isEmpty)
+            XCTAssertEqual(viewModel.session.gemsInHand.count, 1)
+            XCTAssertTrue(viewModel.canPlaceFromHand)
+            XCTAssertFalse(viewModel.canUndoLastPlacement)
+        }
+    }
+
 }

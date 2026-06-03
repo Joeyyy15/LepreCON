@@ -17,6 +17,9 @@ final class GameViewModel: ObservableObject {
 
     private let factory: GameSessionFactory
 
+    /// Session state saved immediately before the most recent successful placement (one-step undo).
+    private var previousSessionSnapshot: GameSession?
+
     /// Presentation adapter for the board and controls. Recomputed when session changes.
     var boardDisplayState: GameBoardDisplayState {
         GameBoardDisplayState.from(session: session)
@@ -45,6 +48,11 @@ final class GameViewModel: ObservableObject {
 
     var canPlaceFromHand: Bool {
         boardDisplayState.canPlaceFromHand
+    }
+
+    /// True when the player can undo exactly one prior successful gem placement.
+    var canUndoLastPlacement: Bool {
+        previousSessionSnapshot != nil && session.phase == .playing && !isGameOver
     }
 
     var hasPendingScoreChoices: Bool {
@@ -83,6 +91,7 @@ final class GameViewModel: ObservableObject {
 
     /// Clears pending score choices so the player can roll again without confirming a score.
     func skipScoringChoices() {
+        clearUndoSnapshot()
         PendingScoreDetector.clearPendingScoreChoices(in: &session)
         applyGameOverIfNeeded()
     }
@@ -92,8 +101,16 @@ final class GameViewModel: ObservableObject {
         GameBoardDisplayState.scoringDisplay(forCupIndex: cupIndex, session: session).pendingOptions
     }
 
+    /// Restores the session to immediately before the last successful placement.
+    func undoLastPlacement() {
+        guard let snapshot = previousSessionSnapshot else { return }
+        session = snapshot
+        clearUndoSnapshot()
+    }
+
     /// Player confirms one pending scoring color for a cup.
     func confirmScore(cupIndex: Int, scoringColor: GemKind) -> Result<Void, ScoreConfirmationError> {
+        clearUndoSnapshot()
         let result = ScoreConfirmationEngine.confirmScore(
             session: &session,
             cupIndex: cupIndex,
@@ -121,6 +138,7 @@ final class GameViewModel: ObservableObject {
 
     /// Replaces the session with a fresh game (same player names) and starts play.
     func startNewGame() {
+        clearUndoSnapshot()
         let playerNames = session.players.map(\.name)
         session = factory.makeNewGame(
             playerNames: playerNames.isEmpty ? ["Player 1"] : playerNames
@@ -130,6 +148,7 @@ final class GameViewModel: ObservableObject {
 
     func endGame() {
         guard GameRules.canEndGame(session) else { return }
+        clearUndoSnapshot()
         session.phase = .finished
     }
 
@@ -141,19 +160,34 @@ final class GameViewModel: ObservableObject {
 
     func beginTurn(roll: Int) -> Result<Void, GameTurnError> {
         let result = GameTurnEngine.beginTurn(session: &session, roll: roll)
+        if case .success = result {
+            clearUndoSnapshot()
+        }
         return result
     }
 
     /// Places the chosen hand gem into the currently highlighted cup on the board path.
     func placeGemInCurrentCup(gemID: UUID) -> Result<Void, GameTurnError> {
+        let snapshotBeforePlacement = session
         let result = GameTurnEngine.placeGemInCurrentCup(session: &session, gemID: gemID)
-        if case .success = result {
+        switch result {
+        case .success:
+            previousSessionSnapshot = snapshotBeforePlacement
             applyGameOverIfNeeded()
+        case .failure:
+            break
         }
         return result
     }
 
+    private func clearUndoSnapshot() {
+        previousSessionSnapshot = nil
+    }
+
     private func applyGameOverIfNeeded() {
         GameCompletionDetector.applyGameOverIfNeeded(to: &session)
+        if isGameOver {
+            clearUndoSnapshot()
+        }
     }
 }

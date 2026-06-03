@@ -197,6 +197,15 @@ struct GameView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+
+            if !viewModel.isGameOver {
+                Button("Undo Last Placement") {
+                    viewModel.undoLastPlacement()
+                    lastActionMessage = "Last placement undone."
+                }
+                .buttonStyle(.bordered)
+                .disabled(!viewModel.canUndoLastPlacement)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
