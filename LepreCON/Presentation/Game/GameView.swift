@@ -53,204 +53,77 @@ struct GameView: View {
                     )
                 }
 
-                statusSection
+                GameStatusMessageView(
+                    playerName: viewModel.currentPlayerName,
+                    placementGuidance: placementGuidanceText,
+                    unicornStatusLine: viewModel.boardDisplayState.unicornStatus.statusLine,
+                    unicornIsCaptured: viewModel.boardDisplayState.unicornStatus.isCaptured,
+                    gameOver: viewModel.boardDisplayState.gameOver,
+                    showRainbowCompleteMessage: viewModel.isRainbowComplete && viewModel.boardDisplayState.gameOver == nil,
+                    onPlayAgain: {
+                        viewModel.startNewGame()
+                        lastActionMessage = "New game started. Roll D12 to begin your turn."
+                    }
+                )
 
-                if !viewModel.isGameOver {
-                    turnControlsSection
-                }
-                handSection
-                discardSection
-                gameControlsSection
+                GameActionAreaView(
+                    showsRollButton: !viewModel.isGameOver,
+                    canRollD12: viewModel.canRollD12,
+                    onRollD12: rollD12
+                )
 
-                if let lastActionMessage {
-                    Text(lastActionMessage)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                }
+                HandPanelView(
+                    handGemCounts: viewModel.boardDisplayState.handGemCounts,
+                    emptyHandMessage: viewModel.canRollD12 ? "Roll D12 to draw gems" : "No gems in hand",
+                    canPlaceFromHand: viewModel.canPlaceFromHand,
+                    showsUndo: !viewModel.isGameOver,
+                    canUndoLastPlacement: viewModel.canUndoLastPlacement,
+                    onTapHandGemKind: placeHandGemOfKind,
+                    onUndoLastPlacement: {
+                        viewModel.undoLastPlacement()
+                        lastActionMessage = "Last placement undone."
+                    }
+                )
+
+                DiscardPileView(gemCounts: viewModel.boardDisplayState.discardGemCounts)
+
+                GameFooterControlsView(
+                    showsControls: !viewModel.isGameOver,
+                    canStartGame: viewModel.canStartGame,
+                    canEndGame: viewModel.canEndGame,
+                    onStartGame: {
+                        viewModel.startGame()
+                        lastActionMessage = "Game started. Roll D12 to begin your turn."
+                    },
+                    onEndGame: {
+                        viewModel.endGame()
+                        onFinishGame()
+                    }
+                )
+
+                GameActionFeedbackView(message: lastActionMessage)
             }
             .padding()
         }
     }
 
-    private var statusSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            if let player = viewModel.currentPlayerName {
-                Text(player)
-                    .font(.subheadline.weight(.semibold))
-            }
-
-            if !viewModel.isGameOver,
-               viewModel.boardDisplayState.isTurnPlacementComplete {
-                if viewModel.isInScoringChoicePhase {
-                    Text("Score a cup below or choose Skip Scoring to continue.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                } else {
-                    Text("Placement complete — roll D12 for your next turn.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            if !viewModel.boardDisplayState.unicornStatus.isCaptured {
-                Text(viewModel.boardDisplayState.unicornStatus.statusLine)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            } else {
-                Text(viewModel.boardDisplayState.unicornStatus.statusLine)
-                    .font(.caption)
-                    .foregroundStyle(.green)
-            }
-
-            if let gameOver = viewModel.boardDisplayState.gameOver {
-                gameOverResultsSection(gameOver)
-            } else if viewModel.isRainbowComplete {
-                Text("Rainbow complete — keep playing until the game ends.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
+    private var placementGuidanceText: String? {
+        guard !viewModel.isGameOver,
+              viewModel.boardDisplayState.isTurnPlacementComplete else {
+            return nil
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        if viewModel.isInScoringChoicePhase {
+            return "Score a cup below or choose Skip Scoring to continue."
+        }
+        return "Placement complete — roll D12 for your next turn."
     }
 
-    private func gameOverResultsSection(_ gameOver: GameOverDisplay) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Game Over")
-                .font(.headline)
-
-            Text("Final Score: \(gameOver.finalScore.totalPoints)")
-                .font(.subheadline.weight(.semibold))
-
-            if let rank = gameOver.finalScore.rankDisplayName {
-                Text("Rank: \(rank)")
-                    .font(.subheadline)
-            }
-
-            Text("Rainbow Complete: \(gameOver.isRainbowComplete ? "Yes" : "No")")
-                .font(.subheadline)
-
-            Text(gameOver.unicornStatus.gameOverDetailLine)
-                .font(.subheadline)
-                .foregroundStyle(gameOver.unicornStatus.isCaptured ? .green : .secondary)
-
-            if gameOver.didWin {
-                Text("You collected the full rainbow!")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            } else if !gameOver.finalScore.missingColorNames.isEmpty {
-                Text("Missing: \(gameOver.finalScore.missingColorNames.joined(separator: ", "))")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Text("Color: \(gameOver.finalScore.colorPoints) · Gold: \(gameOver.finalScore.goldPoints) · Unicorn: \(gameOver.finalScore.unicornPoints)")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            Text("Completed cups: \(gameOver.completedCupCount)/\(gameOver.requiredCupCount)")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            Button("Play Again") {
-                viewModel.startNewGame()
-                lastActionMessage = "New game started. Roll D12 to begin your turn."
-            }
-            .buttonStyle(.borderedProminent)
-            .padding(.top, 4)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private var turnControlsSection: some View {
-        Button("Roll D12") {
-            switch viewModel.rollD12AndBeginTurn() {
-            case .success:
-                lastActionMessage = "Rolled \(viewModel.session.currentRoll ?? 0). Tap a hand gem to place."
-            case .failure(let error):
-                lastActionMessage = turnErrorMessage(error)
-            }
-        }
-        .buttonStyle(.borderedProminent)
-        .disabled(!viewModel.canRollD12)
-    }
-
-    private var handSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Your Hand")
-                .font(.headline)
-
-            if viewModel.boardDisplayState.handGemCounts.isEmpty {
-                Text(viewModel.canRollD12 ? "Roll D12 to draw gems" : "No gems in hand")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            } else {
-                HandGemsView(
-                    gemCounts: viewModel.boardDisplayState.handGemCounts,
-                    canPlace: viewModel.canPlaceFromHand,
-                    onTapKind: placeHandGemOfKind
-                )
-            }
-
-            if viewModel.canPlaceFromHand {
-                Text("Tap a gem type to place one into the highlighted cup")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            if !viewModel.isGameOver {
-                Button("Undo Last Placement") {
-                    viewModel.undoLastPlacement()
-                    lastActionMessage = "Last placement undone."
-                }
-                .buttonStyle(.bordered)
-                .disabled(!viewModel.canUndoLastPlacement)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private var discardSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Discard Pile")
-                .font(.headline)
-
-            if viewModel.boardDisplayState.discardGemCounts.isEmpty {
-                Text("Empty")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            } else {
-                LazyVGrid(
-                    columns: [GridItem(.adaptive(minimum: 72, maximum: 120), spacing: 8)],
-                    alignment: .leading,
-                    spacing: 8
-                ) {
-                    ForEach(viewModel.boardDisplayState.discardGemCounts) { item in
-                        GemCountBadgeView(item: item, style: .compact(gemSize: 28))
-                    }
-                }
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private var gameControlsSection: some View {
-        HStack(spacing: 12) {
-            if !viewModel.isGameOver {
-                Button("Start Game") {
-                    viewModel.startGame()
-                    lastActionMessage = "Game started. Roll D12 to begin your turn."
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(!viewModel.canStartGame)
-
-                Button("End Game") {
-                    viewModel.endGame()
-                    onFinishGame()
-                }
-                .buttonStyle(.bordered)
-                .disabled(!viewModel.canEndGame)
-            }
+    private func rollD12() {
+        switch viewModel.rollD12AndBeginTurn() {
+        case .success:
+            lastActionMessage = "Rolled \(viewModel.session.currentRoll ?? 0). Tap a hand gem to place."
+        case .failure(let error):
+            lastActionMessage = turnErrorMessage(error)
         }
     }
 
