@@ -67,6 +67,21 @@ struct GameOverDisplay: Equatable {
     let unicornStatus: UnicornStatusDisplay
 }
 
+/// Compact gameplay HUD values mapped from the live session.
+struct GameHUDDisplay: Equatable {
+    let turnLabel: String
+    let rainbowCompleted: Int
+    let rainbowTotal: Int
+    let gemsInBag: Int
+    let goldInPot: Int
+    let goldCapacity: Int
+    let totalScore: Int
+
+    var compactSummaryLine: String {
+        "Turn \(turnLabel) | Rainbow \(rainbowCompleted)/\(rainbowTotal) | Bag \(gemsInBag) | Gold \(goldInPot)/\(goldCapacity) | Score \(totalScore)"
+    }
+}
+
 /// Minimal final-score summary for the game screen.
 struct FinalScoreDisplay: Equatable {
     let completedColorCount: Int
@@ -97,6 +112,7 @@ struct GameBoardDisplayState: Equatable {
     let isGameOver: Bool
     let gameOver: GameOverDisplay?
     let unicornStatus: UnicornStatusDisplay
+    let hud: GameHUDDisplay
 
     /// Domain cup index → cloud label (1–4) for white/cloud cups only.
     static func cloudNumber(forCupIndex index: Int) -> Int? {
@@ -202,8 +218,49 @@ struct GameBoardDisplayState: Equatable {
             finalScore: finalScore,
             isGameOver: completion.isGameOver,
             gameOver: gameOver,
-            unicornStatus: unicornStatus
+            unicornStatus: unicornStatus,
+            hud: gameHUDDisplay(session: session, finalScore: finalScoreResult)
         )
+    }
+
+    static func gameHUDDisplay(session: GameSession, finalScore: FinalScoreResult) -> GameHUDDisplay {
+        let potIndex = GameSetup.potOfGoldCupIndex
+        let goldInPot = session.cups.indices.contains(potIndex)
+            ? session.cups[potIndex].gems.filter { $0.kind == .gold }.count
+            : 0
+        let goldCapacity = GameSetup.standardGemCounts[.gold] ?? 9
+
+        return GameHUDDisplay(
+            turnLabel: hudTurnLabel(session: session),
+            rainbowCompleted: finalScore.completedColorScores.count,
+            rainbowTotal: ScoreEvaluator.rainbowScoringColors.count,
+            gemsInBag: session.gemsInBag.count,
+            goldInPot: goldInPot,
+            goldCapacity: goldCapacity,
+            totalScore: finalScore.totalPoints
+        )
+    }
+
+    /// Turn number is not tracked in the domain yet; uses phase and roll as a stand-in.
+    private static func hudTurnLabel(session: GameSession) -> String {
+        // TODO: Show a real turn count when GameSession tracks completed player turns.
+        switch session.phase {
+        case .setup:
+            return "Setup"
+        case .finished:
+            return "End"
+        case .playing:
+            if session.isTurnPlacementComplete, !session.pendingScoreChoices.isEmpty {
+                return "Score"
+            }
+            if session.isTurnPlacementComplete {
+                return "—"
+            }
+            if let roll = session.currentRoll {
+                return "·\(roll)"
+            }
+            return "—"
+        }
     }
 
     static func unicornStatusDisplay(

@@ -170,6 +170,39 @@ final class GameBoardDisplayStateTests: XCTestCase {
         }
     }
 
+    // MARK: - Game HUD
+
+    func testHUDReflectsBagGoldRainbowAndScoreFromSession() {
+        var session = GameSessionFactory().makeNewGame(playerNames: ["Alex"])
+        session.phase = .playing
+        session.gemsInBag = Array(repeating: Gem(kind: .red), count: 12)
+        let potIndex = GameSetup.potOfGoldCupIndex
+        session.cups[potIndex].gems = [Gem(kind: .gold), Gem(kind: .gold)]
+        session.cups[2].completion = CupCompletion(
+            scoredColor: .red,
+            wasMatchingCupColor: true,
+            goodCount: 5,
+            passCount: 0,
+            blemishCount: 0,
+            adjustedGoodCount: 5
+        )
+
+        let display = GameBoardDisplayState.from(session: session)
+
+        XCTAssertEqual(display.hud.gemsInBag, 12)
+        XCTAssertEqual(display.hud.goldInPot, 2)
+        XCTAssertEqual(display.hud.goldCapacity, 9)
+        XCTAssertEqual(display.hud.rainbowCompleted, 1)
+        XCTAssertEqual(display.hud.rainbowTotal, 6)
+        XCTAssertGreaterThanOrEqual(display.hud.totalScore, 0)
+    }
+
+    func testHUDTurnLabelUsesSetupWhenNotPlaying() {
+        let session = GameSessionFactory().makeNewGame(playerNames: ["Alex"])
+        let display = GameBoardDisplayState.from(session: session)
+        XCTAssertEqual(display.hud.turnLabel, "Setup")
+    }
+
     // MARK: - Hand grouped counts
 
     func testHandDisplayGroupsSameKindGemsIntoOneCount() {

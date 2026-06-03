@@ -18,25 +18,36 @@ struct BoardContainerView<Content: View>: View {
             .clipShape(RoundedRectangle(cornerRadius: BoardStyle.cornerRadius, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: BoardStyle.cornerRadius, style: .continuous)
-                    .stroke(Color.white.opacity(BoardStyle.panelStrokeOpacity), lineWidth: 1)
+                    .stroke(BoardStyle.boardGoldOutline, lineWidth: 1.5)
             )
-            .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
+            .overlay(
+                RoundedRectangle(cornerRadius: BoardStyle.cornerRadius - 2, style: .continuous)
+                    .stroke(Color.black.opacity(0.35), lineWidth: 1)
+                    .padding(2)
+            )
+            .shadow(color: .black.opacity(0.28), radius: 10, x: 0, y: 5)
     }
 
     private var boardPanelBackground: some View {
         ZStack {
             LinearGradient(
-                colors: [
-                    Color.purple.opacity(0.32),
-                    Color.indigo.opacity(0.24),
-                    Color.cyan.opacity(0.18)
-                ],
+                colors: BoardStyle.boardSkyGradient,
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
 
+            RadialGradient(
+                colors: [
+                    Color.white.opacity(0.12),
+                    Color.clear
+                ],
+                center: .top,
+                startRadius: 8,
+                endRadius: 220
+            )
+
             RoundedRectangle(cornerRadius: BoardStyle.cornerRadius, style: .continuous)
-                .fill(Color.white.opacity(BoardStyle.panelFillOpacity))
+                .fill(Color.black.opacity(0.12))
         }
     }
 }

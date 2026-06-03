@@ -27,7 +27,9 @@ struct GameView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 20) {
+            VStack(spacing: 16) {
+                GameHUDView(hud: viewModel.boardDisplayState.hud)
+
                 GameBoardView(
                     displayState: viewModel.boardDisplayState,
                     onConfirmScore: confirmScore
@@ -72,16 +74,9 @@ struct GameView: View {
     }
 
     private var statusSection: some View {
-        VStack(spacing: 8) {
-            Text("Game Phase: \(viewModel.phaseDisplayText)")
-                .font(.headline)
-
-            Text("Current Player: \(viewModel.currentPlayerName ?? "Not started")")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-
-            if let roll = viewModel.boardDisplayState.currentRoll {
-                Text("D12 Roll: \(roll)")
+        VStack(alignment: .leading, spacing: 8) {
+            if let player = viewModel.currentPlayerName {
+                Text(player)
                     .font(.subheadline.weight(.semibold))
             }
 
@@ -92,31 +87,31 @@ struct GameView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else {
-                    Text("Placement complete — roll again to start next turn")
+                    Text("Placement complete — roll D12 for your next turn.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             }
 
-            Text(viewModel.boardDisplayState.unicornStatus.statusLine)
-                .font(.subheadline)
-                .foregroundStyle(
-                    viewModel.boardDisplayState.unicornStatus.isCaptured ? .green : .secondary
-                )
+            if !viewModel.boardDisplayState.unicornStatus.isCaptured {
+                Text(viewModel.boardDisplayState.unicornStatus.statusLine)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                Text(viewModel.boardDisplayState.unicornStatus.statusLine)
+                    .font(.caption)
+                    .foregroundStyle(.green)
+            }
 
             if let gameOver = viewModel.boardDisplayState.gameOver {
                 gameOverResultsSection(gameOver)
-            } else {
-                Text(viewModel.boardDisplayState.finalScore.summaryLine)
-                    .font(.subheadline.weight(.semibold))
-
-                if viewModel.isRainbowComplete {
-                    Text("Rainbow complete — keep playing until the game ends.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+            } else if viewModel.isRainbowComplete {
+                Text("Rainbow complete — keep playing until the game ends.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func gameOverResultsSection(_ gameOver: GameOverDisplay) -> some View {

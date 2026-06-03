@@ -2,7 +2,7 @@
 //  CloudSlotView.swift
 //  LepreCON
 //
-//  Visual container for a cloud that can hold gems.
+//  Visual container for a cloud cup on the board.
 //
 
 import SwiftUI
@@ -22,8 +22,8 @@ struct CloudSlotView: View {
         VStack(spacing: 4) {
             ZStack(alignment: .topTrailing) {
                 ZStack {
+                    cloudCupWell
                     cloudShape
-
                     cupContent
                 }
                 .frame(width: width, height: height)
@@ -38,10 +38,27 @@ struct CloudSlotView: View {
             }
             .frame(width: width, height: height)
 
-            Text("C\(cloudNumber)")
-                .font(.caption2.weight(.semibold))
-                .lineLimit(1)
+            BoardCupLabelView(text: "C\(cloudNumber)")
         }
+    }
+
+    private var cloudCupWell: some View {
+        RoundedRectangle(cornerRadius: 12, style: .continuous)
+            .fill(
+                LinearGradient(
+                    colors: [
+                        Color.white.opacity(0.55),
+                        Color(red: 0.85, green: 0.9, blue: 0.95).opacity(0.35)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(Color.black.opacity(0.12), lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.15), radius: 4, x: 0, y: 2)
     }
 
     @ViewBuilder
@@ -49,7 +66,7 @@ struct CloudSlotView: View {
         if gemCounts.isEmpty {
             Text("C\(cloudNumber)")
                 .font(.caption2.weight(.bold))
-                .foregroundStyle(.black.opacity(0.4))
+                .foregroundStyle(.black.opacity(0.32))
         } else {
             GemCountListView(
                 items: gemCounts,
@@ -70,33 +87,31 @@ struct CloudSlotView: View {
     private var cloudShape: some View {
         ZStack {
             Capsule()
-                .fill(.white)
+                .fill(.white.opacity(0.95))
                 .frame(width: width * 0.88, height: height * 0.45)
                 .offset(y: height * 0.12)
 
             Circle()
-                .fill(.white)
+                .fill(.white.opacity(0.95))
                 .frame(width: height * 0.55, height: height * 0.55)
                 .offset(x: -width * 0.22, y: -height * 0.02)
 
             Circle()
-                .fill(.white)
+                .fill(.white.opacity(0.98))
                 .frame(width: height * 0.72, height: height * 0.72)
                 .offset(x: 0, y: -height * 0.12)
 
             Circle()
-                .fill(.white)
+                .fill(.white.opacity(0.95))
                 .frame(width: height * 0.55, height: height * 0.55)
                 .offset(x: width * 0.24, y: -height * 0.02)
         }
-        .shadow(color: .black.opacity(0.18), radius: 5, x: 0, y: 3)
+        .shadow(color: .black.opacity(0.12), radius: 3, x: 0, y: 2)
         .overlay(
-            ZStack {
-                Capsule()
-                    .stroke(.gray.opacity(0.25), lineWidth: 2)
-                    .frame(width: width * 0.88, height: height * 0.45)
-                    .offset(y: height * 0.12)
-            }
+            Capsule()
+                .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                .frame(width: width * 0.88, height: height * 0.45)
+                .offset(y: height * 0.12)
         )
     }
 
@@ -104,61 +119,8 @@ struct CloudSlotView: View {
     private var highlightBorder: some View {
         if isHighlighted {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(Color.yellow, lineWidth: 3)
-                .padding(2)
+                .stroke(Color.yellow, lineWidth: 2.5)
+                .padding(1)
         }
     }
-}
-
-#Preview("Cloud Slots") {
-    VStack(spacing: 24) {
-        HStack(spacing: 18) {
-            CloudSlotView(
-                cloudNumber: 1,
-                gemCounts: [
-                    GemCountDisplayItem(kind: .red, count: 1),
-                    GemCountDisplayItem(kind: .blue, count: 1)
-                ],
-                width: 120,
-                height: 80
-            )
-
-            CloudSlotView(
-                cloudNumber: 2,
-                gemCounts: [],
-                width: 120,
-                height: 80
-            )
-        }
-
-        HStack(spacing: 18) {
-            CloudSlotView(
-                cloudNumber: 3,
-                gemCounts: [
-                    GemCountDisplayItem(kind: .green, count: 1),
-                    GemCountDisplayItem(kind: .yellow, count: 1)
-                ],
-                width: 120,
-                height: 80
-            )
-
-            CloudSlotView(
-                cloudNumber: 4,
-                gemCounts: [
-                    GemCountDisplayItem(kind: .black, count: 1),
-                    GemCountDisplayItem(kind: .white, count: 1)
-                ],
-                width: 120,
-                height: 80
-            )
-        }
-    }
-    .padding(32)
-    .background(
-        LinearGradient(
-            colors: [.cyan.opacity(0.25), .blue.opacity(0.12)],
-            startPoint: .top,
-            endPoint: .bottom
-        )
-    )
 }

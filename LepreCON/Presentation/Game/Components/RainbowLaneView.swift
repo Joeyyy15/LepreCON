@@ -2,9 +2,8 @@
 //  RainbowLaneView.swift
 //  LepreCON
 //
-//  Visual container for one colored rainbow lane.
-//  Each lane stacks gems upward like a bar chart.
-//  prototype switching to better graphics later
+//  Visual container for one colored rainbow lane (gem chute).
+//
 
 import SwiftUI
 
@@ -19,6 +18,7 @@ struct RainbowLaneView: View {
 
     private var laneCornerRadius: CGFloat { width * 0.42 }
     private var unicornReservedTop: CGFloat { hasUnicorn ? 16 : 0 }
+    private var isEmpty: Bool { gemCounts.isEmpty }
 
     var body: some View {
         VStack(spacing: 4) {
@@ -33,23 +33,32 @@ struct RainbowLaneView: View {
             }
             .frame(width: width, height: height)
 
-            Text(laneColor.displayName)
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(.primary.opacity(0.9))
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
+            BoardCupLabelView(text: laneColor.displayName)
         }
     }
 
     private var laneBody: some View {
         ZStack(alignment: .bottomLeading) {
             RoundedRectangle(cornerRadius: laneCornerRadius, style: .continuous)
-                .fill(laneFillColor)
+                .fill(
+                    LinearGradient(
+                        colors: [laneFillColor.opacity(0.92), laneDeepColor],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .overlay(laneGlassShine)
                 .overlay(
                     RoundedRectangle(cornerRadius: laneCornerRadius, style: .continuous)
-                        .stroke(Color.white.opacity(0.55), lineWidth: 1.5)
+                        .stroke(laneFillColor.opacity(0.55), lineWidth: 1)
+                        .padding(2)
                 )
-                .shadow(color: .black.opacity(0.15), radius: 3, x: 0, y: 2)
+                .overlay(
+                    RoundedRectangle(cornerRadius: laneCornerRadius, style: .continuous)
+                        .stroke(Color.black.opacity(0.4), lineWidth: 1.5)
+                )
+                .shadow(color: laneDeepColor.opacity(0.8), radius: 2, x: 0, y: 2)
+                .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 3)
                 .overlay(highlightBorder)
 
             GemCountListView(
@@ -71,20 +80,38 @@ struct RainbowLaneView: View {
         .clipShape(RoundedRectangle(cornerRadius: laneCornerRadius, style: .continuous))
     }
 
+    private var laneGlassShine: some View {
+        LinearGradient(
+            colors: [
+                Color.white.opacity(isEmpty ? 0.38 : 0.22),
+                Color.white.opacity(0.06),
+                Color.clear
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+        .clipShape(RoundedRectangle(cornerRadius: laneCornerRadius, style: .continuous))
+    }
+
     private var laneFillColor: Color {
         switch laneColor {
-        case .red:
-            return .red
-        case .orange:
-            return .orange
-        case .yellow:
-            return .yellow
-        case .green:
-            return .green
-        case .blue:
-            return .blue
-        case .purple:
-            return .purple
+        case .red: return .red
+        case .orange: return .orange
+        case .yellow: return .yellow
+        case .green: return .green
+        case .blue: return .blue
+        case .purple: return .purple
+        }
+    }
+
+    private var laneDeepColor: Color {
+        switch laneColor {
+        case .red: return Color(red: 0.45, green: 0.05, blue: 0.08)
+        case .orange: return Color(red: 0.55, green: 0.22, blue: 0.02)
+        case .yellow: return Color(red: 0.45, green: 0.38, blue: 0.05)
+        case .green: return Color(red: 0.05, green: 0.38, blue: 0.12)
+        case .blue: return Color(red: 0.05, green: 0.18, blue: 0.45)
+        case .purple: return Color(red: 0.28, green: 0.05, blue: 0.42)
         }
     }
 
@@ -111,45 +138,11 @@ struct RainbowLaneView: View {
 
         RainbowLaneView(
             laneColor: .orange,
-            gemCounts: [GemCountDisplayItem(kind: .orange, count: 2)],
-            width: 42,
-            height: 180
-        )
-
-        RainbowLaneView(
-            laneColor: .yellow,
-            gemCounts: [GemCountDisplayItem(kind: .yellow, count: 1)],
-            width: 42,
-            height: 180
-        )
-
-        RainbowLaneView(
-            laneColor: .green,
-            gemCounts: [GemCountDisplayItem(kind: .green, count: 4)],
-            width: 42,
-            height: 180
-        )
-
-        RainbowLaneView(
-            laneColor: .blue,
-            gemCounts: [GemCountDisplayItem(kind: .blue, count: 2)],
-            width: 42,
-            height: 180
-        )
-
-        RainbowLaneView(
-            laneColor: .purple,
-            gemCounts: [GemCountDisplayItem(kind: .purple, count: 3)],
+            gemCounts: [],
             width: 42,
             height: 180
         )
     }
     .padding(32)
-    .background(
-        LinearGradient(
-            colors: [.cyan.opacity(0.25), .green.opacity(0.18)],
-            startPoint: .top,
-            endPoint: .bottom
-        )
-    )
+    .background(BoardContainerView { Color.clear.frame(height: 200) })
 }
