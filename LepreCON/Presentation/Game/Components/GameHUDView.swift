@@ -8,10 +8,24 @@
 import SwiftUI
 
 struct GameHUDView: View {
+    enum Style {
+        /// Full chrome for previews or standalone use.
+        case standalone
+        /// Stats only; parent provides the top-bar frame and background.
+        case embedded
+    }
+
     let hud: GameHUDDisplay
+    var style: Style = .standalone
 
     var body: some View {
-        HStack(spacing: 8) {
+        statsRow
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .modifier(HUDChromeModifier(style: style))
+    }
+
+    private var statsRow: some View {
+        HStack(spacing: 6) {
             HUDStatBadgeView(
                 title: "Rainbow",
                 value: "\(hud.rainbowCompleted)/\(hud.rainbowTotal)"
@@ -23,18 +37,30 @@ struct GameHUDView: View {
             )
             HUDStatBadgeView(title: "Score", value: "\(hud.totalScore)")
         }
-        .frame(maxWidth: .infinity, alignment: .center)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(BoardStyle.hudPanelFill)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(BoardStyle.boardGoldOutline, lineWidth: 1)
-        )
-        .shadow(color: .black.opacity(0.25), radius: 4, x: 0, y: 2)
+    }
+}
+
+private struct HUDChromeModifier: ViewModifier {
+    let style: GameHUDView.Style
+
+    func body(content: Content) -> some View {
+        switch style {
+        case .standalone:
+            content
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(BoardStyle.hudPanelFill)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(BoardStyle.boardGoldOutline, lineWidth: 1)
+                )
+                .shadow(color: .black.opacity(0.25), radius: 4, x: 0, y: 2)
+        case .embedded:
+            content
+        }
     }
 }
 

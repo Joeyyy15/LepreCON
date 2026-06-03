@@ -15,6 +15,7 @@ struct GameBoardView: View {
     var body: some View {
         GeometryReader { geometry in
             let scale = BoardLayout.scale(for: geometry.size)
+            let scaledSize = BoardLayout.scaledSize(for: geometry.size, scale: scale)
             let metrics = BoardLayoutMetrics(scale: scale)
 
             BoardContainerView {
@@ -34,9 +35,9 @@ struct GameBoardView: View {
             }
             .frame(width: BoardLayout.designWidth, height: BoardLayout.designHeight)
             .scaleEffect(scale)
-            .frame(width: geometry.size.width, height: geometry.size.height, alignment: .center)
+            .frame(width: scaledSize.width, height: scaledSize.height)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
         }
-        .frame(minHeight: BoardLayout.designHeight * 0.82)
     }
 }
 

@@ -41,9 +41,16 @@ enum BoardLayout {
     static let designWidth: CGFloat = 340
     static let designHeight: CGFloat = 332
 
+    /// Keeps the board large but fully visible in the middle zone on phone screens.
+    static let maximumScale: CGFloat = 1.05
+
     static func scale(for containerSize: CGSize) -> CGFloat {
         let widthScale = (containerSize.width - 16) / designWidth
         let heightScale = (containerSize.height - 16) / designHeight
-        return min(widthScale, heightScale, 1.0)
+        return min(widthScale, heightScale, maximumScale)
+    }
+
+    static func scaledSize(for containerSize: CGSize, scale: CGFloat) -> CGSize {
+        CGSize(width: designWidth * scale, height: designHeight * scale)
     }
 }

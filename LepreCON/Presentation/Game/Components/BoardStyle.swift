@@ -35,4 +35,17 @@ enum BoardStyle {
     static var boardGoldOutline: Color {
         Color(red: 0.82, green: 0.65, blue: 0.2).opacity(0.75)
     }
+
+    // Shared chrome for HUD and dock so the screen reads as one scene.
+    static let sceneChromeRadius: CGFloat = 14
+    static let dockPanelFill = Color(red: 0.08, green: 0.12, blue: 0.22).opacity(0.9)
+    static let dockPanelStroke = Color(red: 0.82, green: 0.65, blue: 0.2).opacity(0.8)
+
+    static var d12GradientTop: Color {
+        Color(red: 1.0, green: 0.88, blue: 0.38)
+    }
+
+    static var d12GradientBottom: Color {
+        Color(red: 0.88, green: 0.62, blue: 0.1)
+    }
 }

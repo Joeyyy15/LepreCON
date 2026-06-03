@@ -14,6 +14,8 @@ struct GameView: View {
     let onFinishGame: () -> Void
 
     @State private var lastActionMessage: String?
+    @State private var showsScoringSheet = false
+    @State private var showsResolutionSheet = false
 
     init(onFinishGame: @escaping () -> Void) {
         _viewModel = StateObject(wrappedValue: GameViewModel())
@@ -26,97 +28,161 @@ struct GameView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 16) {
-                GameHUDView(hud: viewModel.boardDisplayState.hud)
+        GeometryReader { geometry in
+            let boardHeight = GameScreenLayout.boardHeight(in: geometry.size.height)
 
-                GameBoardView(
-                    displayState: viewModel.boardDisplayState,
-                    onConfirmScore: confirmScore
-                )
-                .frame(maxWidth: .infinity)
-                .frame(height: 360)
+            ZStack {
+                GameSceneBackgroundView()
 
-                if !viewModel.isGameOver,
-                   !viewModel.boardDisplayState.pendingScoringCups.isEmpty {
-                    CupScoringControlsSection(
-                        rows: viewModel.boardDisplayState.pendingScoringCups,
-                        onConfirmScore: confirmScore,
-                        onSkipScoring: skipScoring
-                    )
+                VStack(spacing: 0) {
+                    topZone
+                        .padding(.bottom, GameScreenLayout.hudToBoardGap)
+
+                    boardZone
+                        .frame(height: boardHeight)
+
+                    bottomDock
+                        .padding(.top, GameScreenLayout.boardToDockGap)
                 }
+                .padding(.horizontal, GameScreenLayout.horizontalPadding)
+                .padding(.top, GameScreenLayout.topPadding)
+                .padding(.bottom, GameScreenLayout.bottomPadding)
+            }
+        }
+        .overlay(alignment: .top) {
+            GameActionFeedbackView(message: lastActionMessage)
+                .padding(.top, GameScreenLayout.topBarHeight + GameScreenLayout.topPadding + 4)
+        }
+        .sheet(isPresented: $showsScoringSheet) {
+            GameScoringSheetView(
+                rows: viewModel.boardDisplayState.pendingScoringCups,
+                onConfirmScore: { cupIndex, color in
+                    confirmScore(cupIndex: cupIndex, scoringColor: color)
+                },
+                onSkipScoring: {
+                    skipScoring()
+                    showsScoringSheet = false
+                }
+            )
+        }
+        .sheet(isPresented: $showsResolutionSheet) {
+            resolutionSheet
+        }
+        .onChange(of: viewModel.boardDisplayState.pendingScoringCups) { _, cups in
+            showsScoringSheet = !viewModel.isGameOver && !cups.isEmpty
+        }
+        .onChange(of: viewModel.resolutionEventPresentation) { _, presentation in
+            showsResolutionSheet = presentation != nil
+        }
+        .overlay(alignment: .bottom) {
+            gameOverBanner
+        }
+    }
 
+    // MARK: - Screen zones
+
+    private var topZone: some View {
+        GameTopBarView(
+            hud: viewModel.boardDisplayState.hud,
+            canStartGame: viewModel.canStartGame,
+            canEndGame: viewModel.canEndGame,
+            showsGameControls: !viewModel.isGameOver,
+            onStartGame: startGame,
+            onEndGame: endGame
+        )
+        .frame(height: GameScreenLayout.topBarHeight)
+        .zIndex(2)
+    }
+
+    private var boardZone: some View {
+        GameBoardView(
+            displayState: viewModel.boardDisplayState,
+            onConfirmScore: confirmScore
+        )
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .zIndex(0)
+    }
+
+    private var bottomDock: some View {
+        GameControlDockView(
+            handGemCounts: viewModel.boardDisplayState.handGemCounts,
+            currentRoll: viewModel.boardDisplayState.currentRoll,
+            showsRollControl: !viewModel.isGameOver,
+            canRollD12: viewModel.canRollD12,
+            canPlaceFromHand: viewModel.canPlaceFromHand,
+            showsUndo: !viewModel.isGameOver,
+            canUndo: viewModel.canUndoLastPlacement,
+            onRollD12: rollD12,
+            onUndo: {
+                viewModel.undoLastPlacement()
+                lastActionMessage = "Last placement undone."
+            },
+            onTapHandGemKind: placeHandGemOfKind
+        )
+        .zIndex(1)
+    }
+
+    @ViewBuilder
+    private var gameOverBanner: some View {
+        if let gameOver = viewModel.boardDisplayState.gameOver {
+            VStack(spacing: 8) {
+                Text("Game Over — Score \(gameOver.finalScore.totalPoints)")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(BoardStyle.hudValue)
+
+                Button("Play Again") {
+                    viewModel.startNewGame()
+                    lastActionMessage = "New game started. Roll D12 to begin your turn."
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+            }
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(BoardStyle.hudPanelFill.opacity(0.95))
+            )
+            .padding(.bottom, GameScreenLayout.dockHeight + GameScreenLayout.bottomPadding + 8)
+        }
+    }
+
+    private var resolutionSheet: some View {
+        NavigationStack {
+            Group {
                 if let presentation = viewModel.resolutionEventPresentation {
                     TurnResolutionEventsPanel(
                         presentation: presentation,
                         highlightedLineIndex: viewModel.highlightedResolutionLineIndex
                     )
+                    .padding()
                 }
-
-                GameStatusMessageView(
-                    playerName: viewModel.currentPlayerName,
-                    placementGuidance: placementGuidanceText,
-                    unicornStatusLine: viewModel.boardDisplayState.unicornStatus.statusLine,
-                    unicornIsCaptured: viewModel.boardDisplayState.unicornStatus.isCaptured,
-                    gameOver: viewModel.boardDisplayState.gameOver,
-                    showRainbowCompleteMessage: viewModel.isRainbowComplete && viewModel.boardDisplayState.gameOver == nil,
-                    onPlayAgain: {
-                        viewModel.startNewGame()
-                        lastActionMessage = "New game started. Roll D12 to begin your turn."
-                    }
-                )
-
-                GameActionAreaView(
-                    showsRollButton: !viewModel.isGameOver,
-                    canRollD12: viewModel.canRollD12,
-                    onRollD12: rollD12
-                )
-
-                HandPanelView(
-                    handGemCounts: viewModel.boardDisplayState.handGemCounts,
-                    emptyHandMessage: viewModel.canRollD12 ? "Roll D12 to draw gems" : "No gems in hand",
-                    canPlaceFromHand: viewModel.canPlaceFromHand,
-                    showsUndo: !viewModel.isGameOver,
-                    canUndoLastPlacement: viewModel.canUndoLastPlacement,
-                    onTapHandGemKind: placeHandGemOfKind,
-                    onUndoLastPlacement: {
-                        viewModel.undoLastPlacement()
-                        lastActionMessage = "Last placement undone."
-                    }
-                )
-
-                DiscardPileView(gemCounts: viewModel.boardDisplayState.discardGemCounts)
-
-                GameFooterControlsView(
-                    showsControls: !viewModel.isGameOver,
-                    canStartGame: viewModel.canStartGame,
-                    canEndGame: viewModel.canEndGame,
-                    onStartGame: {
-                        viewModel.startGame()
-                        lastActionMessage = "Game started. Roll D12 to begin your turn."
-                    },
-                    onEndGame: {
-                        viewModel.endGame()
-                        onFinishGame()
-                    }
-                )
-
-                GameActionFeedbackView(message: lastActionMessage)
             }
-            .padding()
+            .navigationTitle("Turn Events")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        showsResolutionSheet = false
+                    }
+                }
+            }
         }
+        .presentationDetents([.medium, .large])
     }
 
-    private var placementGuidanceText: String? {
-        guard !viewModel.isGameOver,
-              viewModel.boardDisplayState.isTurnPlacementComplete else {
-            return nil
-        }
-        if viewModel.isInScoringChoicePhase {
-            return "Score a cup below or choose Skip Scoring to continue."
-        }
-        return "Placement complete — roll D12 for your next turn."
+    // MARK: - Menu actions (existing behavior)
+
+    private func startGame() {
+        viewModel.startGame()
+        lastActionMessage = "Game started. Roll D12 to begin your turn."
     }
+
+    private func endGame() {
+        viewModel.endGame()
+        onFinishGame()
+    }
+
+    // MARK: - Gameplay actions (unchanged behavior)
 
     private func rollD12() {
         switch viewModel.rollD12AndBeginTurn() {
@@ -133,6 +199,7 @@ struct GameView: View {
             if viewModel.session.isTurnPlacementComplete {
                 if viewModel.isInScoringChoicePhase {
                     lastActionMessage = "Placement finished. Score a cup or choose Skip Scoring."
+                    showsScoringSheet = true
                 } else {
                     lastActionMessage = "Placement finished. Roll D12 for your next turn."
                 }
@@ -151,6 +218,7 @@ struct GameView: View {
                 lastActionMessage = "Scored \(scoringColor.scoringDisplayName). Score another cup or choose Skip Scoring."
             } else {
                 lastActionMessage = "Scored \(scoringColor.scoringDisplayName). Roll D12 when ready."
+                showsScoringSheet = false
             }
         case .failure(let error):
             lastActionMessage = scoreConfirmationErrorMessage(error)
