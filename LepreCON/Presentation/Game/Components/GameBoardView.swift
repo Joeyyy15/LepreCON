@@ -14,28 +14,35 @@ struct GameBoardView: View {
 
     var body: some View {
         GeometryReader { geometry in
+            // This calculates how much the full board should scale
+            // to fit inside the available middle screen area.
             let scale = BoardLayout.scale(for: geometry.size)
+
+            // These metrics stay at the original design size.
+            // The board should be built once at design size,
+            // then scaled once using .scaleEffect(scale).
             let designMetrics = BoardLayoutMetrics(scale: 1)
+
+            // This is the final visual size after the board is scaled.
             let scaledSize = BoardLayout.scaledSize(for: geometry.size, scale: scale)
-            let renderMetrics = BoardLayoutMetrics(scale: scale)
 
             BoardContainerView {
                 VStack(spacing: designMetrics.verticalSpacing) {
                     BoardLanesRowView(
                         lanes: displayState.rainbowLanes,
-                        metrics: renderMetrics,
+                        metrics: designMetrics,
                         onConfirmScore: onConfirmScore
                     )
-                    .frame(maxWidth: designMetrics.playfieldWidth, alignment: .center)
+                    .frame(width: designMetrics.playfieldWidth, alignment: .center)
 
                     BoardBottomRowView(
                         bottomRow: displayState.bottomRow,
-                        metrics: renderMetrics,
+                        metrics: designMetrics,
                         onConfirmScore: onConfirmScore
                     )
-                    .frame(maxWidth: designMetrics.playfieldWidth, alignment: .center)
+                    .frame(width: designMetrics.playfieldWidth, alignment: .center)
                 }
-                .frame(width: designMetrics.playfieldWidth)
+                .frame(width: designMetrics.playfieldWidth, alignment: .center)
             }
             .frame(width: BoardLayout.designWidth, height: BoardLayout.designHeight)
             .scaleEffect(scale)

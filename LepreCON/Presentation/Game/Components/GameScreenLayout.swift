@@ -9,14 +9,13 @@ import SwiftUI
 
 enum GameScreenLayout {
     /// Set true locally to outline HUD, board, and dock bounds.
-    static let showLayoutDebug = false
+    static let showLayoutDebug = true
 
     static let topBarHeight: CGFloat = 52
     static let hudToBoardGap: CGFloat = 4
     static let boardToDockGap: CGFloat = 4
-    static let topPadding: CGFloat = 6
-    static let bottomPadding: CGFloat = 4
-
+    static let topPadding: CGFloat = 0
+    static let bottomPadding: CGFloat = 0
     /// Inset from the safe-area edges to the shared foreground column (per side).
     static let horizontalInset: CGFloat = 20
 
@@ -36,11 +35,11 @@ enum GameScreenLayout {
     }
 
     static func topContentPadding(in geometry: GeometryProxy) -> CGFloat {
-        topPadding + geometry.safeAreaInsets.top
+        topPadding
     }
 
     static func bottomContentPadding(in geometry: GeometryProxy) -> CGFloat {
-        bottomPadding + geometry.safeAreaInsets.bottom
+        bottomPadding
     }
 }
 
@@ -52,7 +51,11 @@ struct GameScreenContentColumn<Content: View>: View {
     var body: some View {
         content()
             .frame(width: GameScreenLayout.contentWidth(in: geometry))
-            .frame(maxWidth: .infinity)
+            .frame(
+                width: geometry.size.width,
+                height: geometry.size.height,
+                alignment: .center
+            )
             .gameScreenDebugBorder(.cyan)
     }
 }

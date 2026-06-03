@@ -12,10 +12,6 @@ struct BoardContainerView<Content: View>: View {
 
     var body: some View {
         content()
-            .padding(.vertical, 6)
-            .frame(maxHeight: .infinity, alignment: .center)
-            .background(BoardStyle.boardSceneVignette)
-            .shadow(color: .black.opacity(0.2), radius: 14, x: 0, y: 6)
-            .shadow(color: BoardStyle.boardPlayfieldGlow, radius: 18, x: 0, y: 0)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
     }
 }

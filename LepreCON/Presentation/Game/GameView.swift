@@ -29,22 +29,90 @@ struct GameView: View {
 
     var body: some View {
         GeometryReader { geometry in
+            let contentWidth = GameScreenLayout.contentWidth(in: geometry)
+
+            let topPadding = GameScreenLayout.topContentPadding(in: geometry)
+            let bottomPadding = GameScreenLayout.bottomContentPadding(in: geometry)
+
+            let topReservedHeight =
+                topPadding +
+                GameScreenLayout.topBarHeight +
+                GameScreenLayout.hudToBoardGap
+
+            let bottomReservedHeight =
+                bottomPadding +
+                GameScreenLayout.dockHeight +
+                GameScreenLayout.boardToDockGap
+
+            let boardHeight = max(
+                0,
+                geometry.size.height - topReservedHeight - bottomReservedHeight
+            )
+
             ZStack {
-                GameSceneBackgroundView()
+                // Middle gameplay layer.
+                // This layer is centered inside the same screen-sized coordinate space
+                // as the HUD and dock.
+                VStack(spacing: 0) {
+                    Spacer()
+                        .frame(height: topReservedHeight)
 
-                GameScreenContentColumn(geometry: geometry) {
-                    VStack(spacing: 0) {
-                        topZone
-                            .padding(.bottom, GameScreenLayout.hudToBoardGap)
+                    GameBoardView(
+                        displayState: viewModel.boardDisplayState,
+                        onConfirmScore: confirmScore
+                    )
+                    .frame(width: contentWidth, height: boardHeight)
 
-                        boardZone
-
-                        bottomDock
-                            .padding(.top, GameScreenLayout.boardToDockGap)
-                    }
+                    Spacer()
+                        .frame(height: bottomReservedHeight)
                 }
-                .padding(.top, GameScreenLayout.topContentPadding(in: geometry))
-                .padding(.bottom, GameScreenLayout.bottomContentPadding(in: geometry))
+                .frame(width: geometry.size.width, height: geometry.size.height)
+                .zIndex(0)
+
+                // Top and bottom chrome layer.
+                // HUD and dock use the same content width as the board.
+                VStack(spacing: 0) {
+                    GameTopBarView(
+                        hud: viewModel.boardDisplayState.hud,
+                        canStartGame: viewModel.canStartGame,
+                        canEndGame: viewModel.canEndGame,
+                        showsGameControls: !viewModel.isGameOver,
+                        onStartGame: startGame,
+                        onEndGame: endGame
+                    )
+                    .frame(width: contentWidth, height: GameScreenLayout.topBarHeight)
+                    .padding(.top, topPadding)
+                    .zIndex(2)
+
+                    Spacer(minLength: 0)
+
+                    GameControlDockView(
+                        handGemCounts: viewModel.boardDisplayState.handGemCounts,
+                        currentRoll: viewModel.boardDisplayState.currentRoll,
+                        showsRollControl: !viewModel.isGameOver,
+                        canRollD12: viewModel.canRollD12,
+                        canPlaceFromHand: viewModel.canPlaceFromHand,
+                        showsUndo: !viewModel.isGameOver,
+                        canUndo: viewModel.canUndoLastPlacement,
+                        onRollD12: rollD12,
+                        onUndo: {
+                            viewModel.undoLastPlacement()
+                            lastActionMessage = "Last placement undone."
+                        },
+                        onTapHandGemKind: placeHandGemOfKind
+                    )
+                    .frame(width: contentWidth, height: GameScreenLayout.dockHeight)
+                    .padding(.bottom, bottomPadding)
+                    .zIndex(2)
+                }
+                .frame(width: geometry.size.width, height: geometry.size.height)
+                .zIndex(1)
+            }
+            .frame(width: geometry.size.width, height: geometry.size.height)
+            .background {
+                // Background is decorative only. It should not participate in
+                // the foreground HUD/board/dock layout.
+                GameSceneBackgroundView()
             }
         }
         .overlay(alignment: .top) {
@@ -75,51 +143,7 @@ struct GameView: View {
         .overlay(alignment: .bottom) {
             gameOverBanner
         }
-    }
-
-    // MARK: - Screen zones
-
-    private var topZone: some View {
-        GameTopBarView(
-            hud: viewModel.boardDisplayState.hud,
-            canStartGame: viewModel.canStartGame,
-            canEndGame: viewModel.canEndGame,
-            showsGameControls: !viewModel.isGameOver,
-            onStartGame: startGame,
-            onEndGame: endGame
-        )
-        .frame(height: GameScreenLayout.topBarHeight)
-        .frame(maxWidth: .infinity)
-        .zIndex(2)
-    }
-
-    private var boardZone: some View {
-        GameBoardView(
-            displayState: viewModel.boardDisplayState,
-            onConfirmScore: confirmScore
-        )
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .zIndex(0)
-    }
-
-    private var bottomDock: some View {
-        GameControlDockView(
-            handGemCounts: viewModel.boardDisplayState.handGemCounts,
-            currentRoll: viewModel.boardDisplayState.currentRoll,
-            showsRollControl: !viewModel.isGameOver,
-            canRollD12: viewModel.canRollD12,
-            canPlaceFromHand: viewModel.canPlaceFromHand,
-            showsUndo: !viewModel.isGameOver,
-            canUndo: viewModel.canUndoLastPlacement,
-            onRollD12: rollD12,
-            onUndo: {
-                viewModel.undoLastPlacement()
-                lastActionMessage = "Last placement undone."
-            },
-            onTapHandGemKind: placeHandGemOfKind
-        )
-        .frame(maxWidth: .infinity)
-        .zIndex(1)
+        .statusBarHidden(true)
     }
 
     @ViewBuilder
@@ -170,7 +194,7 @@ struct GameView: View {
         .presentationDetents([.medium, .large])
     }
 
-    // MARK: - Menu actions (existing behavior)
+    // MARK: - Menu actions
 
     private func startGame() {
         viewModel.startGame()
@@ -182,7 +206,7 @@ struct GameView: View {
         onFinishGame()
     }
 
-    // MARK: - Gameplay actions (unchanged behavior)
+    // MARK: - Gameplay actions
 
     private func rollD12() {
         switch viewModel.rollD12AndBeginTurn() {
