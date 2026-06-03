@@ -31,9 +31,9 @@ enum UnicornResolver {
 
         let cupGems = session.cups[unicornIndex].gems
 
-        // White calms the unicorn: one white gem is spent to discard; cup does not explode.
-        if let whiteIndex = cupGems.firstIndex(where: { $0.kind == .white }) {
-            let whiteGem = session.cups[unicornIndex].gems.remove(at: whiteIndex)
+        // Only GemKind.white calms the unicorn (not clear, cup color, or asset name).
+        if let calmingIndex = indexOfWhiteGemThatCalmsUnicorn(in: cupGems) {
+            let whiteGem = session.cups[unicornIndex].gems.remove(at: calmingIndex)
             session.discardPile.append(whiteGem)
             record(.unicornCalmed(cupIndex: unicornIndex), in: &session)
             return .calmedByWhite(cupIndex: unicornIndex)
@@ -45,6 +45,11 @@ enum UnicornResolver {
         }
 
         return explodeGems(fromCupIndex: unicornIndex, in: &session)
+    }
+
+    /// Index of a white gem that can calm the unicorn. Clear gems are never calming.
+    private static func indexOfWhiteGemThatCalmsUnicorn(in gems: [Gem]) -> Int? {
+        gems.firstIndex(where: { $0.kind.calmsUnicorn })
     }
 
     // MARK: - Explosion

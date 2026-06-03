@@ -83,6 +83,55 @@ final class UnicornResolverTests: XCTestCase {
         XCTAssertEqual(session.cups[4].gems.map(\.kind), [.red, .blue])
     }
 
+    func testWhiteGemInUnicornCupCalmsUnicorn() {
+        let white = Gem(kind: .white)
+        var session = makePlayingSession()
+        placeUnicorn(on: 3, in: &session)
+        session.cups[3].gems = [white]
+
+        let outcome = UnicornResolver.resolve(in: &session)
+
+        XCTAssertEqual(outcome, .calmedByWhite(cupIndex: 3))
+        XCTAssertEqual(session.discardPile.map(\.kind), [.white])
+        XCTAssertTrue(session.cups[3].gems.isEmpty)
+    }
+
+    func testClearGemInUnicornCupDoesNotCalmUnicorn() {
+        let clear = Gem(kind: .clear)
+        var session = makePlayingSession()
+        placeUnicorn(on: 0, in: &session)
+        session.cups[0].gems = [clear, Gem(kind: .red)]
+
+        let outcome = UnicornResolver.resolve(in: &session)
+
+        XCTAssertEqual(outcome, .exploded(fromCupIndex: 0, finalCupIndex: 2))
+        XCTAssertTrue(session.discardPile.isEmpty)
+        XCTAssertFalse(
+            session.recentResolutionEvents.contains { event in
+                if case .unicornCalmed(cupIndex: 0) = event { return true }
+                return false
+            }
+        )
+    }
+
+    func testUnicornCupWithOnlyClearAndOtherNonWhiteGemsExplodes() {
+        let clear = Gem(kind: .clear)
+        let red = Gem(kind: .red)
+        let gold = Gem(kind: .gold)
+        var session = makePlayingSession()
+        placeUnicorn(on: 4, in: &session)
+        session.cups[4].gems = [clear, red, gold]
+
+        let outcome = UnicornResolver.resolve(in: &session)
+
+        XCTAssertEqual(outcome, .exploded(fromCupIndex: 4, finalCupIndex: 7))
+        XCTAssertTrue(session.discardPile.isEmpty)
+        XCTAssertTrue(session.cups[4].gems.isEmpty)
+        XCTAssertEqual(session.cups[5].gems.map(\.id), [clear.id])
+        XCTAssertEqual(session.cups[6].gems.map(\.id), [red.id])
+        XCTAssertEqual(session.cups[7].gems.map(\.id), [gold.id])
+    }
+
     func testCalmedByWhiteKeepsUnicornOnSameCup() {
         var session = makePlayingSession()
         placeUnicorn(on: 5, in: &session)

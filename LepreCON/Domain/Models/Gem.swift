@@ -27,6 +27,11 @@ enum GemKind: String, CaseIterable, Codable {
     case black   // "poop" in the rules
     case clear
     case pink
+
+    /// True only for white gems. Clear is a separate type and does not calm the unicorn.
+    var calmsUnicorn: Bool {
+        self == .white
+    }
 }
 
 /// A gem instance on the board or in the bag.
