@@ -42,7 +42,7 @@ struct GameControlDockView: View {
                 canPlace: canPlaceFromHand,
                 onTapKind: onTapHandGemKind
             )
-            .frame(width: GameScreenLayout.dockSideSectionWidth, alignment: .trailing)
+            .frame(width: GameScreenLayout.dockHandSectionWidth, alignment: .center)
         }
         .padding(.horizontal, GameScreenLayout.dockInnerPadding)
         .padding(.vertical, 10)

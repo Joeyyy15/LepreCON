@@ -23,6 +23,8 @@ enum GameScreenLayout {
     static let gearTrailingPadding: CGFloat = 10
     static let dockInnerPadding: CGFloat = 12
     static let dockSideSectionWidth: CGFloat = 80
+    /// Slightly wider than undo so hand gems can use a 3–4 column grid without horizontal scrolling.
+    static let dockHandSectionWidth: CGFloat = 92
 
     static let dockHeight: CGFloat = 120
 
