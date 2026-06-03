@@ -65,15 +65,11 @@ struct CloudSlotView: View {
         if gemCounts.isEmpty {
             Color.clear
         } else {
-            GemCountListView(
+            BoardCupGemCluster(
                 items: gemCounts,
-                style: .compact(gemSize: min(height * 0.24, 14)),
-                showsShortLabel: true
-            )
-            .frame(
-                maxWidth: max(0, width - innerPadding * 2),
-                maxHeight: max(0, height - innerPadding * 2 - unicornReservedTop),
-                alignment: .center
+                width: max(0, width - innerPadding * 2),
+                height: max(0, height - innerPadding * 2 - unicornReservedTop),
+                showsKindLabel: true
             )
             .padding(.horizontal, innerPadding)
             .padding(.top, unicornReservedTop + innerPadding * 0.5)

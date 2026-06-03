@@ -51,18 +51,14 @@ struct PotSlotView: View {
         if gemCounts.isEmpty {
             Color.clear
         } else {
-            GemCountListView(
+            BoardCupGemCluster(
                 items: gemCounts,
-                style: .compact(gemSize: min(height * 0.2, 13)),
-                showsShortLabel: true
-            )
-            .frame(
-                maxWidth: max(0, width - innerPadding * 2),
-                maxHeight: max(0, height * 0.55),
-                alignment: .center
+                width: max(0, width - innerPadding * 2),
+                height: max(0, height * 0.68),
+                showsKindLabel: true
             )
             .padding(.horizontal, innerPadding)
-            .offset(y: -height * 0.1)
+            .offset(y: -height * 0.08)
         }
     }
 

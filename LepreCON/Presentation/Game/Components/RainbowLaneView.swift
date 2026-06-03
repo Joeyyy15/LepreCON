@@ -60,18 +60,13 @@ struct RainbowLaneView: View {
                 .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 3)
                 .overlay(highlightBorder)
 
-            GemCountListView(
+            BoardLaneGemStack(
                 items: gemCounts,
-                style: .largeLane(laneWidth: width),
-                showsShortLabel: false
-            )
-            .frame(
                 width: max(0, width - innerPadding * 2),
-                height: max(0, height - innerPadding - unicornReservedTop - 4),
-                alignment: .bottomLeading
+                height: max(0, height - innerPadding - unicornReservedTop - 4)
             )
-            .padding(.leading, innerPadding)
-            .padding(.trailing, innerPadding)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+            .padding(.horizontal, innerPadding)
             .padding(.bottom, innerPadding)
             .padding(.top, unicornReservedTop + 2)
         }
