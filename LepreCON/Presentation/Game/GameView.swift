@@ -180,20 +180,20 @@ struct GameView: View {
             Text("Your Hand")
                 .font(.headline)
 
-            if viewModel.boardDisplayState.handGems.isEmpty {
+            if viewModel.boardDisplayState.handGemCounts.isEmpty {
                 Text(viewModel.canRollD12 ? "Roll D12 to draw gems" : "No gems in hand")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {
                 HandGemsView(
-                    gems: viewModel.boardDisplayState.handGems,
+                    gemCounts: viewModel.boardDisplayState.handGemCounts,
                     canPlace: viewModel.canPlaceFromHand,
-                    onTapGem: placeHandGemInCurrentCup
+                    onTapKind: placeHandGemOfKind
                 )
             }
 
             if viewModel.canPlaceFromHand {
-                Text("Tap a gem to place it in the highlighted cup")
+                Text("Tap a gem type to place one into the highlighted cup")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -254,8 +254,8 @@ struct GameView: View {
         }
     }
 
-    private func placeHandGemInCurrentCup(gemID: UUID) {
-        switch viewModel.placeGemInCurrentCup(gemID: gemID) {
+    private func placeHandGemOfKind(_ kind: GemKind) {
+        switch viewModel.placeHandGem(kind: kind) {
         case .success:
             if viewModel.session.isTurnPlacementComplete {
                 if viewModel.isInScoringChoicePhase {

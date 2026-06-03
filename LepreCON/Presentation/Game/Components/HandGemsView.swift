@@ -2,83 +2,52 @@
 // HandGemsView.swift
 // LepreCON
 //
-// Wrapping grid of hand gems so a normal D12 draw is visible without horizontal scrolling.
+// Grouped, tappable hand gem counts. Tap a kind to place one gem of that type.
 //
 
 import SwiftUI
 
 struct HandGemsView: View {
-    let gems: [GemDisplayItem]
+    let gemCounts: [GemCountDisplayItem]
     var canPlace: Bool = false
-    var isInteractive: Bool = true
-    var onTapGem: (UUID) -> Void = { _ in }
+    var onTapKind: (GemKind) -> Void = { _ in }
 
     private let columns = [
-        GridItem(.adaptive(minimum: 56, maximum: 80), spacing: 10)
+        GridItem(.adaptive(minimum: 84, maximum: 110), spacing: 8)
     ]
 
     var body: some View {
-        LazyVGrid(columns: columns, alignment: .leading, spacing: 10) {
-            ForEach(gems) { gem in
-                if isInteractive {
-                    Button {
-                        onTapGem(gem.id)
-                    } label: {
-                        HandGemTileView(gem: gem, size: 52)
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(!canPlace)
-                } else {
-                    HandGemTileView(gem: gem, size: 36)
+        LazyVGrid(columns: columns, alignment: .leading, spacing: 8) {
+            ForEach(gemCounts) { item in
+                Button {
+                    onTapKind(item.kind)
+                } label: {
+                    GemCountBadgeView(item: item, style: .hand(gemSize: 26))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 5)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(Color.white.opacity(0.14))
+                        )
                 }
+                .buttonStyle(.plain)
+                .disabled(!canPlace)
+                .accessibilityLabel("Place \(item.displayName), \(item.count) in hand")
             }
         }
-    }
-}
-
-/// One tappable hand gem with an optional label when PNGs look alike (gold/yellow, clear/white, etc.).
-struct HandGemTileView: View {
-    let gem: GemDisplayItem
-    let size: CGFloat
-
-    var body: some View {
-        ZStack(alignment: .bottom) {
-            GemView(imageName: gem.imageName, size: size)
-                .padding(8)
-                .background(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(Color.white.opacity(0.12))
-                )
-
-            if let overlay = gem.kind.handGemOverlayLabel {
-                Text(overlay)
-                    .font(.system(size: 9, weight: .heavy))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 2)
-                    .background(
-                        Capsule()
-                            .fill(Color.black.opacity(0.72))
-                    )
-                    .padding(.bottom, 4)
-            }
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(gem.kind.gemCountDisplayName)
     }
 }
 
 #Preview("Hand Gems") {
     HandGemsView(
-        gems: [
-            GemDisplayItem(id: UUID(), imageName: "gem_yellow", kind: .gold),
-            GemDisplayItem(id: UUID(), imageName: "gem_white", kind: .clear),
-            GemDisplayItem(id: UUID(), imageName: "gem_white", kind: .white),
-            GemDisplayItem(id: UUID(), imageName: "gem_purple", kind: .pink),
-            GemDisplayItem(id: UUID(), imageName: "gem_black", kind: .black)
+        gemCounts: [
+            GemCountDisplayItem(kind: .red, count: 3),
+            GemCountDisplayItem(kind: .gold, count: 1),
+            GemCountDisplayItem(kind: .clear, count: 2)
         ],
         canPlace: true,
-        onTapGem: { _ in }
+        onTapKind: { _ in }
     )
     .padding()
 }

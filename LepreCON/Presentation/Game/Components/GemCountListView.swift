@@ -13,12 +13,14 @@ enum GemCountBadgeStyle: Equatable {
     case largeLane(laneWidth: CGFloat)
     /// Smaller badges for clouds, pot, and discard.
     case compact(gemSize: CGFloat)
+    /// Compact tappable badges for the player's hand.
+    case hand(gemSize: CGFloat)
 
     var gemSize: CGFloat {
         switch self {
         case .largeLane(let laneWidth):
             return laneWidth * 0.52
-        case .compact(let size):
+        case .compact(let size), .hand(let size):
             return size
         }
     }
@@ -29,6 +31,8 @@ enum GemCountBadgeStyle: Equatable {
             return 11
         case .compact:
             return 9
+        case .hand:
+            return 10
         }
     }
 
@@ -38,6 +42,8 @@ enum GemCountBadgeStyle: Equatable {
             return 12
         case .compact:
             return 10
+        case .hand:
+            return 11
         }
     }
 
@@ -45,7 +51,7 @@ enum GemCountBadgeStyle: Equatable {
         switch self {
         case .largeLane:
             return 3
-        case .compact:
+        case .compact, .hand:
             return 2
         }
     }

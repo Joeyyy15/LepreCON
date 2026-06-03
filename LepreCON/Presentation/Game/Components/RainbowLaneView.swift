@@ -18,8 +18,7 @@ struct RainbowLaneView: View {
 
     var body: some View {
         VStack(spacing: 6) {
-            ZStack(alignment: .bottom) {
-                // The colored rainbow lane background.
+            ZStack(alignment: .bottomLeading) {
                 RoundedRectangle(cornerRadius: width * 0.45)
                     .fill(laneFillColor)
                     .frame(width: width, height: height)
@@ -30,16 +29,14 @@ struct RainbowLaneView: View {
                     .shadow(color: .black.opacity(0.18), radius: 4, x: 0, y: 3)
                     .overlay(highlightBorder)
 
-                // Grouped gem counts stay inside a fixed lane height.
                 GemCountListView(items: gemCounts, style: .largeLane(laneWidth: width))
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
                     .padding(.horizontal, 3)
                     .padding(.bottom, 5)
-
+            }
+            .overlay(alignment: .topTrailing) {
                 if hasUnicorn {
                     UnicornIndicatorView()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                        .padding(.top, 4)
+                        .padding(3)
                 }
             }
 

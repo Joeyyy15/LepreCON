@@ -29,15 +29,16 @@ struct CloudSlotView: View {
                     GemCountListView(items: gemCounts, style: .compact(gemSize: height * 0.28))
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
                         .padding(.horizontal, 4)
-                }
-
-                if hasUnicorn {
-                    UnicornIndicatorView()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-                        .padding(4)
+                        .padding(.top, hasUnicorn ? 14 : 0)
                 }
             }
             .frame(width: width, height: height)
+            .overlay(alignment: .topTrailing) {
+                if hasUnicorn {
+                    UnicornIndicatorView()
+                        .padding(2)
+                }
+            }
             .overlay(highlightBorder)
 
             Text("C\(cloudNumber)")

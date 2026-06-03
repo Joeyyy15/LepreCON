@@ -85,7 +85,7 @@ struct GameBoardDisplayState: Equatable {
     let rainbowLanes: [RainbowLaneDisplay]
     /// Bottom row left → right per rulebook image: cloud2, cloud1, pot, cloud3, cloud4.
     let bottomRow: [BottomRowSlotDisplay]
-    let handGems: [GemDisplayItem]
+    let handGemCounts: [GemCountDisplayItem]
     let discardGemCounts: [GemCountDisplayItem]
     let currentRoll: Int?
     let canRollD12: Bool
@@ -192,7 +192,7 @@ struct GameBoardDisplayState: Equatable {
                 rainbowLane(cupIndex: 7, color: .purple)
             ],
             bottomRow: bottomRow,
-            handGems: session.gemsInHand.map { GemDisplayItem(gem: $0) },
+            handGemCounts: GemCountDisplayBuilder.groupedCounts(from: session.gemsInHand),
             discardGemCounts: GemCountDisplayBuilder.groupedCounts(from: session.discardPile),
             currentRoll: session.currentRoll,
             canRollD12: GameTurnEngine.canRollD12(in: session),

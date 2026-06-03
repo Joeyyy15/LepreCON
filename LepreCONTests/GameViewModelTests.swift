@@ -520,6 +520,64 @@ final class GameViewModelTests: XCTestCase {
         }
     }
 
+    // MARK: - Grouped hand placement
+
+    func testPlaceHandGemKindPlacesOneGemOfThatKind() async {
+        await MainActor.run {
+            let viewModel = makeViewModelReadyToPlace(handGems: [.red, .blue])
+            let cupIndex = viewModel.session.nextPlacementCupIndex
+
+            _ = viewModel.placeHandGem(kind: .red)
+
+            XCTAssertEqual(viewModel.session.gemsInHand.count, 1)
+            XCTAssertTrue(viewModel.session.cups[cupIndex].gems.contains(where: { $0.kind == .red }))
+            XCTAssertEqual(viewModel.boardDisplayState.handGemCounts.first?.kind, .blue)
+        }
+    }
+
+    func testGroupedPlacementDecreasesHandCountByOne() async {
+        await MainActor.run {
+            var session = GameSessionFactory().makeNewGame(playerNames: ["Player 1"])
+            session.phase = .playing
+            for index in session.cups.indices {
+                session.cups[index].gems = []
+            }
+            session.gemsInHand = [Gem(kind: .gold), Gem(kind: .gold)]
+            session.gemsInBag = [Gem(kind: .green)]
+            session.currentRoll = 2
+            session.unicornCupIndex = 9
+            session.unicornCupID = session.cups[9].id
+
+            let viewModel = GameViewModel(session: session)
+            _ = viewModel.placeHandGem(kind: .gold)
+
+            XCTAssertEqual(viewModel.boardDisplayState.handGemCounts.count, 1)
+            XCTAssertEqual(viewModel.boardDisplayState.handGemCounts.first?.kind, .gold)
+            XCTAssertEqual(viewModel.boardDisplayState.handGemCounts.first?.count, 1)
+        }
+    }
+
+    func testUndoAfterGroupedPlacementRestoresHandCount() async {
+        await MainActor.run {
+            var session = GameSessionFactory().makeNewGame(playerNames: ["Player 1"])
+            session.phase = .playing
+            for index in session.cups.indices {
+                session.cups[index].gems = []
+            }
+            session.gemsInHand = [Gem(kind: .red), Gem(kind: .red)]
+            session.gemsInBag = [Gem(kind: .green)]
+            session.currentRoll = 2
+            session.unicornCupIndex = 9
+            session.unicornCupID = session.cups[9].id
+
+            let viewModel = GameViewModel(session: session)
+            _ = viewModel.placeHandGem(kind: .red)
+            viewModel.undoLastPlacement()
+
+            XCTAssertEqual(viewModel.boardDisplayState.handGemCounts.first?.count, 2)
+        }
+    }
+
     // MARK: - Undo last placement
 
     @MainActor
@@ -532,7 +590,7 @@ final class GameViewModelTests: XCTestCase {
         for index in session.cups.indices {
             session.cups[index].gems = []
         }
-        session.gemsInBag = []
+        session.gemsInBag = [Gem(kind: .green)]
         session.gemsInHand = handGems.map { Gem(kind: $0) }
         session.currentRoll = handGems.count
         session.nextPlacementCupIndex = cupIndex
@@ -599,15 +657,13 @@ final class GameViewModelTests: XCTestCase {
 
             XCTAssertFalse(viewModel.canUndoLastPlacement)
             viewModel.undoLastPlacement()
-            XCTAssertEqual(viewModel.session.gemsInHand.count, 1)
+            XCTAssertEqual(viewModel.session.gemsInHand.count, 2)
         }
     }
 
     func testBeginTurnClearsUndo() async {
         await MainActor.run {
-            let viewModel = GameViewModel(playerNames: ["Player 1"])
-            viewModel.startGame()
-            _ = viewModel.beginTurn(roll: 1)
+            let viewModel = makeViewModelReadyToPlace(handGems: [.red])
             let gem = viewModel.session.gemsInHand[0]
             _ = viewModel.placeGemInCurrentCup(gemID: gem.id)
             XCTAssertTrue(viewModel.canUndoLastPlacement)
@@ -615,6 +671,22 @@ final class GameViewModelTests: XCTestCase {
             _ = viewModel.beginTurn(roll: 1)
 
             XCTAssertFalse(viewModel.canUndoLastPlacement)
+        }
+    }
+
+    func testUndoAfterGroupedFinalPlacementRestoresPriorState() async {
+        await MainActor.run {
+            let viewModel = makeViewModelReadyToPlace(handGems: [.red])
+            let cupIndex = viewModel.session.nextPlacementCupIndex
+            _ = viewModel.placeHandGem(kind: .red)
+            XCTAssertTrue(viewModel.session.isTurnPlacementComplete)
+
+            viewModel.undoLastPlacement()
+
+            XCTAssertFalse(viewModel.session.isTurnPlacementComplete)
+            XCTAssertEqual(viewModel.session.gemsInHand.count, 1)
+            XCTAssertTrue(viewModel.session.gemsInHand.contains(where: { $0.kind == .red }))
+            XCTAssertTrue(viewModel.session.cups[cupIndex].gems.isEmpty)
         }
     }
 

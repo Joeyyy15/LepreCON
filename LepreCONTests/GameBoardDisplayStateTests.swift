@@ -170,6 +170,70 @@ final class GameBoardDisplayStateTests: XCTestCase {
         }
     }
 
+    // MARK: - Hand grouped counts
+
+    func testHandDisplayGroupsSameKindGemsIntoOneCount() {
+        var session = GameSessionFactory().makeNewGame(playerNames: ["Alex"])
+        session.phase = .playing
+        session.gemsInHand = Array(repeating: Gem(kind: .red), count: 3)
+
+        let display = GameBoardDisplayState.from(session: session)
+
+        XCTAssertEqual(display.handGemCounts.count, 1)
+        XCTAssertEqual(display.handGemCounts.first?.kind, .red)
+        XCTAssertEqual(display.handGemCounts.first?.count, 3)
+    }
+
+    func testHandGroupingIsByGemKindNotImageName() {
+        var session = GameSessionFactory().makeNewGame(playerNames: ["Alex"])
+        session.phase = .playing
+        session.gemsInHand = [
+            Gem(kind: .yellow),
+            Gem(kind: .gold)
+        ]
+
+        let display = GameBoardDisplayState.from(session: session)
+        let kinds = display.handGemCounts.map(\.kind)
+
+        XCTAssertEqual(display.handGemCounts.count, 2)
+        XCTAssertEqual(Set(kinds), Set([.yellow, .gold]))
+    }
+
+    func testHandYellowAndGoldAreSeparateGroups() {
+        var session = GameSessionFactory().makeNewGame(playerNames: ["Alex"])
+        session.gemsInHand = [Gem(kind: .yellow), Gem(kind: .gold)]
+
+        let display = GameBoardDisplayState.from(session: session)
+
+        XCTAssertEqual(display.handGemCounts.map(\.kind), [.yellow, .gold])
+    }
+
+    func testHandWhiteAndClearAreSeparateGroups() {
+        var session = GameSessionFactory().makeNewGame(playerNames: ["Alex"])
+        session.gemsInHand = [Gem(kind: .white), Gem(kind: .clear)]
+
+        let display = GameBoardDisplayState.from(session: session)
+
+        XCTAssertEqual(display.handGemCounts.map(\.kind), [.white, .clear])
+        XCTAssertEqual(display.handGemCounts.first { $0.kind == .white }?.shortLabel, "W")
+        XCTAssertEqual(display.handGemCounts.first { $0.kind == .clear }?.shortLabel, "C")
+    }
+
+    func testUnicornMarksCorrectCupWithoutObstructingGemCounts() {
+        var session = GameSessionFactory().makeNewGame(playerNames: ["Alex"])
+        session.phase = .playing
+        session.unicornCupIndex = 9
+        session.unicornCupID = session.cups[9].id
+        session.cups[9].gems = [Gem(kind: .red), Gem(kind: .blue)]
+
+        let display = GameBoardDisplayState.from(session: session)
+        let cloudSlot = display.bottomRow.first { $0.cupSlot.cupIndex == 9 }
+
+        XCTAssertEqual(cloudSlot?.cupSlot.hasUnicorn, true)
+        XCTAssertEqual(cloudSlot?.cupSlot.gemCounts.count, 2)
+        XCTAssertEqual(display.rainbowLanes.filter(\.hasUnicorn).count, 0)
+    }
+
     // MARK: - Playability UI display
 
     func testHandGemOverlayLabelsAreNonEmptyForAmbiguousKinds() {

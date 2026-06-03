@@ -166,6 +166,14 @@ final class GameViewModel: ObservableObject {
         return result
     }
 
+    /// Places one gem of the given kind from hand (first matching instance).
+    func placeHandGem(kind: GemKind) -> Result<Void, GameTurnError> {
+        guard let gem = session.gemsInHand.first(where: { $0.kind == kind }) else {
+            return .failure(.gemNotInHand)
+        }
+        return placeGemInCurrentCup(gemID: gem.id)
+    }
+
     /// Places the chosen hand gem into the currently highlighted cup on the board path.
     func placeGemInCurrentCup(gemID: UUID) -> Result<Void, GameTurnError> {
         let snapshotBeforePlacement = session
