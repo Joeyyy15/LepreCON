@@ -12,32 +12,46 @@ struct PotSlotView: View {
     let gemCounts: [GemCountDisplayItem]
     let width: CGFloat
     let height: CGFloat
+    var innerPadding: CGFloat = 5
     var isHighlighted: Bool = false
 
     var body: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 4) {
             ZStack {
                 potShape
 
-                if gemCounts.isEmpty {
-                    Text("Pot")
-                        .font(.caption)
-                        .bold()
-                        .foregroundStyle(.white.opacity(0.75))
-                        .offset(y: height * 0.08)
-                } else {
-                    GemCountListView(items: gemCounts, style: .compact(gemSize: height * 0.22))
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-                        .padding(.horizontal, 4)
-                        .offset(y: -height * 0.06)
-                }
+                potContent
             }
             .frame(width: width, height: height)
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay(highlightBorder)
 
             Text("Pot")
-                .font(.caption2)
-                .bold()
+                .font(.caption2.weight(.semibold))
+                .lineLimit(1)
+        }
+    }
+
+    @ViewBuilder
+    private var potContent: some View {
+        if gemCounts.isEmpty {
+            Text("Pot")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.white.opacity(0.75))
+                .offset(y: height * 0.06)
+        } else {
+            GemCountListView(
+                items: gemCounts,
+                style: .compact(gemSize: min(height * 0.2, 13)),
+                showsShortLabel: true
+            )
+            .frame(
+                maxWidth: max(0, width - innerPadding * 2),
+                maxHeight: max(0, height * 0.55),
+                alignment: .center
+            )
+            .padding(.horizontal, innerPadding)
+            .offset(y: -height * 0.1)
         }
     }
 

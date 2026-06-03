@@ -13,37 +13,62 @@ struct RainbowLaneView: View {
     let gemCounts: [GemCountDisplayItem]
     let width: CGFloat
     let height: CGFloat
+    var innerPadding: CGFloat = 4
     var isHighlighted: Bool = false
     var hasUnicorn: Bool = false
 
-    var body: some View {
-        VStack(spacing: 6) {
-            ZStack(alignment: .bottomLeading) {
-                RoundedRectangle(cornerRadius: width * 0.45)
-                    .fill(laneFillColor)
-                    .frame(width: width, height: height)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: width * 0.45)
-                            .stroke(.white.opacity(0.55), lineWidth: 2)
-                    )
-                    .shadow(color: .black.opacity(0.18), radius: 4, x: 0, y: 3)
-                    .overlay(highlightBorder)
+    private var laneCornerRadius: CGFloat { width * 0.42 }
+    private var unicornReservedTop: CGFloat { hasUnicorn ? 16 : 0 }
 
-                GemCountListView(items: gemCounts, style: .largeLane(laneWidth: width))
-                    .padding(.horizontal, 3)
-                    .padding(.bottom, 5)
-            }
-            .overlay(alignment: .topTrailing) {
+    var body: some View {
+        VStack(spacing: 4) {
+            ZStack(alignment: .topTrailing) {
+                laneBody
+
                 if hasUnicorn {
                     UnicornIndicatorView()
-                        .padding(3)
+                        .padding(4)
+                        .zIndex(1)
                 }
             }
+            .frame(width: width, height: height)
 
             Text(laneColor.displayName)
-                .font(.caption2)
-                .bold()
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.primary.opacity(0.9))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
+    }
+
+    private var laneBody: some View {
+        ZStack(alignment: .bottomLeading) {
+            RoundedRectangle(cornerRadius: laneCornerRadius, style: .continuous)
+                .fill(laneFillColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: laneCornerRadius, style: .continuous)
+                        .stroke(Color.white.opacity(0.55), lineWidth: 1.5)
+                )
+                .shadow(color: .black.opacity(0.15), radius: 3, x: 0, y: 2)
+                .overlay(highlightBorder)
+
+            GemCountListView(
+                items: gemCounts,
+                style: .largeLane(laneWidth: width),
+                showsShortLabel: false
+            )
+            .frame(
+                width: max(0, width - innerPadding * 2),
+                height: max(0, height - innerPadding - unicornReservedTop - 4),
+                alignment: .bottomLeading
+            )
+            .padding(.leading, innerPadding)
+            .padding(.trailing, innerPadding)
+            .padding(.bottom, innerPadding)
+            .padding(.top, unicornReservedTop + 2)
+        }
+        .frame(width: width, height: height)
+        .clipShape(RoundedRectangle(cornerRadius: laneCornerRadius, style: .continuous))
     }
 
     private var laneFillColor: Color {
@@ -66,8 +91,8 @@ struct RainbowLaneView: View {
     @ViewBuilder
     private var highlightBorder: some View {
         if isHighlighted {
-            RoundedRectangle(cornerRadius: width * 0.45, style: .continuous)
-                .stroke(Color.yellow, lineWidth: 3)
+            RoundedRectangle(cornerRadius: laneCornerRadius, style: .continuous)
+                .stroke(Color.yellow, lineWidth: 2.5)
         }
     }
 }

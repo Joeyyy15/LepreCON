@@ -32,10 +32,8 @@ struct GameView: View {
                     displayState: viewModel.boardDisplayState,
                     onConfirmScore: confirmScore
                 )
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 380)
-                    .clipShape(RoundedRectangle(cornerRadius: 24))
-                    .shadow(color: .black.opacity(0.18), radius: 10, x: 0, y: 6)
+                .frame(maxWidth: .infinity)
+                .frame(height: 360)
 
                 if !viewModel.isGameOver,
                    !viewModel.boardDisplayState.pendingScoringCups.isEmpty {

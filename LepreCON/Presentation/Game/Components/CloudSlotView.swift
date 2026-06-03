@@ -12,38 +12,58 @@ struct CloudSlotView: View {
     let gemCounts: [GemCountDisplayItem]
     let width: CGFloat
     let height: CGFloat
+    var innerPadding: CGFloat = 5
     var isHighlighted: Bool = false
     var hasUnicorn: Bool = false
 
-    var body: some View {
-        VStack(spacing: 6) {
-            ZStack {
-                cloudShape
+    private var unicornReservedTop: CGFloat { hasUnicorn ? 14 : 0 }
 
-                if gemCounts.isEmpty {
-                    Text("C\(cloudNumber)")
-                        .font(.caption2)
-                        .bold()
-                        .foregroundStyle(.black.opacity(0.45))
-                } else {
-                    GemCountListView(items: gemCounts, style: .compact(gemSize: height * 0.28))
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-                        .padding(.horizontal, 4)
-                        .padding(.top, hasUnicorn ? 14 : 0)
+    var body: some View {
+        VStack(spacing: 4) {
+            ZStack(alignment: .topTrailing) {
+                ZStack {
+                    cloudShape
+
+                    cupContent
+                }
+                .frame(width: width, height: height)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(highlightBorder)
+
+                if hasUnicorn {
+                    UnicornIndicatorView()
+                        .padding(3)
+                        .zIndex(1)
                 }
             }
             .frame(width: width, height: height)
-            .overlay(alignment: .topTrailing) {
-                if hasUnicorn {
-                    UnicornIndicatorView()
-                        .padding(2)
-                }
-            }
-            .overlay(highlightBorder)
 
             Text("C\(cloudNumber)")
-                .font(.caption2)
-                .bold()
+                .font(.caption2.weight(.semibold))
+                .lineLimit(1)
+        }
+    }
+
+    @ViewBuilder
+    private var cupContent: some View {
+        if gemCounts.isEmpty {
+            Text("C\(cloudNumber)")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(.black.opacity(0.4))
+        } else {
+            GemCountListView(
+                items: gemCounts,
+                style: .compact(gemSize: min(height * 0.24, 14)),
+                showsShortLabel: true
+            )
+            .frame(
+                maxWidth: max(0, width - innerPadding * 2),
+                maxHeight: max(0, height - innerPadding * 2 - unicornReservedTop),
+                alignment: .center
+            )
+            .padding(.horizontal, innerPadding)
+            .padding(.top, unicornReservedTop + innerPadding * 0.5)
+            .padding(.bottom, innerPadding)
         }
     }
 
