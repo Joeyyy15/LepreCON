@@ -24,9 +24,9 @@ struct HUDStatBadgeView: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
         }
-        .padding(.horizontal, 8)
+        .padding(.horizontal, 7)
         .padding(.vertical, 5)
-        .frame(minWidth: 44)
+        .frame(minWidth: 40)
         .background(
             RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .fill(BoardStyle.hudBadgeFill)

@@ -15,22 +15,21 @@ struct PotSlotView: View {
     var isHighlighted: Bool = false
 
     var body: some View {
-        VStack(spacing: 4) {
-            ZStack {
-                potPedestal
-                potShape
-                potContent
-            }
-            .frame(width: width, height: height)
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(BoardStyle.boardGoldOutline.opacity(0.85), lineWidth: 1.25)
-            )
-            .overlay(highlightBorder)
-
-            BoardCupLabelView(text: "Pot")
+        ZStack {
+            potPedestal
+            potShape
+            potContent
         }
+        .frame(width: width, height: height)
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(BoardStyle.boardGoldOutline.opacity(0.85), lineWidth: 1.25)
+        )
+        .overlay(highlightBorder)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Pot of Gold")
+        .accessibilityAddTraits(isHighlighted ? .isSelected : [])
     }
 
     private var potPedestal: some View {
@@ -50,10 +49,7 @@ struct PotSlotView: View {
     @ViewBuilder
     private var potContent: some View {
         if gemCounts.isEmpty {
-            Text("Pot")
-                .font(.caption.weight(.bold))
-                .foregroundStyle(Color(red: 0.98, green: 0.85, blue: 0.45).opacity(0.85))
-                .offset(y: height * 0.06)
+            Color.clear
         } else {
             GemCountListView(
                 items: gemCounts,

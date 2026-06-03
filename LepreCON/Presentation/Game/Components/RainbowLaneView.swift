@@ -21,20 +21,19 @@ struct RainbowLaneView: View {
     private var isEmpty: Bool { gemCounts.isEmpty }
 
     var body: some View {
-        VStack(spacing: 4) {
-            ZStack(alignment: .topTrailing) {
-                laneBody
+        ZStack(alignment: .topTrailing) {
+            laneBody
 
-                if hasUnicorn {
-                    UnicornIndicatorView()
-                        .padding(4)
-                        .zIndex(1)
-                }
+            if hasUnicorn {
+                UnicornIndicatorView()
+                    .padding(4)
+                    .zIndex(1)
             }
-            .frame(width: width, height: height)
-
-            BoardCupLabelView(text: laneColor.displayName)
         }
+        .frame(width: width, height: height)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(laneColor.displayName) lane")
+        .accessibilityAddTraits(isHighlighted ? .isSelected : [])
     }
 
     private var laneBody: some View {

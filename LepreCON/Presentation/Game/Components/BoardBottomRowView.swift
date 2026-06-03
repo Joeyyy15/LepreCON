@@ -17,12 +17,12 @@ struct BoardBottomRowView: View {
             ForEach(bottomRow) { slot in
                 bottomSlotColumn(slot)
                     .frame(
-                        minWidth: slot.kind.isPot ? metrics.potWidth : metrics.cloudWidth,
-                        maxWidth: slot.kind.isPot ? metrics.potWidth : metrics.cloudWidth
+                        width: slot.kind.isPot ? metrics.potWidth : metrics.cloudWidth,
+                        alignment: .center
                     )
             }
         }
-        .frame(maxWidth: .infinity, alignment: .center)
+        .frame(width: metrics.bottomRowWidth, alignment: .center)
     }
 
     @ViewBuilder

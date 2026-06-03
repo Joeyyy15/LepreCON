@@ -15,29 +15,34 @@ struct GameBoardView: View {
     var body: some View {
         GeometryReader { geometry in
             let scale = BoardLayout.scale(for: geometry.size)
+            let designMetrics = BoardLayoutMetrics(scale: 1)
             let scaledSize = BoardLayout.scaledSize(for: geometry.size, scale: scale)
-            let metrics = BoardLayoutMetrics(scale: scale)
+            let renderMetrics = BoardLayoutMetrics(scale: scale)
 
             BoardContainerView {
-                VStack(spacing: metrics.verticalSpacing) {
+                VStack(spacing: designMetrics.verticalSpacing) {
                     BoardLanesRowView(
                         lanes: displayState.rainbowLanes,
-                        metrics: metrics,
+                        metrics: renderMetrics,
                         onConfirmScore: onConfirmScore
                     )
+                    .frame(maxWidth: designMetrics.playfieldWidth, alignment: .center)
 
                     BoardBottomRowView(
                         bottomRow: displayState.bottomRow,
-                        metrics: metrics,
+                        metrics: renderMetrics,
                         onConfirmScore: onConfirmScore
                     )
+                    .frame(maxWidth: designMetrics.playfieldWidth, alignment: .center)
                 }
+                .frame(width: designMetrics.playfieldWidth)
             }
             .frame(width: BoardLayout.designWidth, height: BoardLayout.designHeight)
             .scaleEffect(scale)
             .frame(width: scaledSize.width, height: scaledSize.height)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
         }
+        .gameScreenDebugBorder(.green)
     }
 }
 

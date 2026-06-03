@@ -30,27 +30,49 @@ struct BoardLayoutMetrics {
         potWidth = 78 * scale
         potHeight = 66 * scale
         bottomSpacing = 4 * scale
-        verticalSpacing = 14 * scale
+        verticalSpacing = 12 * scale
         laneInnerPadding = 4 * scale
         cupInnerPadding = 5 * scale
+    }
+
+    var lanesRowWidth: CGFloat {
+        6 * laneWidth + 5 * laneSpacing
+    }
+
+    var bottomRowWidth: CGFloat {
+        4 * cloudWidth + potWidth + 4 * bottomSpacing
+    }
+
+    var playfieldWidth: CGFloat {
+        max(lanesRowWidth, bottomRowWidth)
     }
 }
 
 enum BoardLayout {
-    /// Natural design size before scaling to fit the device.
-    static let designWidth: CGFloat = 340
-    static let designHeight: CGFloat = 332
+    static let designHeight: CGFloat = 318
 
-    /// Keeps the board large but fully visible in the middle zone on phone screens.
     static let maximumScale: CGFloat = 1.05
+    static let boardFitMargin: CGFloat = 2
+
+    /// Matches the widest row (cloud/pot row) at scale 1.0.
+    static var designWidth: CGFloat {
+        BoardLayoutMetrics(scale: 1).playfieldWidth
+    }
+
+    static func playfieldWidth(scale: CGFloat) -> CGFloat {
+        BoardLayoutMetrics(scale: scale).playfieldWidth
+    }
 
     static func scale(for containerSize: CGSize) -> CGFloat {
-        let widthScale = (containerSize.width - 16) / designWidth
-        let heightScale = (containerSize.height - 16) / designHeight
+        let widthScale = (containerSize.width - boardFitMargin) / designWidth
+        let heightScale = (containerSize.height - boardFitMargin) / designHeight
         return min(widthScale, heightScale, maximumScale)
     }
 
     static func scaledSize(for containerSize: CGSize, scale: CGFloat) -> CGSize {
-        CGSize(width: designWidth * scale, height: designHeight * scale)
+        CGSize(
+            width: playfieldWidth(scale: scale),
+            height: designHeight * scale
+        )
     }
 }

@@ -21,13 +21,13 @@ struct GameControlDockView: View {
     var onTapHandGemKind: (GemKind) -> Void = { _ in }
 
     var body: some View {
-        HStack(alignment: .center, spacing: 10) {
+        HStack(alignment: .center, spacing: 0) {
             DockUndoButtonView(
                 showsUndo: showsUndo,
                 canUndo: canUndo,
                 onUndo: onUndo
             )
-            .frame(width: 76)
+            .frame(width: GameScreenLayout.dockSideSectionWidth, alignment: .leading)
 
             DockD12RollView(
                 showsRollControl: showsRollControl,
@@ -35,16 +35,16 @@ struct GameControlDockView: View {
                 currentRoll: currentRoll,
                 onRollD12: onRollD12
             )
-            .layoutPriority(1)
+            .frame(maxWidth: .infinity)
 
             DockHandGemsView(
                 gemCounts: handGemCounts,
                 canPlace: canPlaceFromHand,
                 onTapKind: onTapHandGemKind
             )
-            .frame(minWidth: 108, maxWidth: .infinity)
+            .frame(width: GameScreenLayout.dockSideSectionWidth, alignment: .trailing)
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, GameScreenLayout.dockInnerPadding)
         .padding(.vertical, 10)
         .frame(height: GameScreenLayout.dockHeight)
         .frame(maxWidth: .infinity)
@@ -57,5 +57,6 @@ struct GameControlDockView: View {
                 .stroke(BoardStyle.dockPanelStroke, lineWidth: 1.1)
         )
         .shadow(color: .black.opacity(0.24), radius: 5, x: 0, y: 2)
+        .gameScreenDebugBorder(.orange)
     }
 }

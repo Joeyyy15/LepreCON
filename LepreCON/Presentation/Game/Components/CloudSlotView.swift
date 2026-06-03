@@ -19,27 +19,26 @@ struct CloudSlotView: View {
     private var unicornReservedTop: CGFloat { hasUnicorn ? 14 : 0 }
 
     var body: some View {
-        VStack(spacing: 4) {
-            ZStack(alignment: .topTrailing) {
-                ZStack {
-                    cloudCupWell
-                    cloudShape
-                    cupContent
-                }
-                .frame(width: width, height: height)
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .overlay(highlightBorder)
-
-                if hasUnicorn {
-                    UnicornIndicatorView()
-                        .padding(3)
-                        .zIndex(1)
-                }
+        ZStack(alignment: .topTrailing) {
+            ZStack {
+                cloudCupWell
+                cloudShape
+                cupContent
             }
             .frame(width: width, height: height)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(highlightBorder)
 
-            BoardCupLabelView(text: "C\(cloudNumber)")
+            if hasUnicorn {
+                UnicornIndicatorView()
+                    .padding(3)
+                    .zIndex(1)
+            }
         }
+        .frame(width: width, height: height)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Cloud cup \(cloudNumber)")
+        .accessibilityAddTraits(isHighlighted ? .isSelected : [])
     }
 
     private var cloudCupWell: some View {
@@ -64,9 +63,7 @@ struct CloudSlotView: View {
     @ViewBuilder
     private var cupContent: some View {
         if gemCounts.isEmpty {
-            Text("C\(cloudNumber)")
-                .font(.caption2.weight(.bold))
-                .foregroundStyle(.black.opacity(0.32))
+            Color.clear
         } else {
             GemCountListView(
                 items: gemCounts,

@@ -18,7 +18,7 @@ struct BoardLanesRowView: View {
                 laneColumn(lane)
             }
         }
-        .frame(maxWidth: .infinity)
+        .frame(width: metrics.lanesRowWidth, alignment: .center)
     }
 
     @ViewBuilder

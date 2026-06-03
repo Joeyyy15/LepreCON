@@ -20,12 +20,16 @@ struct GameHUDView: View {
 
     var body: some View {
         statsRow
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: statsAlignment)
             .modifier(HUDChromeModifier(style: style))
     }
 
+    private var statsAlignment: Alignment {
+        style == .embedded ? .center : .leading
+    }
+
     private var statsRow: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: style == .embedded ? 4 : 6) {
             HUDStatBadgeView(
                 title: "Rainbow",
                 value: "\(hud.rainbowCompleted)/\(hud.rainbowTotal)"

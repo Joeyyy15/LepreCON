@@ -29,29 +29,27 @@ struct GameView: View {
 
     var body: some View {
         GeometryReader { geometry in
-            let boardHeight = GameScreenLayout.boardHeight(in: geometry.size.height)
-
             ZStack {
                 GameSceneBackgroundView()
 
-                VStack(spacing: 0) {
-                    topZone
-                        .padding(.bottom, GameScreenLayout.hudToBoardGap)
+                GameScreenContentColumn(geometry: geometry) {
+                    VStack(spacing: 0) {
+                        topZone
+                            .padding(.bottom, GameScreenLayout.hudToBoardGap)
 
-                    boardZone
-                        .frame(height: boardHeight)
+                        boardZone
 
-                    bottomDock
-                        .padding(.top, GameScreenLayout.boardToDockGap)
+                        bottomDock
+                            .padding(.top, GameScreenLayout.boardToDockGap)
+                    }
                 }
-                .padding(.horizontal, GameScreenLayout.horizontalPadding)
-                .padding(.top, GameScreenLayout.topPadding)
-                .padding(.bottom, GameScreenLayout.bottomPadding)
+                .padding(.top, GameScreenLayout.topContentPadding(in: geometry))
+                .padding(.bottom, GameScreenLayout.bottomContentPadding(in: geometry))
             }
         }
         .overlay(alignment: .top) {
             GameActionFeedbackView(message: lastActionMessage)
-                .padding(.top, GameScreenLayout.topBarHeight + GameScreenLayout.topPadding + 4)
+                .padding(.top, 8)
         }
         .sheet(isPresented: $showsScoringSheet) {
             GameScoringSheetView(
@@ -91,6 +89,7 @@ struct GameView: View {
             onEndGame: endGame
         )
         .frame(height: GameScreenLayout.topBarHeight)
+        .frame(maxWidth: .infinity)
         .zIndex(2)
     }
 
@@ -119,6 +118,7 @@ struct GameView: View {
             },
             onTapHandGemKind: placeHandGemOfKind
         )
+        .frame(maxWidth: .infinity)
         .zIndex(1)
     }
 

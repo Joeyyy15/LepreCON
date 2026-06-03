@@ -14,8 +14,8 @@ enum BoardStyle {
     static let panelFillOpacity: Double = 0.14
 
     static let labelText = Color(red: 0.98, green: 0.92, blue: 0.72)
-    static let labelPlateFill = Color.black.opacity(0.42)
-    static let labelPlateStroke = Color(red: 0.85, green: 0.68, blue: 0.22).opacity(0.65)
+    static let labelPlateFill = Color.black.opacity(0.48)
+    static let labelPlateStroke = Color(red: 0.85, green: 0.68, blue: 0.22).opacity(0.7)
 
     static let hudPanelFill = Color(red: 0.08, green: 0.12, blue: 0.22).opacity(0.88)
     static let hudBadgeFill = Color.black.opacity(0.35)
@@ -23,17 +23,27 @@ enum BoardStyle {
     static let hudTitle = Color.white.opacity(0.65)
     static let hudValue = Color(red: 0.98, green: 0.9, blue: 0.65)
 
-    static var boardSkyGradient: [Color] {
-        [
-            Color(red: 0.35, green: 0.55, blue: 0.95).opacity(0.55),
-            Color(red: 0.55, green: 0.35, blue: 0.85).opacity(0.45),
-            Color(red: 0.2, green: 0.45, blue: 0.55).opacity(0.5),
-            Color(red: 0.12, green: 0.28, blue: 0.38).opacity(0.65)
-        ]
-    }
-
     static var boardGoldOutline: Color {
         Color(red: 0.82, green: 0.65, blue: 0.2).opacity(0.75)
+    }
+
+    /// Soft vignette behind the playfield — not a solid panel.
+    static var boardSceneVignette: RadialGradient {
+        RadialGradient(
+            colors: [
+                Color.black.opacity(0.16),
+                Color.black.opacity(0.06),
+                Color.clear
+            ],
+            center: .center,
+            startRadius: 24,
+            endRadius: 240
+        )
+    }
+
+    /// Faint gold glow around the playfield for separation from the scene.
+    static var boardPlayfieldGlow: Color {
+        Color(red: 0.95, green: 0.82, blue: 0.35).opacity(0.22)
     }
 
     // Shared chrome for HUD and dock so the screen reads as one scene.

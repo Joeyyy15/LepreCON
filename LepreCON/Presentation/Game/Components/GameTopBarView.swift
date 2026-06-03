@@ -2,7 +2,7 @@
 // GameTopBarView.swift
 // LepreCON
 //
-// Single pinned top bar: HUD stats and settings gear in one frame.
+// Top bar: stat boxes centered as a group; settings gear overlaid on the right.
 //
 
 import SwiftUI
@@ -20,13 +20,16 @@ struct GameTopBarView: View {
     @State private var showsRulesPlaceholder = false
 
     var body: some View {
-        HStack(alignment: .center, spacing: 8) {
+        ZStack {
             GameHUDView(hud: hud, style: .embedded)
-                .layoutPriority(1)
+                .frame(maxWidth: .infinity)
 
-            settingsMenuButton
+            HStack {
+                Spacer(minLength: 0)
+                settingsMenuButton
+                    .padding(.trailing, GameScreenLayout.gearTrailingPadding)
+            }
         }
-        .padding(.horizontal, 10)
         .padding(.vertical, 6)
         .frame(height: GameScreenLayout.topBarHeight)
         .frame(maxWidth: .infinity)
@@ -39,6 +42,7 @@ struct GameTopBarView: View {
                 .stroke(BoardStyle.dockPanelStroke, lineWidth: 1)
         )
         .shadow(color: .black.opacity(0.22), radius: 4, x: 0, y: 2)
+        .gameScreenDebugBorder(.yellow)
         .confirmationDialog(
             "End this game?",
             isPresented: $showsEndGameConfirmation,
