@@ -44,6 +44,8 @@ struct GameSession: Identifiable, Equatable, Codable {
     var unicornCupID: UUID?
     /// True when the unicorn was captured in a scoring cup (+3 at end if rainbow is complete).
     var unicornCaptured: Bool
+    /// Events from the most recent end-of-turn resolution (unicorn/poop). Cleared when a new turn starts.
+    var recentResolutionEvents: [TurnResolutionEvent]
 
     init(
         id: UUID = UUID(),
@@ -60,7 +62,8 @@ struct GameSession: Identifiable, Equatable, Codable {
         pendingScoreChoices: [PendingScoreChoice] = [],
         unicornCupIndex: Int? = nil,
         unicornCupID: UUID? = nil,
-        unicornCaptured: Bool = false
+        unicornCaptured: Bool = false,
+        recentResolutionEvents: [TurnResolutionEvent] = []
     ) {
         self.id = id
         self.phase = phase
@@ -77,5 +80,6 @@ struct GameSession: Identifiable, Equatable, Codable {
         self.unicornCupIndex = unicornCupIndex
         self.unicornCupID = unicornCupID
         self.unicornCaptured = unicornCaptured
+        self.recentResolutionEvents = recentResolutionEvents
     }
 }

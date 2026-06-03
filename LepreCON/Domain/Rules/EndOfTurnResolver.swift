@@ -15,6 +15,7 @@ enum EndOfTurnResolver {
 
     /// Runs every resolution step in rulebook order. Call when placement ends.
     static func resolveAfterPlacementEnds(session: inout GameSession) {
+        session.recentResolutionEvents.removeAll()
         resolveUnicorn(in: &session)
         resolvePoop(in: &session)
         refreshPendingScores(in: &session)

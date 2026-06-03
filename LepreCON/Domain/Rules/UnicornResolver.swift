@@ -35,6 +35,7 @@ enum UnicornResolver {
         if let whiteIndex = cupGems.firstIndex(where: { $0.kind == .white }) {
             let whiteGem = session.cups[unicornIndex].gems.remove(at: whiteIndex)
             session.discardPile.append(whiteGem)
+            record(.unicornCalmed(cupIndex: unicornIndex), in: &session)
             return .calmedByWhite(cupIndex: unicornIndex)
         }
 
@@ -55,6 +56,7 @@ enum UnicornResolver {
     ) -> UnicornResolutionOutcome {
         let gemsToSpread = session.cups[unicornIndex].gems
         session.cups[unicornIndex].gems.removeAll()
+        record(.unicornExplosionStarted(fromCupIndex: unicornIndex), in: &session)
 
         let cupCount = session.cups.count
         var spreadFrom = (unicornIndex + 1) % cupCount
@@ -67,10 +69,26 @@ enum UnicornResolver {
             ) else {
                 // Every cup is completed — gem has nowhere to land; return it to the unicorn cup.
                 session.cups[unicornIndex].gems.append(gem)
+                record(
+                    .unicornExplosionStep(
+                        gemKind: gem.kind,
+                        fromCupIndex: unicornIndex,
+                        toCupIndex: unicornIndex
+                    ),
+                    in: &session
+                )
                 continue
             }
 
             session.cups[targetIndex].gems.append(gem)
+            record(
+                .unicornExplosionStep(
+                    gemKind: gem.kind,
+                    fromCupIndex: unicornIndex,
+                    toCupIndex: targetIndex
+                ),
+                in: &session
+            )
             finalCupIndex = targetIndex
             spreadFrom = (targetIndex + 1) % cupCount
         }
@@ -78,9 +96,14 @@ enum UnicornResolver {
         // Unicorn follows the last gem that landed; if none landed, stay on the empty cup.
         if let finalCupIndex {
             syncUnicorn(to: finalCupIndex, in: &session)
+            record(.unicornMoved(toCupIndex: finalCupIndex), in: &session)
         }
 
         return .exploded(fromCupIndex: unicornIndex, finalCupIndex: finalCupIndex)
+    }
+
+    private static func record(_ event: TurnResolutionEvent, in session: inout GameSession) {
+        session.recentResolutionEvents.append(event)
     }
 
     private static func syncUnicorn(to cupIndex: Int, in session: inout GameSession) {

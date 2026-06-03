@@ -15,7 +15,12 @@ final class GameViewModel: ObservableObject {
     /// The active game state (players, cups, bag, phase). Updated as the game progresses.
     @Published private(set) var session: GameSession
 
+    /// Temporary UI for the latest end-of-turn unicorn/poop events (no domain delay).
+    @Published private(set) var resolutionEventPresentation: TurnResolutionEventPresentation?
+    @Published private(set) var highlightedResolutionLineIndex: Int?
+
     private let factory: GameSessionFactory
+    private var resolutionHighlightTask: Task<Void, Never>?
 
     /// Session state saved immediately before the most recent successful placement (one-step undo).
     private var previousSessionSnapshot: GameSession?
@@ -106,6 +111,7 @@ final class GameViewModel: ObservableObject {
         guard let snapshot = previousSessionSnapshot else { return }
         session = snapshot
         clearUndoSnapshot()
+        refreshResolutionEventPresentation()
     }
 
     /// Player confirms one pending scoring color for a cup.
@@ -139,6 +145,7 @@ final class GameViewModel: ObservableObject {
     /// Replaces the session with a fresh game (same player names) and starts play.
     func startNewGame() {
         clearUndoSnapshot()
+        clearResolutionEventPresentation()
         let playerNames = session.players.map(\.name)
         session = factory.makeNewGame(
             playerNames: playerNames.isEmpty ? ["Player 1"] : playerNames
@@ -162,6 +169,7 @@ final class GameViewModel: ObservableObject {
         let result = GameTurnEngine.beginTurn(session: &session, roll: roll)
         if case .success = result {
             clearUndoSnapshot()
+            clearResolutionEventPresentation()
         }
         return result
     }
@@ -182,10 +190,40 @@ final class GameViewModel: ObservableObject {
         case .success:
             previousSessionSnapshot = snapshotBeforePlacement
             applyGameOverIfNeeded()
+            refreshResolutionEventPresentation()
         case .failure:
             break
         }
         return result
+    }
+
+    private func refreshResolutionEventPresentation() {
+        resolutionHighlightTask?.cancel()
+        resolutionEventPresentation = TurnResolutionEventDisplayBuilder.presentation(
+            events: session.recentResolutionEvents,
+            cups: session.cups
+        )
+        guard let presentation = resolutionEventPresentation, !presentation.logLines.isEmpty else {
+            highlightedResolutionLineIndex = nil
+            return
+        }
+        highlightedResolutionLineIndex = 0
+        resolutionHighlightTask = Task { [weak self] in
+            for index in presentation.logLines.indices {
+                guard !Task.isCancelled else { return }
+                await MainActor.run {
+                    self?.highlightedResolutionLineIndex = index
+                }
+                try? await Task.sleep(nanoseconds: 550_000_000)
+            }
+        }
+    }
+
+    private func clearResolutionEventPresentation() {
+        resolutionHighlightTask?.cancel()
+        resolutionHighlightTask = nil
+        resolutionEventPresentation = nil
+        highlightedResolutionLineIndex = nil
     }
 
     private func clearUndoSnapshot() {

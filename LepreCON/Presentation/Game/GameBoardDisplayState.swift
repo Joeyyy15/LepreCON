@@ -274,7 +274,7 @@ struct GameBoardDisplayState: Equatable {
         return .none
     }
 
-    private static func cupLabel(forCupIndex index: Int, cups: [Cup]) -> String {
+    static func cupLabel(forCupIndex index: Int, cups: [Cup]) -> String {
         guard cups.indices.contains(index) else { return "Cup \(index)" }
         let cup = cups[index]
         if cup.isPotOfGold { return "Pot of Gold" }

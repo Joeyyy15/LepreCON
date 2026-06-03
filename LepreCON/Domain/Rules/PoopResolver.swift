@@ -35,6 +35,9 @@ enum PoopResolver {
             let gemsToDiscard = session.cups[cupIndex].gems
             session.discardPile.append(contentsOf: gemsToDiscard)
             session.cups[cupIndex].gems.removeAll()
+            session.recentResolutionEvents.append(
+                .poopDiscardedCup(cupIndex: cupIndex, discardedGems: gemsToDiscard)
+            )
 
             discardedCups.append(
                 DiscardedPoopCup(cupIndex: cupIndex, discardedCount: gemsToDiscard.count)
@@ -44,6 +47,7 @@ enum PoopResolver {
         guard !discardedCups.isEmpty else {
             return .noPoop
         }
+        session.recentResolutionEvents.append(.poopResolved)
         return .discardedCups(discardedCups)
     }
 }

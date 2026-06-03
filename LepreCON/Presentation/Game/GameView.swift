@@ -46,6 +46,13 @@ struct GameView: View {
                     )
                 }
 
+                if let presentation = viewModel.resolutionEventPresentation {
+                    TurnResolutionEventsPanel(
+                        presentation: presentation,
+                        highlightedLineIndex: viewModel.highlightedResolutionLineIndex
+                    )
+                }
+
                 statusSection
 
                 if !viewModel.isGameOver {

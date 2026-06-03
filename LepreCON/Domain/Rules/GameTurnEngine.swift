@@ -45,6 +45,7 @@ enum GameTurnEngine {
 
         session.currentRoll = roll
         session.isTurnPlacementComplete = false
+        session.recentResolutionEvents.removeAll()
         PendingScoreDetector.clearPendingScoreChoices(in: &session)
         drawGemsIntoHand(session: &session, count: roll)
         session.nextPlacementCupIndex = firstAvailablePlacementCupIndex(in: session)
