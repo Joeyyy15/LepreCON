@@ -63,8 +63,9 @@ struct GameTopBarView: View {
     private var settingsMenuButton: some View {
         Menu {
             if showsGameControls {
-                Button("Start Game", action: onStartGame)
-                    .disabled(!canStartGame)
+                if canStartGame {
+                    Button("Start Game", action: onStartGame)
+                }
 
                 Button("End Game", role: .destructive) {
                     showsEndGameConfirmation = true

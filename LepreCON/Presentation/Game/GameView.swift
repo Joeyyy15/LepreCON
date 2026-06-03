@@ -16,6 +16,7 @@ struct GameView: View {
     @State private var lastActionMessage: String?
     @State private var showsScoringSheet = false
     @State private var showsResolutionSheet = false
+    @State private var didAutoStartGame = false
 
     init(onFinishGame: @escaping () -> Void) {
         _viewModel = StateObject(wrappedValue: GameViewModel())
@@ -142,6 +143,13 @@ struct GameView: View {
         }
         .overlay(alignment: .bottom) {
             gameOverBanner
+        }
+        .onAppear {
+            guard !didAutoStartGame else { return }
+            didAutoStartGame = true
+            if viewModel.canStartGame {
+                startGame()
+            }
         }
         .statusBarHidden(true)
     }
