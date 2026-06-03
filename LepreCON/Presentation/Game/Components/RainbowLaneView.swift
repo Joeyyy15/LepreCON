@@ -31,7 +31,7 @@ struct RainbowLaneView: View {
                     .overlay(highlightBorder)
 
                 // Grouped gem counts stay inside a fixed lane height.
-                GemCountListView(items: gemCounts, gemSize: width * 0.38)
+                GemCountListView(items: gemCounts, style: .largeLane(laneWidth: width))
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
                     .padding(.horizontal, 3)
                     .padding(.bottom, 5)

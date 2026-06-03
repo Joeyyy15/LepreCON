@@ -444,6 +444,34 @@ final class GameViewModelTests: XCTestCase {
         }
     }
 
+    func testStartNewGameResetsSessionAfterGameOver() async {
+        await MainActor.run {
+            var session = GameSessionFactory().makeNewGame(playerNames: ["Alex"])
+            session.phase = .finished
+            session.unicornCaptured = true
+            let viewModel = GameViewModel(session: session)
+
+            viewModel.startNewGame()
+
+            XCTAssertEqual(viewModel.session.phase, .playing)
+            XCTAssertFalse(viewModel.isGameOver)
+            XCTAssertFalse(viewModel.session.unicornCaptured)
+            XCTAssertTrue(viewModel.canRollD12)
+        }
+    }
+
+    func testViewModelExposesUnicornCapturedInDisplayState() async {
+        await MainActor.run {
+            var session = GameSessionFactory().makeNewGame(playerNames: ["Player 1"])
+            session.phase = .playing
+            session.unicornCaptured = true
+
+            let viewModel = GameViewModel(session: session)
+
+            XCTAssertTrue(viewModel.boardDisplayState.unicornStatus.isCaptured)
+        }
+    }
+
     func testSkipScoringWithEmptyBagEndsGame() async {
         await MainActor.run {
             var session = GameSessionFactory().makeNewGame(playerNames: ["Player 1"])

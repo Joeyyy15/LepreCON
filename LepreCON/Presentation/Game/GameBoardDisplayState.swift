@@ -49,6 +49,14 @@ struct BottomRowSlotDisplay: Equatable, Identifiable {
     var id: UUID { cupSlot.id }
 }
 
+/// Unicorn capture status for status bar and game-over summary.
+struct UnicornStatusDisplay: Equatable {
+    let isCaptured: Bool
+    let statusLine: String
+    /// Extra detail on game over (whether +3 counted).
+    let gameOverDetailLine: String
+}
+
 /// Results shown when the game is over.
 struct GameOverDisplay: Equatable {
     let didWin: Bool
@@ -56,6 +64,7 @@ struct GameOverDisplay: Equatable {
     let finalScore: FinalScoreDisplay
     let completedCupCount: Int
     let requiredCupCount: Int
+    let unicornStatus: UnicornStatusDisplay
 }
 
 /// Minimal final-score summary for the game screen.
@@ -87,6 +96,7 @@ struct GameBoardDisplayState: Equatable {
     let finalScore: FinalScoreDisplay
     let isGameOver: Bool
     let gameOver: GameOverDisplay?
+    let unicornStatus: UnicornStatusDisplay
 
     /// Domain cup index → cloud label (1–4) for white/cloud cups only.
     static func cloudNumber(forCupIndex index: Int) -> Int? {
@@ -157,13 +167,18 @@ struct GameBoardDisplayState: Equatable {
         let finalScoreResult = FinalScoreEvaluator.evaluate(session: session)
         let completion = GameCompletionDetector.status(for: session)
         let finalScore = finalScoreDisplay(from: finalScoreResult)
+        let unicornStatus = unicornStatusDisplay(
+            session: session,
+            finalScore: finalScoreResult
+        )
         let gameOver: GameOverDisplay? = completion.isGameOver
             ? GameOverDisplay(
                 didWin: completion.didWin,
                 isRainbowComplete: completion.isRainbowComplete,
                 finalScore: finalScore,
                 completedCupCount: GameCompletionDetector.completedScoreableCupCount(in: session),
-                requiredCupCount: GameCompletionDetector.scoreableCupCount
+                requiredCupCount: GameCompletionDetector.scoreableCupCount,
+                unicornStatus: unicornStatus
             )
             : nil
 
@@ -186,7 +201,29 @@ struct GameBoardDisplayState: Equatable {
             pendingScoringCups: pendingScoringCups,
             finalScore: finalScore,
             isGameOver: completion.isGameOver,
-            gameOver: gameOver
+            gameOver: gameOver,
+            unicornStatus: unicornStatus
+        )
+    }
+
+    static func unicornStatusDisplay(
+        session: GameSession,
+        finalScore: FinalScoreResult
+    ) -> UnicornStatusDisplay {
+        if session.unicornCaptured {
+            let detail = finalScore.isRainbowComplete
+                ? "Unicorn: Captured (+3 pts counted)"
+                : "Unicorn: Captured (no bonus — rainbow incomplete)"
+            return UnicornStatusDisplay(
+                isCaptured: true,
+                statusLine: "Unicorn: Captured",
+                gameOverDetailLine: detail
+            )
+        }
+        return UnicornStatusDisplay(
+            isCaptured: false,
+            statusLine: "Unicorn: Not captured",
+            gameOverDetailLine: "Unicorn: Not captured (0 pts)"
         )
     }
 

@@ -119,6 +119,15 @@ final class GameViewModel: ObservableObject {
         session.phase = .playing
     }
 
+    /// Replaces the session with a fresh game (same player names) and starts play.
+    func startNewGame() {
+        let playerNames = session.players.map(\.name)
+        session = factory.makeNewGame(
+            playerNames: playerNames.isEmpty ? ["Player 1"] : playerNames
+        )
+        session.phase = .playing
+    }
+
     func endGame() {
         guard GameRules.canEndGame(session) else { return }
         session.phase = .finished

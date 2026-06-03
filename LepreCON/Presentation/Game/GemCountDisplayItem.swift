@@ -64,6 +64,12 @@ extension GemKind {
         }
     }
 
+    /// Small badge on hand gems when the PNG alone is ambiguous (gold vs yellow, etc.).
+    var handGemOverlayLabel: String? {
+        let label = gemCountShortLabel
+        return label.isEmpty ? nil : label
+    }
+
     /// Short tag shown beside the PNG when kinds share an asset image.
     var gemCountShortLabel: String {
         switch self {

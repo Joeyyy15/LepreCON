@@ -26,7 +26,7 @@ struct CloudSlotView: View {
                         .bold()
                         .foregroundStyle(.black.opacity(0.45))
                 } else {
-                    GemCountListView(items: gemCounts, gemSize: height * 0.28)
+                    GemCountListView(items: gemCounts, style: .compact(gemSize: height * 0.28))
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
                         .padding(.horizontal, 4)
                 }

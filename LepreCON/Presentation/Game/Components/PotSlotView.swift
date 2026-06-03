@@ -26,7 +26,7 @@ struct PotSlotView: View {
                         .foregroundStyle(.white.opacity(0.75))
                         .offset(y: height * 0.08)
                 } else {
-                    GemCountListView(items: gemCounts, gemSize: height * 0.22)
+                    GemCountListView(items: gemCounts, style: .compact(gemSize: height * 0.22))
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
                         .padding(.horizontal, 4)
                         .offset(y: -height * 0.06)

@@ -93,6 +93,12 @@ struct GameView: View {
                 }
             }
 
+            Text(viewModel.boardDisplayState.unicornStatus.statusLine)
+                .font(.subheadline)
+                .foregroundStyle(
+                    viewModel.boardDisplayState.unicornStatus.isCaptured ? .green : .secondary
+                )
+
             if let gameOver = viewModel.boardDisplayState.gameOver {
                 gameOverResultsSection(gameOver)
             } else {
@@ -109,18 +115,24 @@ struct GameView: View {
     }
 
     private func gameOverResultsSection(_ gameOver: GameOverDisplay) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 8) {
             Text("Game Over")
                 .font(.headline)
 
             Text("Final Score: \(gameOver.finalScore.totalPoints)")
                 .font(.subheadline.weight(.semibold))
 
-            Text("Rank: \(gameOver.finalScore.rankDisplayName ?? gameOver.finalScore.summaryLine)")
-                .font(.subheadline)
+            if let rank = gameOver.finalScore.rankDisplayName {
+                Text("Rank: \(rank)")
+                    .font(.subheadline)
+            }
 
             Text("Rainbow Complete: \(gameOver.isRainbowComplete ? "Yes" : "No")")
                 .font(.subheadline)
+
+            Text(gameOver.unicornStatus.gameOverDetailLine)
+                .font(.subheadline)
+                .foregroundStyle(gameOver.unicornStatus.isCaptured ? .green : .secondary)
 
             if gameOver.didWin {
                 Text("You collected the full rainbow!")
@@ -139,6 +151,13 @@ struct GameView: View {
             Text("Completed cups: \(gameOver.completedCupCount)/\(gameOver.requiredCupCount)")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+
+            Button("Play Again") {
+                viewModel.startNewGame()
+                lastActionMessage = "New game started. Roll D12 to begin your turn."
+            }
+            .buttonStyle(.borderedProminent)
+            .padding(.top, 4)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -198,7 +217,7 @@ struct GameView: View {
                     spacing: 8
                 ) {
                     ForEach(viewModel.boardDisplayState.discardGemCounts) { item in
-                        GemCountBadgeView(item: item, gemSize: 28)
+                        GemCountBadgeView(item: item, style: .compact(gemSize: 28))
                     }
                 }
             }
@@ -208,19 +227,21 @@ struct GameView: View {
 
     private var gameControlsSection: some View {
         HStack(spacing: 12) {
-            Button("Start Game") {
-                viewModel.startGame()
-                lastActionMessage = "Game started. Roll D12 to begin your turn."
-            }
-            .buttonStyle(.borderedProminent)
-            .disabled(!viewModel.canStartGame)
+            if !viewModel.isGameOver {
+                Button("Start Game") {
+                    viewModel.startGame()
+                    lastActionMessage = "Game started. Roll D12 to begin your turn."
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(!viewModel.canStartGame)
 
-            Button("End Game") {
-                viewModel.endGame()
-                onFinishGame()
+                Button("End Game") {
+                    viewModel.endGame()
+                    onFinishGame()
+                }
+                .buttonStyle(.bordered)
+                .disabled(!viewModel.canEndGame)
             }
-            .buttonStyle(.bordered)
-            .disabled(!viewModel.canEndGame)
         }
     }
 

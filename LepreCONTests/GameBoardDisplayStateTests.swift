@@ -169,4 +169,102 @@ final class GameBoardDisplayStateTests: XCTestCase {
             XCTAssertEqual(item.imageName, kind.imageAssetName)
         }
     }
+
+    // MARK: - Playability UI display
+
+    func testHandGemOverlayLabelsAreNonEmptyForAmbiguousKinds() {
+        let specialKinds: [GemKind] = [.gold, .clear, .white, .pink, .black]
+        for kind in specialKinds {
+            XCTAssertNotNil(kind.handGemOverlayLabel, "\(kind)")
+            XCTAssertFalse(kind.handGemOverlayLabel?.isEmpty ?? true, "\(kind)")
+        }
+        XCTAssertNil(GemKind.red.handGemOverlayLabel)
+    }
+
+    func testUnicornStatusShowsNotCapturedByDefault() {
+        let session = GameSessionFactory().makeNewGame(playerNames: ["Alex"])
+        let display = GameBoardDisplayState.from(session: session)
+
+        XCTAssertFalse(display.unicornStatus.isCaptured)
+        XCTAssertEqual(display.unicornStatus.statusLine, "Unicorn: Not captured")
+    }
+
+    func testUnicornStatusShowsCapturedAfterCapture() {
+        var session = GameSessionFactory().makeNewGame(playerNames: ["Alex"])
+        session.phase = .playing
+        for index in session.cups.indices {
+            session.cups[index].gems = []
+        }
+        session.cups[2].gems = Array(repeating: Gem(kind: .red), count: 5)
+        session.unicornCupIndex = 2
+        session.unicornCupID = session.cups[2].id
+        session.isTurnPlacementComplete = true
+        PendingScoreDetector.refreshPendingScoreChoices(in: &session)
+        _ = ScoreConfirmationEngine.confirmScore(session: &session, cupIndex: 2, scoringColor: .red)
+
+        let display = GameBoardDisplayState.from(session: session)
+        XCTAssertTrue(display.unicornStatus.isCaptured)
+        XCTAssertEqual(display.unicornStatus.statusLine, "Unicorn: Captured")
+    }
+
+    func testGameOverDisplayIncludesUnicornCaptureDetailWhenRainbowComplete() {
+        var session = GameSessionFactory().makeNewGame(playerNames: ["Alex"])
+        session.phase = .playing
+        for index in session.cups.indices {
+            session.cups[index].gems = []
+        }
+        session.unicornCaptured = true
+        markAllScoreableCupsWithSixRainbowColors(&session)
+
+        let display = GameBoardDisplayState.from(session: session)
+
+        XCTAssertNotNil(display.gameOver)
+        XCTAssertTrue(display.gameOver?.unicornStatus.isCaptured ?? false)
+        XCTAssertTrue(
+            display.gameOver?.unicornStatus.gameOverDetailLine.contains("+3") ?? false
+        )
+    }
+
+    func testGameOverDisplayShowsCapturedWithoutBonusWhenRainbowIncomplete() {
+        var session = GameSessionFactory().makeNewGame(playerNames: ["Alex"])
+        session.phase = .finished
+        session.unicornCaptured = true
+        markAllScoreableCupsRedOnly(&session)
+
+        let score = FinalScoreEvaluator.evaluate(session: session)
+        let status = GameBoardDisplayState.unicornStatusDisplay(session: session, finalScore: score)
+
+        XCTAssertFalse(score.isRainbowComplete)
+        XCTAssertTrue(status.gameOverDetailLine.contains("no bonus"))
+    }
+
+    private func markAllScoreableCupsRedOnly(_ session: inout GameSession) {
+        for index in session.cups.indices where !session.cups[index].isPotOfGold {
+            session.cups[index].completion = CupCompletion(
+                scoredColor: .red,
+                wasMatchingCupColor: false,
+                goodCount: 5,
+                passCount: 0,
+                blemishCount: 0,
+                adjustedGoodCount: 5
+            )
+        }
+    }
+
+    private func markAllScoreableCupsWithSixRainbowColors(_ session: inout GameSession) {
+        let colors: [GemKind] = [.red, .orange, .yellow, .green, .blue, .purple]
+        var colorIndex = 0
+        for index in session.cups.indices where !session.cups[index].isPotOfGold {
+            let color = colors[colorIndex % colors.count]
+            session.cups[index].completion = CupCompletion(
+                scoredColor: color,
+                wasMatchingCupColor: false,
+                goodCount: 5,
+                passCount: 0,
+                blemishCount: 0,
+                adjustedGoodCount: 5
+            )
+            colorIndex += 1
+        }
+    }
 }
