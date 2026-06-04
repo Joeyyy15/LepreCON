@@ -41,14 +41,17 @@ struct GameView: View {
             let topPadding = GameScreenLayout.topContentPadding(in: geometry)
             let bottomPadding = GameScreenLayout.bottomContentPadding(in: geometry)
 
+            let topBarHeight = GameScreenLayout.topBarHeight(forContentWidth: contentWidth)
+            let dockHeight = GameScreenLayout.dockHeight(forContentWidth: contentWidth)
+
             let topReservedHeight =
                 topPadding +
-                GameScreenLayout.topBarHeight +
+                topBarHeight +
                 GameScreenLayout.hudToBoardGap
 
             let bottomReservedHeight =
                 bottomPadding +
-                GameScreenLayout.dockHeight +
+                dockHeight +
                 GameScreenLayout.boardToDockGap +
                 GameScreenLayout.actionFeedbackSlotHeight
 
@@ -100,7 +103,7 @@ struct GameView: View {
                         onStartGame: startGame,
                         onEndGame: endGame
                     )
-                    .frame(width: contentWidth, height: GameScreenLayout.topBarHeight)
+                    .frame(width: contentWidth, height: topBarHeight)
                     .padding(.top, topPadding)
                     .zIndex(2)
 
@@ -124,7 +127,7 @@ struct GameView: View {
                         },
                         onTapHandGemKind: placeHandGemOfKind
                     )
-                    .frame(width: contentWidth, height: GameScreenLayout.dockHeight)
+                    .frame(width: contentWidth, height: dockHeight)
                     .padding(.bottom, bottomPadding)
                     .zIndex(2)
                 }

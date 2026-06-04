@@ -11,7 +11,9 @@ enum GameScreenLayout {
     /// Set true locally to outline HUD, board, and dock bounds.
     static let showLayoutDebug = false
 
-    static let topBarHeight: CGFloat = 52
+    /// Asset aspect (2172×724) for top_bar and bottom_bar.
+    static let barArtAspectRatio: CGFloat = 724.0 / 2172.0
+
     static let hudToBoardGap: CGFloat = 4
     static let boardToDockGap: CGFloat = 4
     /// Reserved strip between the board and dock for action feedback toasts.
@@ -19,16 +21,34 @@ enum GameScreenLayout {
     static let topPadding: CGFloat = 0
     static let bottomPadding: CGFloat = 0
     /// Inset from the safe-area edges to the shared foreground column (per side).
-    static let horizontalInset: CGFloat = 20
+    static let horizontalInset: CGFloat = 10
 
-    static let topBarInnerPadding: CGFloat = 10
-    static let gearTrailingPadding: CGFloat = 10
-    static let dockInnerPadding: CGFloat = 12
-    static let dockSideSectionWidth: CGFloat = 80
-    /// Slightly wider than undo so hand gems can use a 3–4 column grid without horizontal scrolling.
-    static let dockHandSectionWidth: CGFloat = 92
+    static let topBarInnerPadding: CGFloat = 4
+    static let settingsButtonSize: CGFloat = 34
+    static let dockInnerPadding: CGFloat = 4
 
-    static let dockHeight: CGFloat = 120
+    /// Legacy fixed heights (previews); gameplay uses width-based sizing below.
+    static let topBarHeight: CGFloat = 88
+    static let dockHeight: CGFloat = 128
+
+    static let minTopBarHeight: CGFloat = 78
+    static let maxTopBarHeight: CGFloat = 96
+    static let minDockHeight: CGFloat = 112
+    static let maxDockHeight: CGFloat = 136
+
+    /// Height that fits bar art to content width without squeezing the board.
+    static func topBarHeight(forContentWidth width: CGFloat) -> CGFloat {
+        barArtHeight(forWidth: width, min: minTopBarHeight, max: maxTopBarHeight)
+    }
+
+    static func dockHeight(forContentWidth width: CGFloat) -> CGFloat {
+        barArtHeight(forWidth: width, min: minDockHeight, max: maxDockHeight)
+    }
+
+    private static func barArtHeight(forWidth width: CGFloat, min: CGFloat, max: CGFloat) -> CGFloat {
+        let natural = width * barArtAspectRatio
+        return Swift.min(Swift.max(natural, min), max)
+    }
 
     /// Width shared by HUD, board, and dock inside the safe visible area.
     static func contentWidth(in geometry: GeometryProxy) -> CGFloat {
