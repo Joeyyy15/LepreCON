@@ -71,6 +71,7 @@ struct GameTopBarView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .offset(x:8)
         .gameScreenDebugBorder(.yellow)
         .confirmationDialog(
             "End this game?",

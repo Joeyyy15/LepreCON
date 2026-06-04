@@ -1,10 +1,3 @@
-//
-// TopBarArtBackground.swift
-// LepreCON
-//
-// Decorative top HUD bar artwork (non-interactive).
-//
-
 import SwiftUI
 import UIKit
 
@@ -17,7 +10,9 @@ struct TopBarArtBackground: View {
                 Image(Self.assetName)
                     .resizable()
                     .scaledToFit()
+                    .scaleEffect(1)   // makes the visible bar art bigger
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .clipped()           // hides overflow after scaling
             } else {
                 RoundedRectangle(cornerRadius: BoardStyle.sceneChromeRadius, style: .continuous)
                     .fill(BoardStyle.hudPanelFill)

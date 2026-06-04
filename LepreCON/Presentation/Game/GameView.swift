@@ -37,24 +37,16 @@ struct GameView: View {
     var body: some View {
         GeometryReader { geometry in
             let contentWidth = GameScreenLayout.contentWidth(in: geometry)
-
             let topPadding = GameScreenLayout.topContentPadding(in: geometry)
             let bottomPadding = GameScreenLayout.bottomContentPadding(in: geometry)
 
+            // Use the real content width to size the image-based HUD bars.
+            // This prevents top_bar from shrinking into the middle of the screen.
             let topBarHeight = GameScreenLayout.topBarHeight(forContentWidth: contentWidth)
             let dockHeight = GameScreenLayout.dockHeight(forContentWidth: contentWidth)
 
-            let topReservedHeight =
-                topPadding +
-                topBarHeight +
-                GameScreenLayout.hudToBoardGap
-
-            let bottomReservedHeight =
-                bottomPadding +
-                dockHeight +
-                GameScreenLayout.boardToDockGap +
-                GameScreenLayout.actionFeedbackSlotHeight
-
+            let topReservedHeight = topPadding + topBarHeight + GameScreenLayout.hudToBoardGap
+            let bottomReservedHeight = bottomPadding + dockHeight + GameScreenLayout.boardToDockGap
             let boardHeight = max(
                 0,
                 geometry.size.height - topReservedHeight - bottomReservedHeight

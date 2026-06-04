@@ -18,10 +18,10 @@ enum GameScreenLayout {
     static let boardToDockGap: CGFloat = 4
     /// Reserved strip between the board and dock for action feedback toasts.
     static let actionFeedbackSlotHeight: CGFloat = 36
-    static let topPadding: CGFloat = 0
+    static let topPadding: CGFloat = -28
     static let bottomPadding: CGFloat = 0
     /// Inset from the safe-area edges to the shared foreground column (per side).
-    static let horizontalInset: CGFloat = 10
+    static let horizontalInset: CGFloat = 6
 
     static let topBarInnerPadding: CGFloat = 4
     static let settingsButtonSize: CGFloat = 34
@@ -31,8 +31,8 @@ enum GameScreenLayout {
     static let topBarHeight: CGFloat = 88
     static let dockHeight: CGFloat = 128
 
-    static let minTopBarHeight: CGFloat = 78
-    static let maxTopBarHeight: CGFloat = 96
+    static let minTopBarHeight: CGFloat = 108
+    static let maxTopBarHeight: CGFloat = 126
     static let minDockHeight: CGFloat = 112
     static let maxDockHeight: CGFloat = 136
 
