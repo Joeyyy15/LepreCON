@@ -27,14 +27,21 @@ enum GameScreenLayout {
     static let settingsButtonSize: CGFloat = 34
     static let dockInnerPadding: CGFloat = 4
 
+    /// Bottom hand tray covers roughly the lower third of the gameplay screen.
+    static let handTrayScreenHeightFraction: CGFloat = 1.0 / 3.0
+    static let handTrayPreviewGemSize: CGFloat = 14
+    static let handTrayDockPreviewMaxGems: Int = 3
+    static let handTrayGridGemSize: CGFloat = 52
+    static let handTrayGridCellMinHeight: CGFloat = 78
+
     /// Legacy fixed heights (previews); gameplay uses width-based sizing below.
     static let topBarHeight: CGFloat = 88
     static let dockHeight: CGFloat = 128
 
     static let minTopBarHeight: CGFloat = 108
     static let maxTopBarHeight: CGFloat = 126
-    static let minDockHeight: CGFloat = 112
-    static let maxDockHeight: CGFloat = 136
+    static let minDockHeight: CGFloat = 132
+    static let maxDockHeight: CGFloat = 156
 
     /// Height that fits bar art to content width without squeezing the board.
     static func topBarHeight(forContentWidth width: CGFloat) -> CGFloat {
@@ -64,6 +71,10 @@ enum GameScreenLayout {
 
     static func bottomContentPadding(in geometry: GeometryProxy) -> CGFloat {
         bottomPadding
+    }
+
+    static func handTrayHeight(screenHeight: CGFloat) -> CGFloat {
+        max(0, screenHeight * handTrayScreenHeightFraction)
     }
 }
 

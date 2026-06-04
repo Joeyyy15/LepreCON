@@ -64,7 +64,9 @@ struct BoardBottomRowView: View {
                     width: metrics.potWidth,
                     height: metrics.potHeight,
                     innerPadding: metrics.cupInnerPadding,
-                    isHighlighted: slot.cupSlot.isHighlighted
+                    isHighlighted: slot.cupSlot.isHighlighted,
+                    hasUnicorn: slot.cupSlot.hasUnicorn,
+                    showUnicornMarker: !hideUnicornMarkers
                 )
                 .frame(
                     width: metrics.potWidth,

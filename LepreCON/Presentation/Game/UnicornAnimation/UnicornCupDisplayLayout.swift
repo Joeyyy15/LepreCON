@@ -27,6 +27,16 @@ enum UnicornCupDisplayLayout {
         return .rainbowLane
     }
 
+    /// Cloud/pot unicorns sit under the slot art in the overlay so gems stay readable.
+    static func unicornRendersBelowSlotArt(forCupIndex cupIndex: Int) -> Bool {
+        switch slotKind(forCupIndex: cupIndex) {
+        case .rainbowLane:
+            return false
+        case .cloud, .pot:
+            return true
+        }
+    }
+
     /// Where the unicorn head should hover so it does not cover the gem stack.
     static func unicornHoverPosition(
         for anchor: CupBoardAnchorInfo,
@@ -39,15 +49,11 @@ enum UnicornCupDisplayLayout {
                 x: anchor.bounds.midX,
                 y: anchor.bounds.minY - unicornSize * 0.22
             )
-        case .cloud:
-            return CGPoint(
-                x: anchor.bounds.midX + anchor.bounds.width * 0.14,
-                y: anchor.bounds.minY - unicornSize * 0.34
-            )
-        case .pot:
+        case .cloud, .pot:
+            // Center sits just below the slot; top of marker touches the cup bottom edge.
             return CGPoint(
                 x: anchor.bounds.midX,
-                y: anchor.bounds.minY - unicornSize * 0.3
+                y: anchor.bounds.maxY + unicornSize * 0.42
             )
         }
     }

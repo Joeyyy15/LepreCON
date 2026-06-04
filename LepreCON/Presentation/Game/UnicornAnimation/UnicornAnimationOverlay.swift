@@ -19,45 +19,25 @@ struct UnicornAnimationOverlay: View {
     private let carriedGemSize: CGFloat = 34
     private let dropGemSize: CGFloat = 36
 
+    private var unicornBehindSlotArt: Bool {
+        guard let activeIndex = animator.activeCupIndex else { return false }
+        return UnicornCupDisplayLayout.unicornRendersBelowSlotArt(forCupIndex: activeIndex)
+    }
+
     var body: some View {
         ZStack {
             Color.black.opacity(0.08)
                 .ignoresSafeArea()
 
-            if let activeIndex = animator.activeCupIndex,
-               let anchor = cupAnchors[activeIndex] {
-                ActiveCupHighlightView(
-                    kind: UnicornCupDisplayLayout.slotKind(forCupIndex: activeIndex),
-                    bounds: anchor.bounds
-                )
+            if unicornBehindSlotArt {
+                unicornAndCarriedGemLayer
             }
 
-            if let drop = animator.droppingGem {
-                GemView(imageName: drop.imageName, size: dropGemSize)
-                    .scaleEffect(0.85 + drop.dropProgress * 0.15)
-                    .opacity(0.35 + drop.dropProgress * 0.65)
-                    .position(
-                        x: drop.position.x,
-                        y: drop.position.y + drop.dropProgress * 14
-                    )
-            }
+            activeCupHighlightLayer
+            gemEffectLayers
 
-            if let calm = animator.calmingGem {
-                GemView(imageName: calm.imageName, size: carriedGemSize)
-                    .opacity(1 - Double(calm.riseProgress) * 0.85)
-                    .position(
-                        x: calm.position.x,
-                        y: calm.position.y - calm.riseProgress * 28
-                    )
-            }
-
-            if let position = animator.unicornPosition {
-                unicornHead(at: position)
-
-                if let carried = animator.carriedGemImageName {
-                    GemView(imageName: carried, size: carriedGemSize)
-                        .position(x: position.x, y: position.y - unicornSize * 0.38)
-                }
+            if !unicornBehindSlotArt {
+                unicornAndCarriedGemLayer
             }
         }
         .contentShape(Rectangle())
@@ -67,6 +47,54 @@ struct UnicornAnimationOverlay: View {
         .onAppear { startPlaybackIfReady() }
         .onChange(of: cupAnchors) { _, _ in startPlaybackIfReady() }
         .onDisappear { animator.cancel() }
+    }
+
+    @ViewBuilder
+    private var activeCupHighlightLayer: some View {
+        if let activeIndex = animator.activeCupIndex,
+           let anchor = cupAnchors[activeIndex] {
+            ActiveCupHighlightView(
+                kind: UnicornCupDisplayLayout.slotKind(forCupIndex: activeIndex),
+                bounds: anchor.bounds
+            )
+        }
+    }
+
+    @ViewBuilder
+    private var gemEffectLayers: some View {
+        if let drop = animator.droppingGem {
+            GemView(imageName: drop.imageName, size: dropGemSize)
+                .scaleEffect(0.85 + drop.dropProgress * 0.15)
+                .opacity(0.35 + drop.dropProgress * 0.65)
+                .position(
+                    x: drop.position.x,
+                    y: drop.position.y + drop.dropProgress * 14
+                )
+        }
+
+        if let calm = animator.calmingGem {
+            GemView(imageName: calm.imageName, size: carriedGemSize)
+                .opacity(1 - Double(calm.riseProgress) * 0.85)
+                .position(
+                    x: calm.position.x,
+                    y: calm.position.y - calm.riseProgress * 28
+                )
+        }
+    }
+
+    @ViewBuilder
+    private var unicornAndCarriedGemLayer: some View {
+        if let position = animator.unicornPosition {
+            unicornHead(at: position)
+
+            if let carried = animator.carriedGemImageName {
+                let carriedYOffset = unicornBehindSlotArt
+                    ? unicornSize * 0.48
+                    : unicornSize * 0.38
+                GemView(imageName: carried, size: carriedGemSize)
+                    .position(x: position.x, y: position.y - carriedYOffset)
+            }
+        }
     }
 
     @ViewBuilder

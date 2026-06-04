@@ -12,13 +12,13 @@ struct GameControlDockView: View {
     let currentRoll: Int?
     let showsRollControl: Bool
     let canRollD12: Bool
-    let canPlaceFromHand: Bool
+    let canOpenHandTray: Bool
     let showsUndo: Bool
     let canUndo: Bool
 
     var onRollD12: () -> Void = {}
     var onUndo: () -> Void = {}
-    var onTapHandGemKind: (GemKind) -> Void = { _ in }
+    var onOpenHandTray: () -> Void = {}
 
     var body: some View {
         GeometryReader { geometry in
@@ -54,11 +54,10 @@ struct GameControlDockView: View {
                 HUDSectionLabel(text: "Hand")
                     .hudBarPosition(width: barWidth, height: barHeight, anchor: HUDBarArtLayout.dockHandLabelAnchor)
 
-                DockHandGemsView(
+                DockHandPreviewView(
                     gemCounts: handGemCounts,
-                    canPlace: canPlaceFromHand,
-                    compactOnArtBackground: true,
-                    onTapKind: onTapHandGemKind
+                    canOpenTray: canOpenHandTray,
+                    onOpenTray: onOpenHandTray
                 )
                 .frame(maxWidth: barWidth * 0.34)
                 .hudBarPosition(width: barWidth, height: barHeight, anchor: HUDBarArtLayout.dockHandContentAnchor)

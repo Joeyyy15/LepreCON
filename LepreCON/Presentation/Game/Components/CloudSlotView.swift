@@ -23,10 +23,10 @@ struct CloudSlotView: View {
     /// Scales cloud artwork to fill most of the slot without changing layout metrics.
     private var cloudArtScale: CGFloat { 1.26 }
 
-    private var unicornReservedTop: CGFloat { hasUnicorn ? 14 : 0 }
+    private var unicornReservedBottom: CGFloat { hasUnicorn ? 12 : 0 }
 
     var body: some View {
-        ZStack(alignment: .topTrailing) {
+        ZStack(alignment: .bottom) {
             ZStack(alignment: .top) {
                 cloudShape
                 cupContent
@@ -35,8 +35,9 @@ struct CloudSlotView: View {
 
             if hasUnicorn, showUnicornMarker {
                 UnicornIndicatorView()
-                    .padding(3)
-                    .zIndex(1)
+                    .padding(.bottom, 2)
+                    .offset(y: unicornReservedBottom * 0.35)
+                    .zIndex(0)
             }
         }
         .frame(width: width, height: height)
@@ -54,11 +55,11 @@ struct CloudSlotView: View {
             BoardCupGemCluster(
                 items: gemCounts,
                 width: max(0, width - innerPadding * 2),
-                height: max(0, height * 0.42 - unicornReservedTop),
+                height: max(0, height * 0.42 - unicornReservedBottom * 0.35),
                 showsKindLabel: true
             )
             .padding(.horizontal, innerPadding)
-            .padding(.top, unicornReservedTop + innerPadding * 0.25)
+            .padding(.top, innerPadding * 0.25)
             .offset(y: height * 0.04)
             .zIndex(2)
         }
