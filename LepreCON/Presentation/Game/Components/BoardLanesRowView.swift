@@ -69,14 +69,21 @@ struct BoardLaneGemsRowView: View {
                     height: metrics.laneGemStackHeight
                 )
                 .padding(.horizontal, metrics.laneInnerPadding)
-                .frame(width: metrics.laneWidth, height: metrics.laneGemStackHeight, alignment: .bottom)
+                .frame(
+                    width: metrics.laneWidth,
+                    height: metrics.laneGemStackHeight,
+                    alignment: .bottom
+                )
 
                 if lane.hasUnicorn {
                     UnicornIndicatorView()
                         .padding(4)
                 }
             }
-            .frame(width: metrics.laneWidth, height: metrics.laneGemStackHeight)
+            .frame(
+                width: metrics.laneWidth,
+                height: metrics.laneGemStackHeight
+            )
         }
         .frame(width: metrics.laneWidth)
     }
