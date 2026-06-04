@@ -41,26 +41,76 @@ struct RainbowLaneBackgroundView: View {
 
     @ViewBuilder
     private var laneArtwork: some View {
-        Image(laneColor.laneBackgroundAssetName)
-            .resizable()
-            .scaledToFill()
-            .frame(width: width, height: height, alignment: .top)
-            .clipped()
+        adjustedLaneImage
             .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 3)
-            .shadow(color: isHighlighted ? Color.yellow.opacity(0.9) : .clear, radius: 12)
-            .shadow(color: isHighlighted ? Color.orange.opacity(0.55) : .clear, radius: 5)
+            .shadow(
+                color: isHighlighted ? Color.yellow.opacity(0.9) : .clear,
+                radius: 12
+            )
+            .shadow(
+                color: isHighlighted ? Color.orange.opacity(0.55) : .clear,
+                radius: 5
+            )
             .overlay {
                 if isHighlighted {
-                    Image(laneColor.laneBackgroundAssetName)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: width, height: height, alignment: .top)
-                        .clipped()
+                    adjustedLaneImage
                         .allowsHitTesting(false)
                         .opacity(0.35)
                         .blendMode(.screen)
                 }
             }
+    }
+    // Creates the lane image using small visual adjustments for assets
+    // that have slightly different transparent padding or artwork height.
+    private var adjustedLaneImage: some View {
+        Image(laneColor.laneBackgroundAssetName)
+            .resizable()
+            .scaledToFill()
+            .frame(width: width, height: height, alignment: .top)
+            .scaleEffect(x: 1, y: laneVerticalScale, anchor: .center)
+            .offset(y: laneVerticalOffset)
+            .frame(width: width, height: height)
+            .clipped()
+    }
+
+    // Slightly stretches specific lane assets vertically.
+    // These values are percentages, so they scale correctly on different devices.
+    private var laneVerticalScale: CGFloat {
+        switch laneColor {
+        case .red:
+            return 1.000
+
+        case .yellow:
+            return 1.020
+
+        case .green:
+            return 1.030
+
+        case .orange, .blue, .purple:
+            return 1.000
+        }
+    }
+
+    // Moves the stretched image so the extra height appears where it is needed.
+    // Negative values move artwork upward.
+    // Positive values move artwork downward.
+    private var laneVerticalOffset: CGFloat {
+        switch laneColor {
+        case .red:
+            // Red needs more visible artwork at the top.
+            return height * -0.0125
+
+        case .yellow:
+            // Yellow needs a little more height at both the top and bottom.
+            return 0
+
+        case .green:
+            // Green needs more visible artwork at the bottom.
+            return height * 0.015
+
+        case .orange, .blue, .purple:
+            return 0
+        }
     }
 
     private var proceduralLaneBackground: some View {
