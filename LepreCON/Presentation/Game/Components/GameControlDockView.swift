@@ -2,7 +2,7 @@
 // GameControlDockView.swift
 // LepreCON
 //
-// Three-section bottom dock: Undo (left), Roll D12 (center), Hand gems (right).
+// Bottom dock: centered bottom_bar with anchored overlays.
 //
 
 import SwiftUI
@@ -12,51 +12,58 @@ struct GameControlDockView: View {
     let currentRoll: Int?
     let showsRollControl: Bool
     let canRollD12: Bool
-    let canPlaceFromHand: Bool
+    let canOpenHandTray: Bool
     let showsUndo: Bool
     let canUndo: Bool
 
     var onRollD12: () -> Void = {}
     var onUndo: () -> Void = {}
-    var onTapHandGemKind: (GemKind) -> Void = { _ in }
+    var onOpenHandTray: () -> Void = {}
 
     var body: some View {
-        HStack(alignment: .center, spacing: 0) {
-            DockUndoButtonView(
-                showsUndo: showsUndo,
-                canUndo: canUndo,
-                onUndo: onUndo
-            )
-            .frame(width: GameScreenLayout.dockSideSectionWidth, alignment: .leading)
+        GeometryReader { geometry in
+            let barWidth = geometry.size.width
+            let barHeight = geometry.size.height
 
-            DockD12RollView(
-                showsRollControl: showsRollControl,
-                canRollD12: canRollD12,
-                currentRoll: currentRoll,
-                onRollD12: onRollD12
-            )
-            .frame(maxWidth: .infinity)
+            ZStack(alignment: .topLeading) {
+                BottomBarArtBackground()
 
-            DockHandGemsView(
-                gemCounts: handGemCounts,
-                canPlace: canPlaceFromHand,
-                onTapKind: onTapHandGemKind
-            )
-            .frame(width: GameScreenLayout.dockHandSectionWidth, alignment: .center)
+                HUDSectionLabel(text: "Undo")
+                    .hudBarPosition(width: barWidth, height: barHeight, anchor: HUDBarArtLayout.dockUndoLabelAnchor)
+
+                DockUndoButtonView(
+                    showsUndo: showsUndo,
+                    canUndo: canUndo,
+                    compactOnArtBackground: true,
+                    onUndo: onUndo
+                )
+                .hudBarPosition(width: barWidth, height: barHeight, anchor: HUDBarArtLayout.dockUndoIconAnchor)
+
+                DockD12RollView(
+                    showsRollControl: showsRollControl,
+                    canRollD12: canRollD12,
+                    currentRoll: currentRoll,
+                    compactOnArtBackground: true,
+                    onRollD12: onRollD12
+                )
+                .hudBarPosition(width: barWidth, height: barHeight, anchor: HUDBarArtLayout.dockRollDieAnchor)
+
+                HUDSectionLabel(text: "Roll D12")
+                    .hudBarPosition(width: barWidth, height: barHeight, anchor: HUDBarArtLayout.dockRollCaptionAnchor)
+
+                HUDSectionLabel(text: "Hand")
+                    .hudBarPosition(width: barWidth, height: barHeight, anchor: HUDBarArtLayout.dockHandLabelAnchor)
+
+                DockHandPreviewView(
+                    gemCounts: handGemCounts,
+                    canOpenTray: canOpenHandTray,
+                    onOpenTray: onOpenHandTray
+                )
+                .frame(maxWidth: barWidth * 0.34)
+                .hudBarPosition(width: barWidth, height: barHeight, anchor: HUDBarArtLayout.dockHandContentAnchor)
+            }
         }
-        .padding(.horizontal, GameScreenLayout.dockInnerPadding)
-        .padding(.vertical, 10)
-        .frame(height: GameScreenLayout.dockHeight)
-        .frame(maxWidth: .infinity)
-        .background(
-            RoundedRectangle(cornerRadius: BoardStyle.sceneChromeRadius, style: .continuous)
-                .fill(BoardStyle.dockPanelFill)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: BoardStyle.sceneChromeRadius, style: .continuous)
-                .stroke(BoardStyle.dockPanelStroke, lineWidth: 1.1)
-        )
-        .shadow(color: .black.opacity(0.24), radius: 5, x: 0, y: 2)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .gameScreenDebugBorder(.orange)
     }
 }

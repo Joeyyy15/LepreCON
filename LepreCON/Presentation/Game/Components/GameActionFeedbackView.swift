@@ -27,7 +27,9 @@ struct GameActionFeedbackView: View {
                         .stroke(BoardStyle.boardGoldOutline.opacity(0.65), lineWidth: 0.75)
                 )
                 .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
-                .padding(.horizontal, 20)
+                .frame(maxWidth: .infinity)
+                .lineLimit(2)
+                .minimumScaleFactor(0.85)
         }
     }
 }

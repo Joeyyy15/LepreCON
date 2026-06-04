@@ -16,7 +16,14 @@ struct GameView: View {
     @State private var lastActionMessage: String?
     @State private var showsScoringSheet = false
     @State private var showsResolutionSheet = false
+    @State private var deferResolutionSheet = false
+    @State private var cupBoardAnchors: [Int: CupBoardAnchorInfo] = [:]
     @State private var didAutoStartGame = false
+    @State private var isHandTrayPresented = false
+
+    private var blocksGameplayInput: Bool {
+        viewModel.isUnicornAnimationPlaying
+    }
 
     init(onFinishGame: @escaping () -> Void) {
         _viewModel = StateObject(wrappedValue: GameViewModel())
@@ -31,20 +38,17 @@ struct GameView: View {
     var body: some View {
         GeometryReader { geometry in
             let contentWidth = GameScreenLayout.contentWidth(in: geometry)
-
             let topPadding = GameScreenLayout.topContentPadding(in: geometry)
             let bottomPadding = GameScreenLayout.bottomContentPadding(in: geometry)
 
-            let topReservedHeight =
-                topPadding +
-                GameScreenLayout.topBarHeight +
-                GameScreenLayout.hudToBoardGap
+            // Use the real content width to size the image-based HUD bars.
+            // This prevents top_bar from shrinking into the middle of the screen.
+            let topBarHeight = GameScreenLayout.topBarHeight(forContentWidth: contentWidth)
+            let dockHeight = GameScreenLayout.dockHeight(forContentWidth: contentWidth)
 
-            let bottomReservedHeight =
-                bottomPadding +
-                GameScreenLayout.dockHeight +
-                GameScreenLayout.boardToDockGap
-
+            let topReservedHeight = topPadding + topBarHeight + GameScreenLayout.hudToBoardGap
+            let bottomReservedHeight = bottomPadding + dockHeight + GameScreenLayout.boardToDockGap
+            let handTrayHeight = GameScreenLayout.handTrayHeight(screenHeight: geometry.size.height)
             let boardHeight = max(
                 0,
                 geometry.size.height - topReservedHeight - bottomReservedHeight
@@ -58,10 +62,22 @@ struct GameView: View {
                     Spacer()
                         .frame(height: topReservedHeight)
 
-                    GameBoardView(
-                        displayState: viewModel.boardDisplayState,
-                        onConfirmScore: confirmScore
-                    )
+                    ZStack {
+                        GameBoardView(
+                            displayState: viewModel.boardDisplayState,
+                            hideUnicornMarkers: viewModel.isUnicornAnimationPlaying,
+                            onConfirmScore: confirmScore
+                        )
+                        .onPreferenceChange(CupBoardAnchorKey.self) { cupBoardAnchors = $0 }
+
+                        if let script = viewModel.unicornAnimationScript {
+                            UnicornAnimationOverlay(
+                                script: script,
+                                cupAnchors: cupBoardAnchors,
+                                onFinished: handleUnicornAnimationFinished
+                            )
+                        }
+                    }
                     .frame(width: contentWidth, height: boardHeight)
 
                     Spacer()
@@ -81,33 +97,55 @@ struct GameView: View {
                         onStartGame: startGame,
                         onEndGame: endGame
                     )
-                    .frame(width: contentWidth, height: GameScreenLayout.topBarHeight)
+                    .frame(width: contentWidth, height: topBarHeight)
                     .padding(.top, topPadding)
                     .zIndex(2)
 
                     Spacer(minLength: 0)
 
+                    GameActionFeedbackView(message: lastActionMessage)
+                        .frame(width: contentWidth, height: GameScreenLayout.actionFeedbackSlotHeight)
+
                     GameControlDockView(
                         handGemCounts: viewModel.boardDisplayState.handGemCounts,
                         currentRoll: viewModel.boardDisplayState.currentRoll,
                         showsRollControl: !viewModel.isGameOver,
-                        canRollD12: viewModel.canRollD12,
-                        canPlaceFromHand: viewModel.canPlaceFromHand,
+                        canRollD12: viewModel.canRollD12 && !blocksGameplayInput,
+                        canOpenHandTray: !blocksGameplayInput,
                         showsUndo: !viewModel.isGameOver,
-                        canUndo: viewModel.canUndoLastPlacement,
+                        canUndo: viewModel.canUndoLastPlacement && !blocksGameplayInput,
                         onRollD12: rollD12,
                         onUndo: {
                             viewModel.undoLastPlacement()
                             lastActionMessage = "Last placement undone."
                         },
-                        onTapHandGemKind: placeHandGemOfKind
+                        onOpenHandTray: { isHandTrayPresented = true }
                     )
-                    .frame(width: contentWidth, height: GameScreenLayout.dockHeight)
+                    .frame(width: contentWidth, height: dockHeight)
                     .padding(.bottom, bottomPadding)
                     .zIndex(2)
                 }
                 .frame(width: geometry.size.width, height: geometry.size.height)
                 .zIndex(1)
+
+                if isHandTrayPresented, !blocksGameplayInput {
+                    HandTrayOverlayView(
+                        gemCounts: viewModel.boardDisplayState.handGemCounts,
+                        canPlace: viewModel.canPlaceFromHand,
+                        trayHeight: handTrayHeight,
+                        onTapKind: placeHandGemFromTray,
+                        onDismiss: { isHandTrayPresented = false }
+                    )
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+                    .zIndex(4)
+                }
+
+                if blocksGameplayInput {
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .frame(width: geometry.size.width, height: geometry.size.height)
+                        .zIndex(5)
+                }
             }
             .frame(width: geometry.size.width, height: geometry.size.height)
             .background {
@@ -115,10 +153,6 @@ struct GameView: View {
                 // the foreground HUD/board/dock layout.
                 GameSceneBackgroundView()
             }
-        }
-        .overlay(alignment: .top) {
-            GameActionFeedbackView(message: lastActionMessage)
-                .padding(.top, 8)
         }
         .sheet(isPresented: $showsScoringSheet) {
             GameScoringSheetView(
@@ -139,7 +173,17 @@ struct GameView: View {
             showsScoringSheet = !viewModel.isGameOver && !cups.isEmpty
         }
         .onChange(of: viewModel.resolutionEventPresentation) { _, presentation in
-            showsResolutionSheet = presentation != nil
+            guard presentation != nil else { return }
+            if viewModel.isUnicornAnimationPlaying {
+                deferResolutionSheet = true
+            } else {
+                showsResolutionSheet = true
+            }
+        }
+        .onChange(of: viewModel.isUnicornAnimationPlaying) { _, isPlaying in
+            if isPlaying {
+                isHandTrayPresented = false
+            }
         }
         .overlay(alignment: .bottom) {
             gameOverBanner
@@ -174,7 +218,14 @@ struct GameView: View {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .fill(BoardStyle.hudPanelFill.opacity(0.95))
             )
-            .padding(.bottom, GameScreenLayout.dockHeight + GameScreenLayout.bottomPadding + 8)
+            .padding(
+                .bottom,
+                GameScreenLayout.dockHeight
+                    + GameScreenLayout.actionFeedbackSlotHeight
+                    + GameScreenLayout.boardToDockGap
+                    + GameScreenLayout.bottomPadding
+                    + 8
+            )
         }
     }
 
@@ -202,6 +253,14 @@ struct GameView: View {
         .presentationDetents([.medium, .large])
     }
 
+    private func handleUnicornAnimationFinished() {
+        viewModel.finishUnicornAnimation()
+        if deferResolutionSheet, viewModel.resolutionEventPresentation != nil {
+            showsResolutionSheet = true
+            deferResolutionSheet = false
+        }
+    }
+
     // MARK: - Menu actions
 
     private func startGame() {
@@ -225,7 +284,7 @@ struct GameView: View {
         }
     }
 
-    private func placeHandGemOfKind(_ kind: GemKind) {
+    private func placeHandGemFromTray(_ kind: GemKind) {
         switch viewModel.placeHandGem(kind: kind) {
         case .success:
             if viewModel.session.isTurnPlacementComplete {

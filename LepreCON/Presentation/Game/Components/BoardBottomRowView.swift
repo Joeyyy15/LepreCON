@@ -10,6 +10,7 @@ import SwiftUI
 struct BoardBottomRowView: View {
     let bottomRow: [BottomRowSlotDisplay]
     let metrics: BoardLayoutMetrics
+    var hideUnicornMarkers: Bool = false
     var onConfirmScore: ((Int, GemKind) -> Void)?
 
     var body: some View {
@@ -48,26 +49,31 @@ struct BoardBottomRowView: View {
                     height: metrics.cloudHeight,
                     innerPadding: metrics.cupInnerPadding,
                     isHighlighted: slot.cupSlot.isHighlighted,
-                    hasUnicorn: slot.cupSlot.hasUnicorn
+                    hasUnicorn: slot.cupSlot.hasUnicorn,
+                    showUnicornMarker: !hideUnicornMarkers
                 )
                 .frame(
                     width: metrics.cloudWidth,
                     height: metrics.cloudHeight,
                     alignment: .top
                 )
+                .reportsCupBoardAnchor(cupIndex: slot.cupSlot.cupIndex)
             case .pot:
                 PotSlotView(
                     gemCounts: slot.cupSlot.gemCounts,
                     width: metrics.potWidth,
                     height: metrics.potHeight,
                     innerPadding: metrics.cupInnerPadding,
-                    isHighlighted: slot.cupSlot.isHighlighted
+                    isHighlighted: slot.cupSlot.isHighlighted,
+                    hasUnicorn: slot.cupSlot.hasUnicorn,
+                    showUnicornMarker: !hideUnicornMarkers
                 )
                 .frame(
                     width: metrics.potWidth,
                     height: metrics.potHeight,
                     alignment: .top
                 )
+                .reportsCupBoardAnchor(cupIndex: slot.cupSlot.cupIndex)
             }
         }
     }

@@ -38,6 +38,7 @@ struct BoardLaneBackgroundsRowView: View {
 struct BoardLaneGemsRowView: View {
     let lanes: [RainbowLaneDisplay]
     let metrics: BoardLayoutMetrics
+    var hideUnicornMarkers: Bool = false
     var onConfirmScore: ((Int, GemKind) -> Void)?
 
     var body: some View {
@@ -75,7 +76,7 @@ struct BoardLaneGemsRowView: View {
                     alignment: .bottom
                 )
 
-                if lane.hasUnicorn {
+                if lane.hasUnicorn, !hideUnicornMarkers {
                     UnicornIndicatorView()
                         .padding(4)
                 }
@@ -84,6 +85,7 @@ struct BoardLaneGemsRowView: View {
                 width: metrics.laneWidth,
                 height: metrics.laneGemStackHeight
             )
+            .reportsCupBoardAnchor(cupIndex: lane.cupIndex)
         }
         .frame(width: metrics.laneWidth)
     }

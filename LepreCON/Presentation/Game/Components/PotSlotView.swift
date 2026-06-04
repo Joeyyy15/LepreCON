@@ -14,13 +14,27 @@ struct PotSlotView: View {
     let height: CGFloat
     var innerPadding: CGFloat = 5
     var isHighlighted: Bool = false
+    var hasUnicorn: Bool = false
+    var showUnicornMarker: Bool = true
 
     private static let potAssetName = "pot_of_gold"
 
+    private var unicornReservedBottom: CGFloat { hasUnicorn ? 10 : 0 }
+
     var body: some View {
-        ZStack(alignment: .top) {
-            potShape
-            potContent
+        ZStack(alignment: .bottom) {
+            ZStack(alignment: .top) {
+                potShape
+                potContent
+            }
+            .frame(width: width, height: height, alignment: .top)
+
+            if hasUnicorn, showUnicornMarker {
+                UnicornIndicatorView()
+                    .padding(.bottom, 2)
+                    .offset(y: unicornReservedBottom * 0.3)
+                    .zIndex(0)
+            }
         }
         .frame(width: width, height: height, alignment: .top)
         .contentShape(Rectangle())
