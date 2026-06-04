@@ -16,6 +16,7 @@ struct CloudSlotView: View {
     var innerPadding: CGFloat = 5
     var isHighlighted: Bool = false
     var hasUnicorn: Bool = false
+    var showUnicornMarker: Bool = true
 
     private static let cloudAssetName = "cloud_cup"
 
@@ -32,7 +33,7 @@ struct CloudSlotView: View {
             }
             .frame(width: width, height: height, alignment: .top)
 
-            if hasUnicorn {
+            if hasUnicorn, showUnicornMarker {
                 UnicornIndicatorView()
                     .padding(3)
                     .zIndex(1)

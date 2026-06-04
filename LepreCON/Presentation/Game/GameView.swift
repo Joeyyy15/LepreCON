@@ -16,7 +16,13 @@ struct GameView: View {
     @State private var lastActionMessage: String?
     @State private var showsScoringSheet = false
     @State private var showsResolutionSheet = false
+    @State private var deferResolutionSheet = false
+    @State private var cupBoardAnchors: [Int: CupBoardAnchorInfo] = [:]
     @State private var didAutoStartGame = false
+
+    private var blocksGameplayInput: Bool {
+        viewModel.isUnicornAnimationPlaying
+    }
 
     init(onFinishGame: @escaping () -> Void) {
         _viewModel = StateObject(wrappedValue: GameViewModel())
@@ -59,10 +65,22 @@ struct GameView: View {
                     Spacer()
                         .frame(height: topReservedHeight)
 
-                    GameBoardView(
-                        displayState: viewModel.boardDisplayState,
-                        onConfirmScore: confirmScore
-                    )
+                    ZStack {
+                        GameBoardView(
+                            displayState: viewModel.boardDisplayState,
+                            hideUnicornMarkers: viewModel.isUnicornAnimationPlaying,
+                            onConfirmScore: confirmScore
+                        )
+                        .onPreferenceChange(CupBoardAnchorKey.self) { cupBoardAnchors = $0 }
+
+                        if let script = viewModel.unicornAnimationScript {
+                            UnicornAnimationOverlay(
+                                script: script,
+                                cupAnchors: cupBoardAnchors,
+                                onFinished: handleUnicornAnimationFinished
+                            )
+                        }
+                    }
                     .frame(width: contentWidth, height: boardHeight)
 
                     Spacer()
@@ -95,10 +113,10 @@ struct GameView: View {
                         handGemCounts: viewModel.boardDisplayState.handGemCounts,
                         currentRoll: viewModel.boardDisplayState.currentRoll,
                         showsRollControl: !viewModel.isGameOver,
-                        canRollD12: viewModel.canRollD12,
-                        canPlaceFromHand: viewModel.canPlaceFromHand,
+                        canRollD12: viewModel.canRollD12 && !blocksGameplayInput,
+                        canPlaceFromHand: viewModel.canPlaceFromHand && !blocksGameplayInput,
                         showsUndo: !viewModel.isGameOver,
-                        canUndo: viewModel.canUndoLastPlacement,
+                        canUndo: viewModel.canUndoLastPlacement && !blocksGameplayInput,
                         onRollD12: rollD12,
                         onUndo: {
                             viewModel.undoLastPlacement()
@@ -112,6 +130,13 @@ struct GameView: View {
                 }
                 .frame(width: geometry.size.width, height: geometry.size.height)
                 .zIndex(1)
+
+                if blocksGameplayInput {
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .frame(width: geometry.size.width, height: geometry.size.height)
+                        .zIndex(5)
+                }
             }
             .frame(width: geometry.size.width, height: geometry.size.height)
             .background {
@@ -139,7 +164,12 @@ struct GameView: View {
             showsScoringSheet = !viewModel.isGameOver && !cups.isEmpty
         }
         .onChange(of: viewModel.resolutionEventPresentation) { _, presentation in
-            showsResolutionSheet = presentation != nil
+            guard presentation != nil else { return }
+            if viewModel.isUnicornAnimationPlaying {
+                deferResolutionSheet = true
+            } else {
+                showsResolutionSheet = true
+            }
         }
         .overlay(alignment: .bottom) {
             gameOverBanner
@@ -207,6 +237,14 @@ struct GameView: View {
             }
         }
         .presentationDetents([.medium, .large])
+    }
+
+    private func handleUnicornAnimationFinished() {
+        viewModel.finishUnicornAnimation()
+        if deferResolutionSheet, viewModel.resolutionEventPresentation != nil {
+            showsResolutionSheet = true
+            deferResolutionSheet = false
+        }
     }
 
     // MARK: - Menu actions

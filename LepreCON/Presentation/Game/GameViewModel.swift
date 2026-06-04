@@ -19,6 +19,10 @@ final class GameViewModel: ObservableObject {
     @Published private(set) var resolutionEventPresentation: TurnResolutionEventPresentation?
     @Published private(set) var highlightedResolutionLineIndex: Int?
 
+    /// Read-only script for replaying unicorn resolution on the board overlay.
+    @Published private(set) var unicornAnimationScript: UnicornAnimationScript?
+    @Published private(set) var isUnicornAnimationPlaying = false
+
     private let factory: GameSessionFactory
     private var resolutionHighlightTask: Task<Void, Never>?
 
@@ -197,12 +201,25 @@ final class GameViewModel: ObservableObject {
         return result
     }
 
+    func finishUnicornAnimation() {
+        unicornAnimationScript = nil
+        isUnicornAnimationPlaying = false
+    }
+
     private func refreshResolutionEventPresentation() {
         resolutionHighlightTask?.cancel()
         resolutionEventPresentation = TurnResolutionEventDisplayBuilder.presentation(
             events: session.recentResolutionEvents,
             cups: session.cups
         )
+        if let script = UnicornResolutionAnimationBuilder.script(
+            from: session.recentResolutionEvents
+        ) {
+            unicornAnimationScript = script
+            isUnicornAnimationPlaying = true
+        } else {
+            finishUnicornAnimation()
+        }
         guard let presentation = resolutionEventPresentation, !presentation.logLines.isEmpty else {
             highlightedResolutionLineIndex = nil
             return
@@ -224,6 +241,7 @@ final class GameViewModel: ObservableObject {
         resolutionHighlightTask = nil
         resolutionEventPresentation = nil
         highlightedResolutionLineIndex = nil
+        finishUnicornAnimation()
     }
 
     private func clearUndoSnapshot() {

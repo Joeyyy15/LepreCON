@@ -10,6 +10,7 @@ import SwiftUI
 
 struct GameBoardView: View {
     let displayState: GameBoardDisplayState
+    var hideUnicornMarkers: Bool = false
     var onConfirmScore: ((Int, GemKind) -> Void)? = nil
 
     var body: some View {
@@ -31,6 +32,7 @@ struct GameBoardView: View {
                     BoardBottomRowView(
                         bottomRow: displayState.bottomRow,
                         metrics: metrics,
+                        hideUnicornMarkers: hideUnicornMarkers,
                         onConfirmScore: onConfirmScore
                     )
                     .padding(.bottom, metrics.bottomRowBottomInset)
@@ -39,6 +41,7 @@ struct GameBoardView: View {
                     BoardLaneGemsRowView(
                         lanes: displayState.rainbowLanes,
                         metrics: metrics,
+                        hideUnicornMarkers: hideUnicornMarkers,
                         onConfirmScore: onConfirmScore
                     )
                     .padding(
@@ -53,6 +56,7 @@ struct GameBoardView: View {
                     alignment: .bottom
                 )
             }
+            .coordinateSpace(name: GameBoardCoordinateSpace.name)
             .frame(width: geometry.size.width, height: geometry.size.height)
         }
         .gameScreenDebugBorder(.green)
