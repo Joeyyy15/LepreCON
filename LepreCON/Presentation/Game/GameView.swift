@@ -43,7 +43,8 @@ struct GameView: View {
             let bottomReservedHeight =
                 bottomPadding +
                 GameScreenLayout.dockHeight +
-                GameScreenLayout.boardToDockGap
+                GameScreenLayout.boardToDockGap +
+                GameScreenLayout.actionFeedbackSlotHeight
 
             let boardHeight = max(
                 0,
@@ -87,6 +88,9 @@ struct GameView: View {
 
                     Spacer(minLength: 0)
 
+                    GameActionFeedbackView(message: lastActionMessage)
+                        .frame(width: contentWidth, height: GameScreenLayout.actionFeedbackSlotHeight)
+
                     GameControlDockView(
                         handGemCounts: viewModel.boardDisplayState.handGemCounts,
                         currentRoll: viewModel.boardDisplayState.currentRoll,
@@ -115,10 +119,6 @@ struct GameView: View {
                 // the foreground HUD/board/dock layout.
                 GameSceneBackgroundView()
             }
-        }
-        .overlay(alignment: .top) {
-            GameActionFeedbackView(message: lastActionMessage)
-                .padding(.top, 8)
         }
         .sheet(isPresented: $showsScoringSheet) {
             GameScoringSheetView(
@@ -174,7 +174,14 @@ struct GameView: View {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .fill(BoardStyle.hudPanelFill.opacity(0.95))
             )
-            .padding(.bottom, GameScreenLayout.dockHeight + GameScreenLayout.bottomPadding + 8)
+            .padding(
+                .bottom,
+                GameScreenLayout.dockHeight
+                    + GameScreenLayout.actionFeedbackSlotHeight
+                    + GameScreenLayout.boardToDockGap
+                    + GameScreenLayout.bottomPadding
+                    + 8
+            )
         }
     }
 

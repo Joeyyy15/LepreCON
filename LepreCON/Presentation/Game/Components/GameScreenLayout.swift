@@ -14,6 +14,8 @@ enum GameScreenLayout {
     static let topBarHeight: CGFloat = 52
     static let hudToBoardGap: CGFloat = 4
     static let boardToDockGap: CGFloat = 4
+    /// Reserved strip between the board and dock for action feedback toasts.
+    static let actionFeedbackSlotHeight: CGFloat = 36
     static let topPadding: CGFloat = 0
     static let bottomPadding: CGFloat = 0
     /// Inset from the safe-area edges to the shared foreground column (per side).
