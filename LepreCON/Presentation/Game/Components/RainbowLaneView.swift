@@ -6,85 +6,98 @@
 //
 
 import SwiftUI
+import UIKit
 
-struct RainbowLaneView: View {
+// MARK: - Lane background only (sits behind cloud/pot in board ZStack)
+
+struct RainbowLaneBackgroundView: View {
     let laneColor: RainbowLaneColor
-    let gemCounts: [GemCountDisplayItem]
     let width: CGFloat
     let height: CGFloat
-    var innerPadding: CGFloat = 4
     var isHighlighted: Bool = false
-    var hasUnicorn: Bool = false
 
-    private var laneCornerRadius: CGFloat { width * 0.42 }
-    private var unicornReservedTop: CGFloat { hasUnicorn ? 16 : 0 }
-    private var isEmpty: Bool { gemCounts.isEmpty }
+    private var laneTopCornerRadius: CGFloat { width * 0.42 }
+    private var laneBottomCornerRadius: CGFloat { width * 0.14 }
+    private var laneShape: UnevenRoundedRectangle {
+        UnevenRoundedRectangle(
+            topLeadingRadius: laneTopCornerRadius,
+            bottomLeadingRadius: laneBottomCornerRadius,
+            bottomTrailingRadius: laneBottomCornerRadius,
+            topTrailingRadius: laneTopCornerRadius
+        )
+    }
 
     var body: some View {
-        ZStack(alignment: .topTrailing) {
-            laneBody
-
-            if hasUnicorn {
-                UnicornIndicatorView()
-                    .padding(4)
-                    .zIndex(1)
+        Group {
+            if UIImage(named: laneColor.laneBackgroundAssetName) != nil {
+                laneArtwork
+            } else {
+                proceduralLaneBackground
             }
         }
         .frame(width: width, height: height)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(laneColor.displayName) lane")
-        .accessibilityAddTraits(isHighlighted ? .isSelected : [])
+        .accessibilityHidden(true)
     }
 
-    private var laneBody: some View {
-        ZStack(alignment: .bottomLeading) {
-            RoundedRectangle(cornerRadius: laneCornerRadius, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [laneFillColor.opacity(0.92), laneDeepColor],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-                .overlay(laneGlassShine)
-                .overlay(
-                    RoundedRectangle(cornerRadius: laneCornerRadius, style: .continuous)
-                        .stroke(laneFillColor.opacity(0.55), lineWidth: 1)
-                        .padding(2)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: laneCornerRadius, style: .continuous)
-                        .stroke(Color.black.opacity(0.4), lineWidth: 1.5)
-                )
-                .shadow(color: laneDeepColor.opacity(0.8), radius: 2, x: 0, y: 2)
-                .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 3)
-                .overlay(highlightBorder)
+    @ViewBuilder
+    private var laneArtwork: some View {
+        Image(laneColor.laneBackgroundAssetName)
+            .resizable()
+            .scaledToFill()
+            .frame(width: width, height: height, alignment: .top)
+            .clipped()
+            .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 3)
+            .shadow(color: isHighlighted ? Color.yellow.opacity(0.9) : .clear, radius: 12)
+            .shadow(color: isHighlighted ? Color.orange.opacity(0.55) : .clear, radius: 5)
+            .overlay {
+                if isHighlighted {
+                    Image(laneColor.laneBackgroundAssetName)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: width, height: height, alignment: .top)
+                        .clipped()
+                        .allowsHitTesting(false)
+                        .opacity(0.35)
+                        .blendMode(.screen)
+                }
+            }
+    }
 
-            BoardLaneGemStack(
-                items: gemCounts,
-                width: max(0, width - innerPadding * 2),
-                height: max(0, height - innerPadding - unicornReservedTop - 4)
+    private var proceduralLaneBackground: some View {
+        laneShape
+            .fill(
+                LinearGradient(
+                    colors: [laneFillColor.opacity(0.92), laneDeepColor],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
             )
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-            .padding(.horizontal, innerPadding)
-            .padding(.bottom, innerPadding)
-            .padding(.top, unicornReservedTop + 2)
-        }
-        .frame(width: width, height: height)
-        .clipShape(RoundedRectangle(cornerRadius: laneCornerRadius, style: .continuous))
+            .overlay(laneGlassShine)
+            .overlay(
+                laneShape
+                    .stroke(laneFillColor.opacity(0.55), lineWidth: 1)
+                    .padding(2)
+            )
+            .overlay(
+                laneShape
+                    .stroke(Color.black.opacity(0.4), lineWidth: 1.5)
+            )
+            .shadow(color: laneDeepColor.opacity(0.8), radius: 2, x: 0, y: 2)
+            .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 3)
+            .overlay(highlightBorder)
     }
 
     private var laneGlassShine: some View {
         LinearGradient(
             colors: [
-                Color.white.opacity(isEmpty ? 0.38 : 0.22),
+                Color.white.opacity(0.22),
                 Color.white.opacity(0.06),
                 Color.clear
             ],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
-        .clipShape(RoundedRectangle(cornerRadius: laneCornerRadius, style: .continuous))
+        .clipShape(laneShape)
     }
 
     private var laneFillColor: Color {
@@ -112,9 +125,55 @@ struct RainbowLaneView: View {
     @ViewBuilder
     private var highlightBorder: some View {
         if isHighlighted {
-            RoundedRectangle(cornerRadius: laneCornerRadius, style: .continuous)
+            laneShape
                 .stroke(Color.yellow, lineWidth: 2.5)
         }
+    }
+}
+
+// MARK: - Combined lane (preview / legacy)
+
+struct RainbowLaneView: View {
+    let laneColor: RainbowLaneColor
+    let gemCounts: [GemCountDisplayItem]
+    let width: CGFloat
+    let height: CGFloat
+    var innerPadding: CGFloat = 4
+    var isHighlighted: Bool = false
+    var hasUnicorn: Bool = false
+
+    private var unicornReservedTop: CGFloat { hasUnicorn ? 16 : 0 }
+
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            ZStack(alignment: .bottom) {
+                RainbowLaneBackgroundView(
+                    laneColor: laneColor,
+                    width: width,
+                    height: height,
+                    isHighlighted: isHighlighted
+                )
+
+                BoardLaneGemStack(
+                    items: gemCounts,
+                    width: max(0, width - innerPadding * 2),
+                    height: max(0, height - innerPadding - unicornReservedTop - 4)
+                )
+                .padding(.horizontal, innerPadding)
+                .padding(.bottom, innerPadding)
+                .padding(.top, unicornReservedTop + 2)
+            }
+
+            if hasUnicorn {
+                UnicornIndicatorView()
+                    .padding(4)
+                    .zIndex(1)
+            }
+        }
+        .frame(width: width, height: height)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(laneColor.displayName) lane")
+        .accessibilityAddTraits(isHighlighted ? .isSelected : [])
     }
 }
 
@@ -126,15 +185,15 @@ struct RainbowLaneView: View {
                 GemCountDisplayItem(kind: .red, count: 3),
                 GemCountDisplayItem(kind: .gold, count: 1)
             ],
-            width: 42,
-            height: 180
+            width: 54,
+            height: 200
         )
 
         RainbowLaneView(
             laneColor: .orange,
             gemCounts: [],
-            width: 42,
-            height: 180
+            width: 54,
+            height: 200
         )
     }
     .padding(32)

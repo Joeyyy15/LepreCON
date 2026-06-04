@@ -14,40 +14,46 @@ struct GameBoardView: View {
 
     var body: some View {
         GeometryReader { geometry in
-            // This calculates how much the full board should scale
-            // to fit inside the available middle screen area.
-            let scale = BoardLayout.scale(for: geometry.size)
-
-            // These metrics stay at the original design size.
-            // The board should be built once at design size,
-            // then scaled once using .scaleEffect(scale).
-            let designMetrics = BoardLayoutMetrics(scale: 1)
-
-            // This is the final visual size after the board is scaled.
-            let scaledSize = BoardLayout.scaledSize(for: geometry.size, scale: scale)
+            let metrics = BoardLayoutMetrics(playfieldSize: geometry.size)
 
             BoardContainerView {
-                VStack(spacing: designMetrics.verticalSpacing) {
-                    BoardLanesRowView(
+                ZStack(alignment: .bottom) {
+                    BoardLaneBackgroundsRowView(
                         lanes: displayState.rainbowLanes,
-                        metrics: designMetrics,
-                        onConfirmScore: onConfirmScore
+                        metrics: metrics
                     )
-                    .frame(width: designMetrics.playfieldWidth, alignment: .center)
+                    .padding(
+                        .bottom,
+                        metrics.bottomRowBottomInset + metrics.laneBackgroundBottomInset
+                    )
+                    .zIndex(0)
 
                     BoardBottomRowView(
                         bottomRow: displayState.bottomRow,
-                        metrics: designMetrics,
+                        metrics: metrics,
                         onConfirmScore: onConfirmScore
                     )
-                    .frame(width: designMetrics.playfieldWidth, alignment: .center)
+                    .padding(.bottom, metrics.bottomRowBottomInset)
+                    .zIndex(1)
+
+                    BoardLaneGemsRowView(
+                        lanes: displayState.rainbowLanes,
+                        metrics: metrics,
+                        onConfirmScore: onConfirmScore
+                    )
+                    .padding(
+                        .bottom,
+                        metrics.bottomRowBottomInset + metrics.laneGemStackBottomInset
+                    )
+                    .zIndex(2)
                 }
-                .frame(width: designMetrics.playfieldWidth, alignment: .center)
+                .frame(
+                    width: metrics.playfieldWidth,
+                    height: metrics.playfieldHeight,
+                    alignment: .bottom
+                )
             }
-            .frame(width: BoardLayout.designWidth, height: BoardLayout.designHeight)
-            .scaleEffect(scale)
-            .frame(width: scaledSize.width, height: scaledSize.height)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+            .frame(width: geometry.size.width, height: geometry.size.height)
         }
         .gameScreenDebugBorder(.green)
     }
@@ -58,5 +64,5 @@ struct GameBoardView: View {
         session: GameSessionFactory().makeNewGame(playerNames: ["Player 1"])
     ))
     .padding()
-    .frame(height: 380)
+    .frame(width: 360, height: 420)
 }

@@ -94,8 +94,8 @@ extension GemKind {
         case .purple: return "gem_purple"
         case .white: return "gem_white"
         case .black: return "gem_black"
-        case .gold: return "gem_yellow"
-        case .clear: return "gem_white"
+        case .gold: return "gem_gold"
+        case .clear: return "gem_clear"
         case .pink: return "gem_purple"
         }
     }

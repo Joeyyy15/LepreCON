@@ -42,6 +42,24 @@ enum RainbowLaneColor: String, CaseIterable, Identifiable {
         }
     }
 
+    /// Asset catalog image for the lane background artwork (display only).
+    var laneBackgroundAssetName: String {
+        switch self {
+        case .red:
+            return "red_lane"
+        case .orange:
+            return "orange_lane"
+        case .yellow:
+            return "yellow_lane"
+        case .green:
+            return "green_lane"
+        case .blue:
+            return "blue_lane"
+        case .purple:
+            return "purple_lane"
+        }
+    }
+
     var displayName: String {
         rawValue.capitalized
     }

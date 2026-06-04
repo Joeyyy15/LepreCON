@@ -80,11 +80,11 @@ struct BoardCupGemCluster: View {
 
     private var gemSize: CGFloat {
         let fit = min(width, height)
-        let target = fit * 0.64
+        let target = fit * 0.72
         if previewItems.count > 3 {
-            return min(max(target, 24), 34)
+            return min(max(target, 28), 42)
         }
-        return min(max(target, 26), 38)
+        return min(max(target, 30), 46)
     }
 
     var body: some View {

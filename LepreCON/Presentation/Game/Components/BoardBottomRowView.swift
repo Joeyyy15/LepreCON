@@ -13,21 +13,32 @@ struct BoardBottomRowView: View {
     var onConfirmScore: ((Int, GemKind) -> Void)?
 
     var body: some View {
-        HStack(alignment: .center, spacing: metrics.bottomSpacing) {
+        HStack(alignment: .top, spacing: metrics.bottomSpacing) {
             ForEach(bottomRow) { slot in
                 bottomSlotColumn(slot)
                     .frame(
                         width: slot.kind.isPot ? metrics.potWidth : metrics.cloudWidth,
-                        alignment: .center
+                        alignment: .top
                     )
             }
         }
-        .frame(width: metrics.bottomRowWidth, alignment: .center)
+        .frame(width: metrics.playfieldWidth, alignment: .center)
     }
 
     @ViewBuilder
     private func bottomSlotColumn(_ slot: BottomRowSlotDisplay) -> some View {
-        VStack(spacing: 5) {
+        VStack(spacing: 4) {
+            if slot.cupSlot.scoring.isCompleted || slot.cupSlot.scoring.hasPendingOptions {
+                let labelWidth = slot.kind.isPot ? metrics.potWidth : metrics.cloudWidth
+                CupScoringStatusView(
+                    scoring: slot.cupSlot.scoring,
+                    onConfirmScore: { color in
+                        onConfirmScore?(slot.cupSlot.cupIndex, color)
+                    }
+                )
+                .frame(width: labelWidth)
+            }
+
             switch slot.kind {
             case .cloud(let number):
                 CloudSlotView(
@@ -39,6 +50,11 @@ struct BoardBottomRowView: View {
                     isHighlighted: slot.cupSlot.isHighlighted,
                     hasUnicorn: slot.cupSlot.hasUnicorn
                 )
+                .frame(
+                    width: metrics.cloudWidth,
+                    height: metrics.cloudHeight,
+                    alignment: .top
+                )
             case .pot:
                 PotSlotView(
                     gemCounts: slot.cupSlot.gemCounts,
@@ -47,17 +63,11 @@ struct BoardBottomRowView: View {
                     innerPadding: metrics.cupInnerPadding,
                     isHighlighted: slot.cupSlot.isHighlighted
                 )
-            }
-
-            if slot.cupSlot.scoring.isCompleted || slot.cupSlot.scoring.hasPendingOptions {
-                let labelWidth = slot.kind.isPot ? metrics.potWidth : metrics.cloudWidth
-                CupScoringStatusView(
-                    scoring: slot.cupSlot.scoring,
-                    onConfirmScore: { color in
-                        onConfirmScore?(slot.cupSlot.cupIndex, color)
-                    }
+                .frame(
+                    width: metrics.potWidth,
+                    height: metrics.potHeight,
+                    alignment: .top
                 )
-                .frame(width: labelWidth)
             }
         }
     }

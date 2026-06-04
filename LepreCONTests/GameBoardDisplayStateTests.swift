@@ -126,7 +126,7 @@ final class GameBoardDisplayStateTests: XCTestCase {
         XCTAssertEqual(lane?.gemCounts.count, 2)
         XCTAssertEqual(Set(kinds), Set([.yellow, .gold]))
         XCTAssertEqual(lane?.gemCounts.first { $0.kind == .yellow }?.imageName, "gem_yellow")
-        XCTAssertEqual(lane?.gemCounts.first { $0.kind == .gold }?.imageName, "gem_yellow")
+        XCTAssertEqual(lane?.gemCounts.first { $0.kind == .gold }?.imageName, "gem_gold")
     }
 
     func testClearAndWhiteAreSeparateGroupsDespiteSharedAsset() {

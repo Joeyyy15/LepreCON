@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct PotSlotView: View {
     let gemCounts: [GemCountDisplayItem]
@@ -14,36 +15,18 @@ struct PotSlotView: View {
     var innerPadding: CGFloat = 5
     var isHighlighted: Bool = false
 
+    private static let potAssetName = "pot_of_gold"
+
     var body: some View {
-        ZStack {
-            potPedestal
+        ZStack(alignment: .top) {
             potShape
             potContent
         }
-        .frame(width: width, height: height)
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(BoardStyle.boardGoldOutline.opacity(0.85), lineWidth: 1.25)
-        )
-        .overlay(highlightBorder)
+        .frame(width: width, height: height, alignment: .top)
+        .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Pot of Gold")
         .accessibilityAddTraits(isHighlighted ? .isSelected : [])
-    }
-
-    private var potPedestal: some View {
-        RoundedRectangle(cornerRadius: 14, style: .continuous)
-            .fill(
-                LinearGradient(
-                    colors: [
-                        Color(red: 0.15, green: 0.12, blue: 0.08).opacity(0.5),
-                        Color.black.opacity(0.25)
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            )
     }
 
     @ViewBuilder
@@ -54,15 +37,44 @@ struct PotSlotView: View {
             BoardCupGemCluster(
                 items: gemCounts,
                 width: max(0, width - innerPadding * 2),
-                height: max(0, height * 0.68),
+                height: max(0, height * 0.78),
                 showsKindLabel: true
             )
             .padding(.horizontal, innerPadding)
             .offset(y: -height * 0.08)
+            .zIndex(1)
         }
     }
 
+    @ViewBuilder
     private var potShape: some View {
+        Group {
+            if UIImage(named: Self.potAssetName) != nil {
+                Image(Self.potAssetName)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: width, height: height, alignment: .top)
+            } else {
+                proceduralPotShape
+            }
+        }
+        .shadow(color: Color.yellow.opacity(isHighlighted ? 0.45 : 0.15), radius: isHighlighted ? 10 : 6, x: 0, y: 0)
+        .shadow(color: .black.opacity(0.3), radius: 6, x: 0, y: 4)
+        .shadow(color: isHighlighted ? Color.yellow.opacity(0.85) : .clear, radius: 12)
+        .overlay {
+            if isHighlighted, UIImage(named: Self.potAssetName) != nil {
+                Image(Self.potAssetName)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: width, height: height, alignment: .top)
+                    .allowsHitTesting(false)
+                    .opacity(0.35)
+                    .blendMode(.screen)
+            }
+        }
+    }
+
+    private var proceduralPotShape: some View {
         ZStack {
             RoundedRectangle(cornerRadius: width * 0.18)
                 .fill(
@@ -113,16 +125,14 @@ struct PotSlotView: View {
                 .frame(width: width * 0.82, height: height * 0.58)
                 .offset(y: height * 0.13)
         }
-        .shadow(color: Color.yellow.opacity(0.15), radius: 6, x: 0, y: 0)
-        .shadow(color: .black.opacity(0.3), radius: 6, x: 0, y: 4)
-    }
-
-    @ViewBuilder
-    private var highlightBorder: some View {
-        if isHighlighted {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Color.yellow, lineWidth: 2.5)
-                .padding(1)
+        .overlay {
+            if isHighlighted {
+                RoundedRectangle(cornerRadius: width * 0.18)
+                    .stroke(Color.yellow.opacity(0.85), lineWidth: 2.5)
+                    .frame(width: width * 0.82, height: height * 0.58)
+                    .offset(y: height * 0.13)
+                    .allowsHitTesting(false)
+            }
         }
     }
 }
