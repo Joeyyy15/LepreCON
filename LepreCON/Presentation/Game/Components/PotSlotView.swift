@@ -2,55 +2,87 @@
 //  PotSlotView.swift
 //  LepreCON
 //
-//  Temporary visual container for the pot of gold.
-//  Later, this can be replaced with a polished PNG asset.
+//  Visual container for the pot of gold on the board.
 //
 
 import SwiftUI
+import UIKit
 
 struct PotSlotView: View {
     let gemCounts: [GemCountDisplayItem]
     let width: CGFloat
     let height: CGFloat
+    var innerPadding: CGFloat = 5
     var isHighlighted: Bool = false
 
+    private static let potAssetName = "pot_of_gold"
+
     var body: some View {
-        VStack(spacing: 6) {
-            ZStack {
-                potShape
+        ZStack(alignment: .top) {
+            potShape
+            potContent
+        }
+        .frame(width: width, height: height, alignment: .top)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Pot of Gold")
+        .accessibilityAddTraits(isHighlighted ? .isSelected : [])
+    }
 
-                if gemCounts.isEmpty {
-                    Text("Pot")
-                        .font(.caption)
-                        .bold()
-                        .foregroundStyle(.white.opacity(0.75))
-                        .offset(y: height * 0.08)
-                } else {
-                    GemCountListView(items: gemCounts, style: .compact(gemSize: height * 0.22))
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-                        .padding(.horizontal, 4)
-                        .offset(y: -height * 0.06)
-                }
-            }
-            .frame(width: width, height: height)
-            .overlay(highlightBorder)
-
-            Text("Pot")
-                .font(.caption2)
-                .bold()
+    @ViewBuilder
+    private var potContent: some View {
+        if gemCounts.isEmpty {
+            Color.clear
+        } else {
+            BoardCupGemCluster(
+                items: gemCounts,
+                width: max(0, width - innerPadding * 2),
+                height: max(0, height * 0.78),
+                showsKindLabel: true
+            )
+            .padding(.horizontal, innerPadding)
+            .offset(y: -height * 0.08)
+            .zIndex(1)
         }
     }
 
+    @ViewBuilder
     private var potShape: some View {
+        Group {
+            if UIImage(named: Self.potAssetName) != nil {
+                Image(Self.potAssetName)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: width, height: height, alignment: .top)
+            } else {
+                proceduralPotShape
+            }
+        }
+        .shadow(color: Color.yellow.opacity(isHighlighted ? 0.45 : 0.15), radius: isHighlighted ? 10 : 6, x: 0, y: 0)
+        .shadow(color: .black.opacity(0.3), radius: 6, x: 0, y: 4)
+        .shadow(color: isHighlighted ? Color.yellow.opacity(0.85) : .clear, radius: 12)
+        .overlay {
+            if isHighlighted, UIImage(named: Self.potAssetName) != nil {
+                Image(Self.potAssetName)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: width, height: height, alignment: .top)
+                    .allowsHitTesting(false)
+                    .opacity(0.35)
+                    .blendMode(.screen)
+            }
+        }
+    }
+
+    private var proceduralPotShape: some View {
         ZStack {
-            // Pot body.
             RoundedRectangle(cornerRadius: width * 0.18)
                 .fill(
                     LinearGradient(
                         colors: [
-                            .black.opacity(0.9),
-                            .gray.opacity(0.8),
-                            .black.opacity(0.95)
+                            Color(red: 0.15, green: 0.12, blue: 0.1),
+                            Color(red: 0.35, green: 0.3, blue: 0.25),
+                            Color.black.opacity(0.95)
                         ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
@@ -59,13 +91,12 @@ struct PotSlotView: View {
                 .frame(width: width * 0.82, height: height * 0.58)
                 .offset(y: height * 0.13)
 
-            // Pot rim.
             Capsule()
                 .fill(
                     LinearGradient(
                         colors: [
-                            .gray.opacity(0.9),
-                            .black.opacity(0.9)
+                            Color(red: 0.55, green: 0.48, blue: 0.35),
+                            Color(red: 0.2, green: 0.16, blue: 0.12)
                         ],
                         startPoint: .top,
                         endPoint: .bottom
@@ -74,48 +105,34 @@ struct PotSlotView: View {
                 .frame(width: width * 0.92, height: height * 0.28)
                 .offset(y: -height * 0.08)
 
-            // Gold glow inside the pot.
             Capsule()
-                .fill(.yellow.opacity(0.55))
-                .frame(width: width * 0.68, height: height * 0.14)
-                .offset(y: -height * 0.11)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color.yellow.opacity(0.75),
+                            Color.orange.opacity(0.45)
+                        ],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .frame(width: width * 0.7, height: height * 0.16)
+                .offset(y: -height * 0.1)
+                .blur(radius: 0.5)
 
-            // Pot border.
             RoundedRectangle(cornerRadius: width * 0.18)
-                .stroke(.white.opacity(0.18), lineWidth: 2)
+                .stroke(Color(red: 0.85, green: 0.68, blue: 0.25).opacity(0.45), lineWidth: 1.5)
                 .frame(width: width * 0.82, height: height * 0.58)
                 .offset(y: height * 0.13)
         }
-        .shadow(color: .black.opacity(0.25), radius: 6, x: 0, y: 4)
-    }
-
-    @ViewBuilder
-    private var highlightBorder: some View {
-        if isHighlighted {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Color.yellow, lineWidth: 3)
-                .padding(2)
+        .overlay {
+            if isHighlighted {
+                RoundedRectangle(cornerRadius: width * 0.18)
+                    .stroke(Color.yellow.opacity(0.85), lineWidth: 2.5)
+                    .frame(width: width * 0.82, height: height * 0.58)
+                    .offset(y: height * 0.13)
+                    .allowsHitTesting(false)
+            }
         }
     }
-}
-
-#Preview("Pot Slot") {
-    HStack(spacing: 32) {
-        PotSlotView(
-            gemCounts: [],
-            width: 130,
-            height: 110
-        )
-
-        PotSlotView(
-            gemCounts: [
-                GemCountDisplayItem(kind: .gold, count: 3),
-                GemCountDisplayItem(kind: .red, count: 1)
-            ],
-            width: 130,
-            height: 110
-        )
-    }
-    .padding(32)
-    .background(.green.opacity(0.18))
 }

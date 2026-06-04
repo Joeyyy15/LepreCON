@@ -67,6 +67,16 @@ struct GameOverDisplay: Equatable {
     let unicornStatus: UnicornStatusDisplay
 }
 
+/// Compact gameplay HUD values mapped from the live session.
+struct GameHUDDisplay: Equatable {
+    let rainbowCompleted: Int
+    let rainbowTotal: Int
+    let gemsInBag: Int
+    let goldInPot: Int
+    let goldCapacity: Int
+    let totalScore: Int
+}
+
 /// Minimal final-score summary for the game screen.
 struct FinalScoreDisplay: Equatable {
     let completedColorCount: Int
@@ -97,6 +107,7 @@ struct GameBoardDisplayState: Equatable {
     let isGameOver: Bool
     let gameOver: GameOverDisplay?
     let unicornStatus: UnicornStatusDisplay
+    let hud: GameHUDDisplay
 
     /// Domain cup index → cloud label (1–4) for white/cloud cups only.
     static func cloudNumber(forCupIndex index: Int) -> Int? {
@@ -202,7 +213,25 @@ struct GameBoardDisplayState: Equatable {
             finalScore: finalScore,
             isGameOver: completion.isGameOver,
             gameOver: gameOver,
-            unicornStatus: unicornStatus
+            unicornStatus: unicornStatus,
+            hud: gameHUDDisplay(session: session, finalScore: finalScoreResult)
+        )
+    }
+
+    static func gameHUDDisplay(session: GameSession, finalScore: FinalScoreResult) -> GameHUDDisplay {
+        let potIndex = GameSetup.potOfGoldCupIndex
+        let goldInPot = session.cups.indices.contains(potIndex)
+            ? session.cups[potIndex].gems.filter { $0.kind == .gold }.count
+            : 0
+        let goldCapacity = GameSetup.standardGemCounts[.gold] ?? 9
+
+        return GameHUDDisplay(
+            rainbowCompleted: finalScore.completedColorScores.count,
+            rainbowTotal: ScoreEvaluator.rainbowScoringColors.count,
+            gemsInBag: session.gemsInBag.count,
+            goldInPot: goldInPot,
+            goldCapacity: goldCapacity,
+            totalScore: finalScore.totalPoints
         )
     }
 

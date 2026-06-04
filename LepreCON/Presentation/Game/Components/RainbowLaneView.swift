@@ -2,73 +2,228 @@
 //  RainbowLaneView.swift
 //  LepreCON
 //
-//  Visual container for one colored rainbow lane.
-//  Each lane stacks gems upward like a bar chart.
-//  prototype switching to better graphics later
+//  Visual container for one colored rainbow lane (gem chute).
+//
 
 import SwiftUI
+import UIKit
 
-struct RainbowLaneView: View {
+// MARK: - Lane background only (sits behind cloud/pot in board ZStack)
+
+struct RainbowLaneBackgroundView: View {
     let laneColor: RainbowLaneColor
-    let gemCounts: [GemCountDisplayItem]
     let width: CGFloat
     let height: CGFloat
     var isHighlighted: Bool = false
-    var hasUnicorn: Bool = false
+
+    private var laneTopCornerRadius: CGFloat { width * 0.42 }
+    private var laneBottomCornerRadius: CGFloat { width * 0.14 }
+    private var laneShape: UnevenRoundedRectangle {
+        UnevenRoundedRectangle(
+            topLeadingRadius: laneTopCornerRadius,
+            bottomLeadingRadius: laneBottomCornerRadius,
+            bottomTrailingRadius: laneBottomCornerRadius,
+            topTrailingRadius: laneTopCornerRadius
+        )
+    }
 
     var body: some View {
-        VStack(spacing: 6) {
-            ZStack(alignment: .bottomLeading) {
-                RoundedRectangle(cornerRadius: width * 0.45)
-                    .fill(laneFillColor)
-                    .frame(width: width, height: height)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: width * 0.45)
-                            .stroke(.white.opacity(0.55), lineWidth: 2)
-                    )
-                    .shadow(color: .black.opacity(0.18), radius: 4, x: 0, y: 3)
-                    .overlay(highlightBorder)
-
-                GemCountListView(items: gemCounts, style: .largeLane(laneWidth: width))
-                    .padding(.horizontal, 3)
-                    .padding(.bottom, 5)
+        Group {
+            if UIImage(named: laneColor.laneBackgroundAssetName) != nil {
+                laneArtwork
+            } else {
+                proceduralLaneBackground
             }
-            .overlay(alignment: .topTrailing) {
-                if hasUnicorn {
-                    UnicornIndicatorView()
-                        .padding(3)
+        }
+        .frame(width: width, height: height)
+        .accessibilityHidden(true)
+    }
+
+    @ViewBuilder
+    private var laneArtwork: some View {
+        adjustedLaneImage
+            .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 3)
+            .shadow(
+                color: isHighlighted ? Color.yellow.opacity(0.9) : .clear,
+                radius: 12
+            )
+            .shadow(
+                color: isHighlighted ? Color.orange.opacity(0.55) : .clear,
+                radius: 5
+            )
+            .overlay {
+                if isHighlighted {
+                    adjustedLaneImage
+                        .allowsHitTesting(false)
+                        .opacity(0.35)
+                        .blendMode(.screen)
                 }
             }
+    }
+    // Creates the lane image using small visual adjustments for assets
+    // that have slightly different transparent padding or artwork height.
+    private var adjustedLaneImage: some View {
+        Image(laneColor.laneBackgroundAssetName)
+            .resizable()
+            .scaledToFill()
+            .frame(width: width, height: height, alignment: .top)
+            .scaleEffect(x: 1, y: laneVerticalScale, anchor: .center)
+            .offset(y: laneVerticalOffset)
+            .frame(width: width, height: height)
+            .clipped()
+    }
 
-            Text(laneColor.displayName)
-                .font(.caption2)
-                .bold()
+    // Slightly stretches specific lane assets vertically.
+    // These values are percentages, so they scale correctly on different devices.
+    private var laneVerticalScale: CGFloat {
+        switch laneColor {
+        case .red:
+            return 1.000
+
+        case .yellow:
+            return 1.020
+
+        case .green:
+            return 1.030
+
+        case .orange, .blue, .purple:
+            return 1.000
         }
+    }
+
+    // Moves the stretched image so the extra height appears where it is needed.
+    // Negative values move artwork upward.
+    // Positive values move artwork downward.
+    private var laneVerticalOffset: CGFloat {
+        switch laneColor {
+        case .red:
+            // Red needs more visible artwork at the top.
+            return height * -0.0125
+
+        case .yellow:
+            // Yellow needs a little more height at both the top and bottom.
+            return 0
+
+        case .green:
+            // Green needs more visible artwork at the bottom.
+            return height * 0.015
+
+        case .orange, .blue, .purple:
+            return 0
+        }
+    }
+
+    private var proceduralLaneBackground: some View {
+        laneShape
+            .fill(
+                LinearGradient(
+                    colors: [laneFillColor.opacity(0.92), laneDeepColor],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
+            .overlay(laneGlassShine)
+            .overlay(
+                laneShape
+                    .stroke(laneFillColor.opacity(0.55), lineWidth: 1)
+                    .padding(2)
+            )
+            .overlay(
+                laneShape
+                    .stroke(Color.black.opacity(0.4), lineWidth: 1.5)
+            )
+            .shadow(color: laneDeepColor.opacity(0.8), radius: 2, x: 0, y: 2)
+            .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 3)
+            .overlay(highlightBorder)
+    }
+
+    private var laneGlassShine: some View {
+        LinearGradient(
+            colors: [
+                Color.white.opacity(0.22),
+                Color.white.opacity(0.06),
+                Color.clear
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+        .clipShape(laneShape)
     }
 
     private var laneFillColor: Color {
         switch laneColor {
-        case .red:
-            return .red
-        case .orange:
-            return .orange
-        case .yellow:
-            return .yellow
-        case .green:
-            return .green
-        case .blue:
-            return .blue
-        case .purple:
-            return .purple
+        case .red: return .red
+        case .orange: return .orange
+        case .yellow: return .yellow
+        case .green: return .green
+        case .blue: return .blue
+        case .purple: return .purple
+        }
+    }
+
+    private var laneDeepColor: Color {
+        switch laneColor {
+        case .red: return Color(red: 0.45, green: 0.05, blue: 0.08)
+        case .orange: return Color(red: 0.55, green: 0.22, blue: 0.02)
+        case .yellow: return Color(red: 0.45, green: 0.38, blue: 0.05)
+        case .green: return Color(red: 0.05, green: 0.38, blue: 0.12)
+        case .blue: return Color(red: 0.05, green: 0.18, blue: 0.45)
+        case .purple: return Color(red: 0.28, green: 0.05, blue: 0.42)
         }
     }
 
     @ViewBuilder
     private var highlightBorder: some View {
         if isHighlighted {
-            RoundedRectangle(cornerRadius: width * 0.45, style: .continuous)
-                .stroke(Color.yellow, lineWidth: 3)
+            laneShape
+                .stroke(Color.yellow, lineWidth: 2.5)
         }
+    }
+}
+
+// MARK: - Combined lane (preview / legacy)
+
+struct RainbowLaneView: View {
+    let laneColor: RainbowLaneColor
+    let gemCounts: [GemCountDisplayItem]
+    let width: CGFloat
+    let height: CGFloat
+    var innerPadding: CGFloat = 4
+    var isHighlighted: Bool = false
+    var hasUnicorn: Bool = false
+
+    private var unicornReservedTop: CGFloat { hasUnicorn ? 16 : 0 }
+
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            ZStack(alignment: .bottom) {
+                RainbowLaneBackgroundView(
+                    laneColor: laneColor,
+                    width: width,
+                    height: height,
+                    isHighlighted: isHighlighted
+                )
+
+                BoardLaneGemStack(
+                    items: gemCounts,
+                    width: max(0, width - innerPadding * 2),
+                    height: max(0, height - innerPadding - unicornReservedTop - 4)
+                )
+                .padding(.horizontal, innerPadding)
+                .padding(.bottom, innerPadding)
+                .padding(.top, unicornReservedTop + 2)
+            }
+
+            if hasUnicorn {
+                UnicornIndicatorView()
+                    .padding(4)
+                    .zIndex(1)
+            }
+        }
+        .frame(width: width, height: height)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(laneColor.displayName) lane")
+        .accessibilityAddTraits(isHighlighted ? .isSelected : [])
     }
 }
 
@@ -80,51 +235,17 @@ struct RainbowLaneView: View {
                 GemCountDisplayItem(kind: .red, count: 3),
                 GemCountDisplayItem(kind: .gold, count: 1)
             ],
-            width: 42,
-            height: 180
+            width: 54,
+            height: 200
         )
 
         RainbowLaneView(
             laneColor: .orange,
-            gemCounts: [GemCountDisplayItem(kind: .orange, count: 2)],
-            width: 42,
-            height: 180
-        )
-
-        RainbowLaneView(
-            laneColor: .yellow,
-            gemCounts: [GemCountDisplayItem(kind: .yellow, count: 1)],
-            width: 42,
-            height: 180
-        )
-
-        RainbowLaneView(
-            laneColor: .green,
-            gemCounts: [GemCountDisplayItem(kind: .green, count: 4)],
-            width: 42,
-            height: 180
-        )
-
-        RainbowLaneView(
-            laneColor: .blue,
-            gemCounts: [GemCountDisplayItem(kind: .blue, count: 2)],
-            width: 42,
-            height: 180
-        )
-
-        RainbowLaneView(
-            laneColor: .purple,
-            gemCounts: [GemCountDisplayItem(kind: .purple, count: 3)],
-            width: 42,
-            height: 180
+            gemCounts: [],
+            width: 54,
+            height: 200
         )
     }
     .padding(32)
-    .background(
-        LinearGradient(
-            colors: [.cyan.opacity(0.25), .green.opacity(0.18)],
-            startPoint: .top,
-            endPoint: .bottom
-        )
-    )
+    .background(BoardContainerView { Color.clear.frame(height: 200) })
 }

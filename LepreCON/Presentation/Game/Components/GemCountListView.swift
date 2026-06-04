@@ -19,7 +19,7 @@ enum GemCountBadgeStyle: Equatable {
     var gemSize: CGFloat {
         switch self {
         case .largeLane(let laneWidth):
-            return laneWidth * 0.52
+            return min(laneWidth * 0.34, 15)
         case .compact(let size), .hand(let size):
             return size
         }
@@ -28,9 +28,9 @@ enum GemCountBadgeStyle: Equatable {
     var labelFontSize: CGFloat {
         switch self {
         case .largeLane:
-            return 11
+            return 8
         case .compact:
-            return 9
+            return 8
         case .hand:
             return 10
         }
@@ -39,9 +39,9 @@ enum GemCountBadgeStyle: Equatable {
     var countFontSize: CGFloat {
         switch self {
         case .largeLane:
-            return 12
+            return 9
         case .compact:
-            return 10
+            return 9
         case .hand:
             return 11
         }
@@ -60,12 +60,13 @@ enum GemCountBadgeStyle: Equatable {
 struct GemCountBadgeView: View {
     let item: GemCountDisplayItem
     let style: GemCountBadgeStyle
+    var showsShortLabel: Bool = true
 
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 3) {
             GemView(imageName: item.imageName, size: style.gemSize)
 
-            if !item.shortLabel.isEmpty {
+            if showsShortLabel, !item.shortLabel.isEmpty {
                 Text(item.shortLabel)
                     .font(.system(size: style.labelFontSize, weight: .bold))
                     .foregroundStyle(.primary)
@@ -85,11 +86,16 @@ struct GemCountBadgeView: View {
 struct GemCountListView: View {
     let items: [GemCountDisplayItem]
     let style: GemCountBadgeStyle
+    var showsShortLabel: Bool = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: style.rowSpacing) {
             ForEach(items) { item in
-                GemCountBadgeView(item: item, style: style)
+                GemCountBadgeView(
+                    item: item,
+                    style: style,
+                    showsShortLabel: showsShortLabel
+                )
             }
         }
     }

@@ -126,7 +126,7 @@ final class GameBoardDisplayStateTests: XCTestCase {
         XCTAssertEqual(lane?.gemCounts.count, 2)
         XCTAssertEqual(Set(kinds), Set([.yellow, .gold]))
         XCTAssertEqual(lane?.gemCounts.first { $0.kind == .yellow }?.imageName, "gem_yellow")
-        XCTAssertEqual(lane?.gemCounts.first { $0.kind == .gold }?.imageName, "gem_yellow")
+        XCTAssertEqual(lane?.gemCounts.first { $0.kind == .gold }?.imageName, "gem_gold")
     }
 
     func testClearAndWhiteAreSeparateGroupsDespiteSharedAsset() {
@@ -168,6 +168,43 @@ final class GameBoardDisplayStateTests: XCTestCase {
             XCTAssertFalse(item.displayName.isEmpty, "\(kind)")
             XCTAssertEqual(item.imageName, kind.imageAssetName)
         }
+    }
+
+    // MARK: - Game HUD
+
+    func testHUDReflectsBagGoldRainbowAndScoreFromSession() {
+        var session = GameSessionFactory().makeNewGame(playerNames: ["Alex"])
+        session.phase = .playing
+        session.gemsInBag = Array(repeating: Gem(kind: .red), count: 12)
+        let potIndex = GameSetup.potOfGoldCupIndex
+        session.cups[potIndex].gems = [Gem(kind: .gold), Gem(kind: .gold)]
+        session.cups[2].completion = CupCompletion(
+            scoredColor: .red,
+            wasMatchingCupColor: true,
+            goodCount: 5,
+            passCount: 0,
+            blemishCount: 0,
+            adjustedGoodCount: 5
+        )
+
+        let display = GameBoardDisplayState.from(session: session)
+
+        XCTAssertEqual(display.hud.gemsInBag, 12)
+        XCTAssertEqual(display.hud.goldInPot, 2)
+        XCTAssertEqual(display.hud.goldCapacity, 9)
+        XCTAssertEqual(display.hud.rainbowCompleted, 1)
+        XCTAssertEqual(display.hud.rainbowTotal, 6)
+        XCTAssertGreaterThanOrEqual(display.hud.totalScore, 0)
+    }
+
+    func testHUDMapsRainbowBagGoldAndScoreFromNewGameSession() {
+        let session = GameSessionFactory().makeNewGame(playerNames: ["Alex"])
+        let display = GameBoardDisplayState.from(session: session)
+
+        XCTAssertEqual(display.hud.rainbowTotal, 6)
+        XCTAssertEqual(display.hud.goldCapacity, 9)
+        XCTAssertGreaterThan(display.hud.gemsInBag, 0)
+        XCTAssertGreaterThanOrEqual(display.hud.totalScore, 0)
     }
 
     // MARK: - Hand grouped counts
