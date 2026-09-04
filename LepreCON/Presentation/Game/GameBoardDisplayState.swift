@@ -123,9 +123,13 @@ struct GameBoardDisplayState: Equatable {
     /// Builds display state from the live game session.
     static func from(session: GameSession) -> GameBoardDisplayState {
         let cups = session.cups
-        let highlightIndex = GameTurnEngine.canPlaceFromHand(in: session)
-            ? session.nextPlacementCupIndex
-            : nil
+        let highlightIndex: Int? = {
+            guard GameTurnEngine.canPlaceFromHand(in: session) else { return nil }
+            if case .cup(let index) = GameTurnEngine.currentPlacementDestination(in: session) {
+                return index
+            }
+            return nil
+        }()
 
         func cupSlot(at index: Int) -> CupSlotDisplay {
             let cup = cups[index]

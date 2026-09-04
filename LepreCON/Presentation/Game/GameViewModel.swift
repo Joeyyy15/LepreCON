@@ -59,6 +59,16 @@ final class GameViewModel: ObservableObject {
         boardDisplayState.canPlaceFromHand
     }
 
+    /// Domain-owned next legal placement target (cup or rotation discard).
+    var currentPlacementDestination: PlacementDestination {
+        GameTurnEngine.currentPlacementDestination(in: session)
+    }
+
+    /// True when a full rotation completed and exactly one gem must go to discard.
+    var isDiscardRequired: Bool {
+        GameTurnEngine.isDiscardRequired(in: session)
+    }
+
     /// True when the player can undo exactly one prior successful gem placement.
     var canUndoLastPlacement: Bool {
         previousSessionSnapshot != nil && session.phase == .playing && !isGameOver
@@ -190,6 +200,21 @@ final class GameViewModel: ObservableObject {
     func placeGemInCurrentCup(gemID: UUID) -> Result<Void, GameTurnError> {
         let snapshotBeforePlacement = session
         let result = GameTurnEngine.placeGemInCurrentCup(session: &session, gemID: gemID)
+        switch result {
+        case .success:
+            previousSessionSnapshot = snapshotBeforePlacement
+            applyGameOverIfNeeded()
+            refreshResolutionEventPresentation()
+        case .failure:
+            break
+        }
+        return result
+    }
+
+    /// Places exactly one hand gem into discard when the domain requires a rotation discard.
+    func placeGemInDiscard(gemID: UUID) -> Result<Void, GameTurnError> {
+        let snapshotBeforePlacement = session
+        let result = GameTurnEngine.placeGemInDiscard(session: &session, gemID: gemID)
         switch result {
         case .success:
             previousSessionSnapshot = snapshotBeforePlacement

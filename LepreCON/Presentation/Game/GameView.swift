@@ -340,6 +340,8 @@ struct GameView: View {
         case .noActiveTurn: return "Roll D12 and draw gems before placing."
         case .gemNotInHand: return "That gem is not in your hand."
         case .invalidPlacementCupIndex: return "Invalid cup for placement."
+        case .placementRequiresDiscard: return "Discard one gem after completing a full rotation."
+        case .discardNotRequired: return "Discard is only allowed after a full board rotation."
         case .pendingScoreChoicesUnresolved: return "Score a cup or choose Skip Scoring before rolling again."
         }
     }

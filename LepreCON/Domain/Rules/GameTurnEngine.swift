@@ -3,7 +3,9 @@
 // LepreCON
 //
 // Handles turn flow: D12 roll, drawing gems into hand, and placing gems one at a time
-// around the cup circle. End-of-turn resolution is delegated to EndOfTurnResolver.
+// around the cup circle. A full circuit of currently available cups requires exactly one
+// discard before board placement resumes. End-of-turn resolution is delegated to
+// EndOfTurnResolver.
 // Magic, unicorn behavior, poop behavior, and player-confirmed scoring are not fully implemented yet.
 //
 
@@ -17,6 +19,10 @@ enum GameTurnError: Error, Equatable {
     case noActiveTurn
     case gemNotInHand
     case invalidPlacementCupIndex
+    /// Current destination is discard; a cup placement is not legal.
+    case placementRequiresDiscard
+    /// Current destination is a cup; discard is not legal yet.
+    case discardNotRequired
     /// Placement finished but the player must confirm or skip pending score choices first.
     case pendingScoreChoicesUnresolved
 }
@@ -45,6 +51,7 @@ enum GameTurnEngine {
 
         session.currentRoll = roll
         session.isTurnPlacementComplete = false
+        session.placementsCompletedInCurrentRotation = 0
         session.recentResolutionEvents.removeAll()
         PendingScoreDetector.clearPendingScoreChoices(in: &session)
         drawGemsIntoHand(session: &session, count: roll)
@@ -61,9 +68,25 @@ enum GameTurnEngine {
     /// already had gems before placement:
     /// - Empty before placement: the placement chain stops.
     /// - Not empty before placement: scoop the whole cup into hand and continue.
+    ///
+    /// Completing a full rotation of available cups makes the next destination discard;
+    /// that does not end placement by itself.
     static func placeGemInCurrentCup(session: inout GameSession, gemID: UUID) -> Result<Void, GameTurnError> {
         guard session.phase == .playing else { return .failure(.gameNotPlaying) }
         guard canPlaceFromHand(in: session) else { return .failure(.noActiveTurn) }
+
+        switch currentPlacementDestination(in: session) {
+        case .discard:
+            return .failure(.placementRequiresDiscard)
+        case .cup(let expectedIndex):
+            guard session.cups.indices.contains(expectedIndex) else {
+                return .failure(.invalidPlacementCupIndex)
+            }
+            guard expectedIndex == session.nextPlacementCupIndex else {
+                return .failure(.invalidPlacementCupIndex)
+            }
+        }
+
         guard let handIndex = session.gemsInHand.firstIndex(where: { $0.id == gemID }) else {
             return .failure(.gemNotInHand)
         }
@@ -82,6 +105,7 @@ enum GameTurnEngine {
         let wasFinalGemInHand = session.gemsInHand.isEmpty
 
         session.cups[cupIndex].gems.append(gem)
+        session.placementsCompletedInCurrentRotation += 1
 
         if wasFinalGemInHand && cupHadGemsBeforePlacement {
             scoopCupIntoHand(session: &session, cupIndex: cupIndex)
@@ -95,26 +119,59 @@ enum GameTurnEngine {
         return .success(())
     }
 
-    /// Moves a gem from hand into the discard pile.
+    /// Moves exactly one gem from hand into the discard pile after a full board rotation.
     ///
-    /// **Not a current player action.** After rolling the D12, the player chooses which gem to
-    /// place on the board path; they cannot manually discard from hand. Reserved for future
-    /// rules (e.g. magic when the final gem of a turn resolves to the discard pile).
+    /// Discard is only legal when `currentPlacementDestination` is `.discard`.
+    /// After a successful discard, a new rotation begins at the already-advanced
+    /// `nextPlacementCupIndex`. Discard alone does not trigger end-of-turn resolution
+    /// unless the hand is empty afterward.
     static func placeGemInDiscard(session: inout GameSession, gemID: UUID) -> Result<Void, GameTurnError> {
         guard session.phase == .playing else { return .failure(.gameNotPlaying) }
         guard canPlaceFromHand(in: session) else { return .failure(.noActiveTurn) }
+        guard case .discard = currentPlacementDestination(in: session) else {
+            return .failure(.discardNotRequired)
+        }
         guard let handIndex = session.gemsInHand.firstIndex(where: { $0.id == gemID }) else {
             return .failure(.gemNotInHand)
         }
 
         let gem = session.gemsInHand.remove(at: handIndex)
         session.discardPile.append(gem)
+        session.placementsCompletedInCurrentRotation = 0
 
         if session.gemsInHand.isEmpty {
             finishPlacementPhase(session: &session)
         }
 
         return .success(())
+    }
+
+    // MARK: - Placement destination
+
+    /// Domain-owned next legal placement target for the active turn.
+    static func currentPlacementDestination(in session: GameSession) -> PlacementDestination {
+        let availableCount = availablePlacementCupCount(in: session)
+        if availableCount > 0,
+           session.placementsCompletedInCurrentRotation >= availableCount {
+            return .discard
+        }
+        return .cup(index: session.nextPlacementCupIndex)
+    }
+
+    /// True when the next required action is a rotation discard.
+    static func isDiscardRequired(in session: GameSession) -> Bool {
+        guard canPlaceFromHand(in: session) else { return false }
+        if case .discard = currentPlacementDestination(in: session) {
+            return true
+        }
+        return false
+    }
+
+    /// Count of cups that currently accept normal placement (completed cups excluded).
+    static func availablePlacementCupCount(in session: GameSession) -> Int {
+        session.cups.reduce(0) { count, cup in
+            count + (cup.isCompleted ? 0 : 1)
+        }
     }
 
     // MARK: - Placement phase completion

@@ -34,6 +34,9 @@ struct GameSession: Identifiable, Equatable, Codable {
     var currentRoll: Int?
     /// Index into `cups` where the next gem should be placed (moves clockwise each placement).
     var nextPlacementCupIndex: Int
+    /// Cups successfully placed into during the current board rotation.
+    /// When this reaches the count of currently available cups, the next destination is discard.
+    var placementsCompletedInCurrentRotation: Int
     /// True after placement stops and the game is ready for resolution rules.
     var isTurnPlacementComplete: Bool
     /// Cups the player may choose to score after placement ends. Cleared when a new turn starts.
@@ -58,6 +61,7 @@ struct GameSession: Identifiable, Equatable, Codable {
         discardPile: [Gem] = [],
         currentRoll: Int? = nil,
         nextPlacementCupIndex: Int = 0,
+        placementsCompletedInCurrentRotation: Int = 0,
         isTurnPlacementComplete: Bool = false,
         pendingScoreChoices: [PendingScoreChoice] = [],
         unicornCupIndex: Int? = nil,
@@ -75,6 +79,7 @@ struct GameSession: Identifiable, Equatable, Codable {
         self.discardPile = discardPile
         self.currentRoll = currentRoll
         self.nextPlacementCupIndex = nextPlacementCupIndex
+        self.placementsCompletedInCurrentRotation = placementsCompletedInCurrentRotation
         self.isTurnPlacementComplete = isTurnPlacementComplete
         self.pendingScoreChoices = pendingScoreChoices
         self.unicornCupIndex = unicornCupIndex
