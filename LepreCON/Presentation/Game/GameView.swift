@@ -16,6 +16,7 @@ struct GameView: View {
     @State private var lastActionMessage: String?
     @State private var showsScoringSheet = false
     @State private var showsResolutionSheet = false
+    @State private var isDiscardContentsPresented = false
     @State private var deferResolutionSheet = false
     @State private var cupBoardAnchors: [Int: CupBoardAnchorInfo] = [:]
     @State private var didAutoStartGame = false
@@ -23,6 +24,11 @@ struct GameView: View {
 
     private var blocksGameplayInput: Bool {
         viewModel.isUnicornAnimationPlaying
+    }
+
+    /// Contents panel stays open while discard is required, or while the player is inspecting.
+    private var showsDiscardContents: Bool {
+        viewModel.shouldPresentDiscardContents || isDiscardContentsPresented
     }
 
     init(onFinishGame: @escaping () -> Void) {
@@ -66,7 +72,15 @@ struct GameView: View {
                         GameBoardView(
                             displayState: viewModel.boardDisplayState,
                             hideUnicornMarkers: viewModel.isUnicornAnimationPlaying,
-                            onConfirmScore: confirmScore
+                            discardCount: viewModel.discardCount,
+                            discardGemCounts: viewModel.discardGemCounts,
+                            isDiscardActiveDestination: viewModel.isDiscardRequired && !blocksGameplayInput,
+                            isDiscardContentsPresented: showsDiscardContents && !blocksGameplayInput,
+                            onConfirmScore: confirmScore,
+                            onTapDiscardPile: handleDiscardPileTap,
+                            onDismissDiscardContents: {
+                                isDiscardContentsPresented = false
+                            }
                         )
                         .onPreferenceChange(CupBoardAnchorKey.self) { cupBoardAnchors = $0 }
 
@@ -185,6 +199,9 @@ struct GameView: View {
                 isHandTrayPresented = false
             }
         }
+        .onChange(of: viewModel.isDiscardRequired) { _, isRequired in
+            handleDiscardRequirementChanged(isRequired)
+        }
         .overlay(alignment: .bottom) {
             gameOverBanner
         }
@@ -285,20 +302,51 @@ struct GameView: View {
     }
 
     private func placeHandGemFromTray(_ kind: GemKind) {
+        let discarding = viewModel.isDiscardRequired
         switch viewModel.placeHandGem(kind: kind) {
         case .success:
             if viewModel.session.isTurnPlacementComplete {
+                isDiscardContentsPresented = false
                 if viewModel.isInScoringChoicePhase {
                     lastActionMessage = "Placement finished. Score a cup or choose Skip Scoring."
                     showsScoringSheet = true
                 } else {
                     lastActionMessage = "Placement finished. Roll D12 for your next turn."
                 }
+            } else if discarding {
+                if !viewModel.isDiscardRequired {
+                    isDiscardContentsPresented = false
+                }
+                lastActionMessage = "Discarded 1 gem. Continue placing from your hand."
+            } else if viewModel.isDiscardRequired {
+                lastActionMessage = "Full rotation complete. Discard 1 gem from your hand."
+                isHandTrayPresented = true
             } else {
                 lastActionMessage = "Gem placed. Continue placing from your hand."
             }
         case .failure(let error):
             lastActionMessage = turnErrorMessage(error)
+        }
+    }
+
+    private func handleDiscardPileTap() {
+        if viewModel.isDiscardRequired {
+            // Contents already auto-presented; open hand so the player can choose a gem.
+            isHandTrayPresented = true
+            lastActionMessage = "Discard 1 gem from your hand into the discard pile."
+            return
+        }
+        isDiscardContentsPresented.toggle()
+    }
+
+    private func handleDiscardRequirementChanged(_ isRequired: Bool) {
+        guard !blocksGameplayInput else { return }
+        if isRequired {
+            isDiscardContentsPresented = true
+            isHandTrayPresented = true
+            lastActionMessage = "Full rotation complete. Discard 1 gem from your hand."
+        } else {
+            isDiscardContentsPresented = false
         }
     }
 

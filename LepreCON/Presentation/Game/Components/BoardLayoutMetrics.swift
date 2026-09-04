@@ -40,6 +40,17 @@ struct BoardLayoutMetrics {
     let laneGemStackBottomInset: CGFloat
     let laneGemStackHeight: CGFloat
 
+    /// Width for the discard pile control under the Pot of Gold.
+    let discardPileWidth: CGFloat
+    /// Compact discard control height under the pot.
+    let discardPileCompactHeight: CGFloat
+    /// Wide overlay panel width for discard contents (does not affect board layout).
+    let discardOverlayWidth: CGFloat
+    /// Wide overlay panel height for discard contents.
+    let discardOverlayHeight: CGFloat
+    /// Bottom padding that anchors the overlay beneath the stationary discard control.
+    let discardOverlayBottomPadding: CGFloat
+
     /// Sizes the board to fill the playfield rectangle between HUD and dock.
     init(playfieldSize size: CGSize) {
         let width = max(size.width, 1)
@@ -48,8 +59,9 @@ struct BoardLayoutMetrics {
         playfieldWidth = width
         playfieldHeight = height
 
-        // Keeps the cloud/pot row lifted above the bottom dock.
-        bottomRowBottomInset = height * 0.19
+        // Room under the stationary compact discard for the contents overlay.
+        // Overlay drawing uses this inset; opening/closing does not change row height.
+        bottomRowBottomInset = height * 0.28
 
         // Negative spacing allows the cloud artwork to overlap slightly,
         // making the cloud row feel fuller and more connected.
@@ -120,6 +132,12 @@ struct BoardLayoutMetrics {
         cloudHeight = cloudH
         potWidth = potW
         potHeight = potH
+
+        discardPileWidth = potWidth
+        discardPileCompactHeight = max(44, height * 0.065)
+        discardOverlayWidth = min(width * 0.94, max(potWidth * 3.2, width * 0.88))
+        discardOverlayHeight = max(150, min(height * 0.34, bottomRowBottomInset * 0.92))
+        discardOverlayBottomPadding = max(4, (bottomRowBottomInset - discardOverlayHeight) * 0.35)
 
         let bottomCupHeight = max(cloudHeight, potHeight)
 

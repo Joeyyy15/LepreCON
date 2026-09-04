@@ -69,6 +69,21 @@ final class GameViewModel: ObservableObject {
         GameTurnEngine.isDiscardRequired(in: session)
     }
 
+    /// Number of gems currently in the discard pile.
+    var discardCount: Int {
+        session.discardPile.count
+    }
+
+    /// Grouped discard contents for inspection UI (read-only presentation).
+    var discardGemCounts: [GemCountDisplayItem] {
+        boardDisplayState.discardGemCounts
+    }
+
+    /// Presentation hint: discard contents should auto-expand while rotation discard is required.
+    var shouldPresentDiscardContents: Bool {
+        isDiscardRequired
+    }
+
     /// True when the player can undo exactly one prior successful gem placement.
     var canUndoLastPlacement: Bool {
         previousSessionSnapshot != nil && session.phase == .playing && !isGameOver
@@ -189,11 +204,17 @@ final class GameViewModel: ObservableObject {
     }
 
     /// Places one gem of the given kind from hand (first matching instance).
+    /// Routes to the current domain destination: cup path or required rotation discard.
     func placeHandGem(kind: GemKind) -> Result<Void, GameTurnError> {
         guard let gem = session.gemsInHand.first(where: { $0.kind == kind }) else {
             return .failure(.gemNotInHand)
         }
-        return placeGemInCurrentCup(gemID: gem.id)
+        switch currentPlacementDestination {
+        case .discard:
+            return placeGemInDiscard(gemID: gem.id)
+        case .cup:
+            return placeGemInCurrentCup(gemID: gem.id)
+        }
     }
 
     /// Places the chosen hand gem into the currently highlighted cup on the board path.

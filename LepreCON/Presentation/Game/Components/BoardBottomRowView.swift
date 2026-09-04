@@ -3,6 +3,7 @@
 // LepreCON
 //
 // Bottom row inside the board: C2, C1, Pot, C4, C3 (display order from display state).
+// Compact discard control sits under the Pot; contents open as a separate overlay.
 //
 
 import SwiftUI
@@ -11,7 +12,10 @@ struct BoardBottomRowView: View {
     let bottomRow: [BottomRowSlotDisplay]
     let metrics: BoardLayoutMetrics
     var hideUnicornMarkers: Bool = false
+    var discardCount: Int = 0
+    var isDiscardActiveDestination: Bool = false
     var onConfirmScore: ((Int, GemKind) -> Void)?
+    var onTapDiscardPile: () -> Void = {}
 
     var body: some View {
         HStack(alignment: .top, spacing: metrics.bottomSpacing) {
@@ -74,6 +78,14 @@ struct BoardBottomRowView: View {
                     alignment: .top
                 )
                 .reportsCupBoardAnchor(cupIndex: slot.cupSlot.cupIndex)
+
+                DiscardPileView(
+                    discardCount: discardCount,
+                    isActiveDestination: isDiscardActiveDestination,
+                    width: metrics.discardPileWidth,
+                    onTap: onTapDiscardPile
+                )
+                .frame(width: metrics.discardPileWidth, height: metrics.discardPileCompactHeight)
             }
         }
     }

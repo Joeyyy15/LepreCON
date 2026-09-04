@@ -79,7 +79,7 @@ enum HUDBarArtLayout {
     static let dockHandLabelAnchor = UnitPoint(x: 0.81, y: 0.29)
 
     /// Hand gems / empty state position inside the right dock panel.
-    static let dockHandContentAnchor = UnitPoint(x: 0.81, y: 0.9)
+    static let dockHandContentAnchor = UnitPoint(x: 0.81, y: 0.55)
 
     /// D12 die size used in the bottom dock.
     static let dockRollDieSize: CGFloat = 57

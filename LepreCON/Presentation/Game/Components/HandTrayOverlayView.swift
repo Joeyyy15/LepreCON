@@ -39,16 +39,19 @@ struct HandTrayOverlayView: View {
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .background(trayPanelBackground)
+        .background(GemTrayPanelChrome.background)
         .overlay(alignment: .top) {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(BoardStyle.boardGoldOutline.opacity(0.55), lineWidth: 1.25)
-                .padding(1)
+            UnevenRoundedRectangle(
+                topLeadingRadius: GemTrayPanelChrome.cornerRadius,
+                topTrailingRadius: GemTrayPanelChrome.cornerRadius
+            )
+            .stroke(BoardStyle.boardGoldOutline.opacity(0.55), lineWidth: 1.25)
+            .padding(1)
         }
         .clipShape(
             UnevenRoundedRectangle(
-                topLeadingRadius: 18,
-                topTrailingRadius: 18
+                topLeadingRadius: GemTrayPanelChrome.cornerRadius,
+                topTrailingRadius: GemTrayPanelChrome.cornerRadius
             )
         )
         .shadow(color: .black.opacity(0.45), radius: 14, x: 0, y: -4)
@@ -75,27 +78,5 @@ struct HandTrayOverlayView: View {
         .padding(.horizontal, 16)
         .padding(.top, 12)
         .padding(.bottom, 8)
-    }
-
-    private var trayPanelBackground: some View {
-        ZStack {
-            LinearGradient(
-                colors: [
-                    BoardStyle.hudPanelFill.opacity(0.98),
-                    Color(red: 0.05, green: 0.09, blue: 0.18).opacity(0.96)
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-
-            LinearGradient(
-                colors: [
-                    Color(red: 0.55, green: 0.38, blue: 0.12).opacity(0.22),
-                    Color.clear
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        }
     }
 }

@@ -801,4 +801,137 @@ final class GameViewModelTests: XCTestCase {
         }
     }
 
+    // MARK: - Discard pile presentation surface
+
+    func testDiscardCountAndGemCountsReflectSessionDiscardPile() async {
+        await MainActor.run {
+            var session = GameSessionFactory().makeNewGame(playerNames: ["Player 1"])
+            session.phase = .playing
+            let red = Gem(kind: .red)
+            let gold = Gem(kind: .gold)
+            session.discardPile = [red, gold, Gem(kind: .red)]
+
+            let viewModel = GameViewModel(session: session)
+
+            XCTAssertEqual(viewModel.discardCount, 3)
+            XCTAssertEqual(viewModel.discardGemCounts.count, 2)
+            XCTAssertEqual(viewModel.discardGemCounts[0].kind, .red)
+            XCTAssertEqual(viewModel.discardGemCounts[0].count, 2)
+            XCTAssertEqual(viewModel.discardGemCounts[1].kind, .gold)
+            XCTAssertEqual(viewModel.discardGemCounts[1].count, 1)
+        }
+    }
+
+    func testEmptyDiscardPileExposesZeroCountAndEmptyGroupedContents() async {
+        await MainActor.run {
+            var session = GameSessionFactory().makeNewGame(playerNames: ["Player 1"])
+            session.phase = .playing
+            session.discardPile = []
+
+            let viewModel = GameViewModel(session: session)
+
+            XCTAssertEqual(viewModel.discardCount, 0)
+            XCTAssertTrue(viewModel.discardGemCounts.isEmpty)
+        }
+    }
+
+    func testPlaceHandGemRoutesToDiscardWhenDestinationIsDiscard() async {
+        await MainActor.run {
+            var session = GameSessionFactory().makeNewGame(playerNames: ["Player 1"])
+            session.phase = .playing
+            for index in session.cups.indices {
+                session.cups[index].gems = []
+            }
+            let discardGem = Gem(kind: .pink)
+            let remaining = Gem(kind: .blue)
+            session.gemsInHand = [discardGem, remaining]
+            session.currentRoll = 2
+            session.nextPlacementCupIndex = 0
+            session.placementsCompletedInCurrentRotation = session.cups.count
+            session.isTurnPlacementComplete = false
+            session.discardPile = []
+            session.unicornCupIndex = 9
+            session.unicornCupID = session.cups[9].id
+
+            let viewModel = GameViewModel(session: session)
+            XCTAssertEqual(viewModel.currentPlacementDestination, .discard)
+            XCTAssertTrue(viewModel.isDiscardRequired)
+
+            let result = viewModel.placeHandGem(kind: .pink)
+
+            XCTAssertTrue(result.isSuccess)
+            XCTAssertEqual(viewModel.session.discardPile.map(\.id), [discardGem.id])
+            XCTAssertEqual(viewModel.session.gemsInHand.map(\.id), [remaining.id])
+            XCTAssertEqual(viewModel.currentPlacementDestination, .cup(index: 0))
+            XCTAssertFalse(viewModel.isDiscardRequired)
+            XCTAssertFalse(viewModel.session.isTurnPlacementComplete)
+        }
+    }
+
+    func testPlaceHandGemKeepsCupPlacementWhenDestinationIsCup() async {
+        await MainActor.run {
+            var session = GameSessionFactory().makeNewGame(playerNames: ["Player 1"])
+            session.phase = .playing
+            for index in session.cups.indices {
+                session.cups[index].gems = []
+            }
+            let first = Gem(kind: .red)
+            let second = Gem(kind: .blue)
+            session.gemsInHand = [first, second]
+            session.currentRoll = 2
+            session.nextPlacementCupIndex = 0
+            session.placementsCompletedInCurrentRotation = 0
+            session.discardPile = []
+            session.unicornCupIndex = 9
+            session.unicornCupID = session.cups[9].id
+
+            let viewModel = GameViewModel(session: session)
+            XCTAssertEqual(viewModel.currentPlacementDestination, .cup(index: 0))
+            XCTAssertFalse(viewModel.shouldPresentDiscardContents)
+
+            let result = viewModel.placeHandGem(kind: .red)
+
+            XCTAssertTrue(result.isSuccess)
+            XCTAssertTrue(viewModel.session.discardPile.isEmpty)
+            XCTAssertEqual(viewModel.session.cups[0].gems.map(\.id), [first.id])
+            XCTAssertEqual(viewModel.session.gemsInHand.map(\.id), [second.id])
+            XCTAssertEqual(viewModel.currentPlacementDestination, .cup(index: 1))
+        }
+    }
+
+    func testShouldPresentDiscardContentsTracksRequiredDiscardDestination() async {
+        await MainActor.run {
+            var session = GameSessionFactory().makeNewGame(playerNames: ["Player 1"])
+            session.phase = .playing
+            for index in session.cups.indices {
+                session.cups[index].gems = []
+            }
+            let discardGem = Gem(kind: .pink)
+            let remaining = Gem(kind: .blue)
+            session.gemsInHand = [discardGem, remaining]
+            session.currentRoll = 2
+            session.nextPlacementCupIndex = 0
+            session.placementsCompletedInCurrentRotation = session.cups.count
+            session.isTurnPlacementComplete = false
+            session.unicornCupIndex = 9
+            session.unicornCupID = session.cups[9].id
+
+            let viewModel = GameViewModel(session: session)
+            XCTAssertTrue(viewModel.isDiscardRequired)
+            XCTAssertTrue(viewModel.shouldPresentDiscardContents)
+
+            _ = viewModel.placeHandGem(kind: .pink)
+
+            XCTAssertFalse(viewModel.isDiscardRequired)
+            XCTAssertFalse(viewModel.shouldPresentDiscardContents)
+            XCTAssertEqual(viewModel.currentPlacementDestination, .cup(index: 0))
+        }
+    }
+}
+
+private extension Result where Success == Void {
+    var isSuccess: Bool {
+        if case .success = self { return true }
+        return false
+    }
 }
