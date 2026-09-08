@@ -2,15 +2,23 @@
 // BoardLayoutMetrics.swift
 // LepreCON
 //
-// Layout sizes for the gameplay board, derived from the available playfield size.
+// Scaled board geometry: golden logical metrics × uniform canvas fit scale.
 //
 
 import SwiftUI
 
 /// Measurements for the connected rainbow + cloud/pot board inside the playfield.
+///
+/// Board-local sizes come from `BoardReferenceMetrics.golden` multiplied by
+/// `canvasFit.scale`. Elements stay in the fitted canvas; letterbox/pillarbox
+/// margins remain empty outside `canvasFit.frame`.
 struct BoardLayoutMetrics {
+    /// Available playfield from `GameBoardView` (may be larger than the canvas).
     let playfieldWidth: CGFloat
     let playfieldHeight: CGFloat
+
+    /// How the golden runtime fit box (390 × 540) maps into this playfield.
+    let canvasFit: BoardCanvasFit
 
     let laneWidth: CGFloat
     let laneHeight: CGFloat
@@ -26,7 +34,7 @@ struct BoardLayoutMetrics {
     let cupInnerPadding: CGFloat
     let bottomRowBottomInset: CGFloat
 
-    /// Space reserved at the top of the playfield so lane tops stop below the HUD.
+    /// Space reserved at the top of the canvas so lane tops stop below the HUD band.
     let topLaneClearance: CGFloat
 
     /// How far outer cloud edges should extend past the outside rainbow lanes.
@@ -51,7 +59,16 @@ struct BoardLayoutMetrics {
     /// Bottom padding that anchors the overlay beneath the stationary discard control.
     let discardOverlayBottomPadding: CGFloat
 
-    /// Sizes the board to fill the playfield rectangle between HUD and dock.
+    /// Scaled downward shift of the entire board composition inside the canvas.
+    let contentVerticalOffset: CGFloat
+
+    /// Width of the fitted board canvas (reference width × scale).
+    var canvasWidth: CGFloat { canvasFit.size.width }
+
+    /// Height of the fitted board canvas (reference height × scale).
+    var canvasHeight: CGFloat { canvasFit.size.height }
+
+    /// Fits golden board geometry into the available playfield via uniform scale.
     init(playfieldSize size: CGSize) {
         let width = max(size.width, 1)
         let height = max(size.height, 1)
@@ -59,116 +76,44 @@ struct BoardLayoutMetrics {
         playfieldWidth = width
         playfieldHeight = height
 
-        // Room under the stationary compact discard for the contents overlay.
-        // Overlay drawing uses this inset; opening/closing does not change row height.
-        bottomRowBottomInset = height * 0.28
+        let fit = BoardCanvasFit.fit(in: CGSize(width: width, height: height))
+        canvasFit = fit
 
-        // Negative spacing allows the cloud artwork to overlap slightly,
-        // making the cloud row feel fuller and more connected.
-        bottomSpacing = -8
+        let reference = BoardReferenceMetrics.golden
+        let scale = fit.scale
 
-        laneInnerPadding = 3
-        cupInnerPadding = 4
-        laneGemStackAboveCloudPadding = 8
-        cupScoringBelowHeight = min(34, height * 0.075)
+        laneWidth = reference.laneWidth * scale
+        laneHeight = reference.laneHeight * scale
+        laneSpacing = reference.laneSpacing * scale
 
-        topLaneClearance = max(20, height * 0.05)
-        outsideCloudOverhang = 10
+        cloudWidth = reference.cloudWidth * scale
+        cloudHeight = reference.cloudHeight * scale
+        potWidth = reference.potWidth * scale
+        potHeight = reference.potHeight * scale
 
-        // Rainbow lanes stay centered and slightly narrower than the cloud row.
-        laneSpacing = 2
+        bottomSpacing = reference.bottomSpacing * scale
+        laneInnerPadding = reference.laneInnerPadding * scale
+        cupInnerPadding = reference.cupInnerPadding * scale
+        bottomRowBottomInset = reference.bottomRowBottomInset * scale
 
-        let lanesRowTargetWidth = width * 0.86
-        // Floor width so six equal frames tile with consistent inter-lane gaps.
-        laneWidth = floor((lanesRowTargetWidth - laneSpacing * 5) / 6)
+        topLaneClearance = reference.topLaneClearance * scale
+        outsideCloudOverhang = reference.outsideCloudOverhang * scale
 
-        let calculatedLanesRowWidth = 6 * laneWidth + 5 * laneSpacing
+        laneCloudBackgroundOverlap = reference.laneCloudBackgroundOverlap * scale
+        laneGemStackAboveCloudPadding = reference.laneGemStackAboveCloudPadding * scale
+        cupScoringBelowHeight = reference.cupScoringBelowHeight * scale
 
-        // The cloud row should extend past the outside rainbow lanes.
-        let bottomRowTargetWidth = min(
-            width,
-            calculatedLanesRowWidth + 2 * outsideCloudOverhang
-        )
+        laneBackgroundBottomInset = reference.laneBackgroundBottomInset * scale
+        laneGemStackBottomInset = reference.laneGemStackBottomInset * scale
+        laneGemStackHeight = reference.laneGemStackHeight * scale
 
-        // Size clouds primarily from the available width.
-        // Five containers must fit in one row, so width is the limiting factor.
-        //
-        // Clouds are wider and shorter.
-        // The pot is slightly narrower but taller.
-        var cloudW = width * 0.225
-        var potW = width * 0.24
+        discardPileWidth = reference.discardPileWidth * scale
+        discardPileCompactHeight = reference.discardPileCompactHeight * scale
+        discardOverlayWidth = reference.discardOverlayWidth * scale
+        discardOverlayHeight = reference.discardOverlayHeight * scale
+        discardOverlayBottomPadding = reference.discardOverlayBottomPadding * scale
 
-        var cloudH = cloudW * 1.5
-        var potH = potW * 1.12
-
-        var calculatedBottomRowWidth =
-            4 * cloudW +
-            potW +
-            4 * bottomSpacing
-
-        // Grow the row if it is not wide enough to extend past the lanes.
-        if calculatedBottomRowWidth < bottomRowTargetWidth {
-            let grow = bottomRowTargetWidth / calculatedBottomRowWidth
-
-            cloudW *= grow
-            cloudH *= grow
-            potW *= grow
-            potH *= grow
-
-            calculatedBottomRowWidth = bottomRowTargetWidth
-        }
-
-        // Shrink only as a safety fallback if the row exceeds the playfield.
-        if calculatedBottomRowWidth > width {
-            let shrink = width / calculatedBottomRowWidth
-
-            cloudW *= shrink
-            cloudH *= shrink
-            potW *= shrink
-            potH *= shrink
-        }
-
-        cloudWidth = cloudW
-        cloudHeight = cloudH
-        potWidth = potW
-        potHeight = potH
-
-        discardPileWidth = potWidth
-        discardPileCompactHeight = max(44, height * 0.065)
-        discardOverlayWidth = min(width * 0.94, max(potWidth * 3.2, width * 0.88))
-        discardOverlayHeight = max(150, min(height * 0.34, bottomRowBottomInset * 0.92))
-        discardOverlayBottomPadding = max(4, (bottomRowBottomInset - discardOverlayHeight) * 0.35)
-
-        let bottomCupHeight = max(cloudHeight, potHeight)
-
-        // Lets the colored lane backgrounds tuck behind the clouds and pot.
-        laneCloudBackgroundOverlap = min(
-            bottomCupHeight * 0.42,
-            height * 0.12
-        )
-
-        laneBackgroundBottomInset =
-            bottomCupHeight - laneCloudBackgroundOverlap
-
-        // Lane tops stop below the HUD while growing upward from the cloud row.
-        laneHeight = max(
-            60,
-            height
-                - topLaneClearance
-                - bottomRowBottomInset
-                - laneBackgroundBottomInset
-        )
-
-        // Lane gems stay above the clouds instead of being hidden behind them.
-        laneGemStackBottomInset =
-            bottomCupHeight + laneGemStackAboveCloudPadding
-
-        laneGemStackHeight = max(
-            48,
-            laneHeight
-                - laneCloudBackgroundOverlap
-                + laneGemStackAboveCloudPadding
-        )
+        contentVerticalOffset = BoardReferenceMetrics.contentVerticalOffset * scale
     }
 
     var lanesRowWidth: CGFloat {
@@ -186,6 +131,93 @@ struct BoardLayoutMetrics {
     var bottomRowTotalHeight: CGFloat {
         bottomRowCupHeight + cupScoringBelowHeight
     }
+
+    /// Compact discard control bottom edge in canvas coordinates (before content offset).
+    var discardControlBottomInCanvas: CGFloat {
+        canvasHeight - bottomRowBottomInset
+    }
+
+    /// Compact discard control top edge in canvas coordinates (before content offset).
+    var discardControlTopInCanvas: CGFloat {
+        discardControlBottomInCanvas - discardPileCompactHeight
+    }
+
+    /// Gap between the compact discard control bottom and the tray top.
+    static let discardTrayGapBelowControl: CGFloat = 4
+
+    /// Compact tray header height (logical, before scale).
+    static let discardTrayHeaderLogicalHeight: CGFloat = 32
+
+    /// Empty-tray body height below the header (logical, before scale).
+    static let discardTrayEmptyBodyLogicalHeight: CGFloat = 44
+
+    /// Modest gem-cell reduction vs Hand so more kinds fit in the dock-capped tray.
+    static let discardGemCellScale: CGFloat = 0.9
+
+    /// Ideal compact discard-tray height from grouped gem kind count (uncapped).
+    ///
+    /// Used for tests and for understanding content needs; runtime height fills
+    /// available space below the fixed tray top down to the dock limit.
+    static func idealDiscardTrayHeight(
+        gemKindCount: Int,
+        panelWidth: CGFloat,
+        scale: CGFloat,
+        gemCellScale: CGFloat = discardGemCellScale
+    ) -> CGFloat {
+        let s = max(scale, 0.01)
+        let g = max(gemCellScale, 0.01)
+        let header = discardTrayHeaderLogicalHeight * s
+        if gemKindCount <= 0 {
+            return header + discardTrayEmptyBodyLogicalHeight * s
+        }
+
+        let gemSize = max(
+            36 * s * g,
+            min(GameScreenLayout.handTrayGridGemSize * s * g, panelWidth * 0.12 * g)
+        )
+        let minColumnWidth = gemSize + 28 * s * g
+        let horizontalPadding = 24 * s
+        let columns = max(1, Int(floor((panelWidth - horizontalPadding) / minColumnWidth)))
+        let rowsNeeded = Int(ceil(Double(gemKindCount) / Double(columns)))
+        let visibleRows = min(max(rowsNeeded, 1), 2)
+
+        let cellHeight = (GameScreenLayout.handTrayGridCellMinHeight * g + 16 * g) * s
+        let rowSpacing = 10 * s
+        let gridPadding = 16 * s
+        let rowsHeight = CGFloat(visibleRows) * cellHeight
+            + CGFloat(max(0, visibleRows - 1)) * rowSpacing
+
+        return header + gridPadding + rowsHeight
+    }
+
+    /// Fixed tray top in playfield coordinates (discard button bottom + gap).
+    /// This must stay stable when height changes — only the bottom edge moves.
+    var discardTrayFixedTopInPlayfield: CGFloat {
+        discardControlBottomInCanvas
+            + contentVerticalOffset
+            + Self.discardTrayGapBelowControl
+    }
+
+    /// Downward tray height with **fixed top**, bottom at `playfieldBottomLimit`.
+    ///
+    /// `playfieldBottomLimit` is playfield Y of (dock top − clearance).
+    /// Height grows only by moving the bottom edge down; never negative.
+    func discardTrayHeight(
+        gemKindCount: Int,
+        playfieldBottomLimit: CGFloat
+    ) -> CGFloat {
+        // gemKindCount reserved for future content-min policies; height fills to dock.
+        _ = gemKindCount
+        return max(0, playfieldBottomLimit - discardTrayFixedTopInPlayfield)
+    }
+
+    /// Bottom padding that keeps tray top fixed while `height` extends the bottom edge.
+    func discardTrayBottomPadding(forHeight height: CGFloat) -> CGFloat {
+        canvasHeight
+            - discardControlBottomInCanvas
+            - Self.discardTrayGapBelowControl
+            - height
+    }
 }
 
 enum BoardLayout {
@@ -194,7 +226,7 @@ enum BoardLayout {
     /// Fixed design used only by SwiftUI previews.
     static var previewMetrics: BoardLayoutMetrics {
         BoardLayoutMetrics(
-            playfieldSize: CGSize(width: 360, height: 420)
+            playfieldSize: BoardDesignCanvas.referenceSize
         )
     }
 }

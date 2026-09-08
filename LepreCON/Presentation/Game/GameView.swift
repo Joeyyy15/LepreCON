@@ -59,6 +59,15 @@ struct GameView: View {
                 0,
                 geometry.size.height - topReservedHeight - bottomReservedHeight
             )
+            // Lowest playfield Y the downward discard tray may occupy (above dock).
+            let discardTrayPlayfieldBottomLimit = max(
+                0,
+                geometry.size.height
+                    - bottomPadding
+                    - dockHeight
+                    - GameScreenLayout.discardTrayDockClearance
+                    - topReservedHeight
+            )
 
             ZStack {
                 // Middle gameplay layer.
@@ -76,6 +85,7 @@ struct GameView: View {
                             discardGemCounts: viewModel.discardGemCounts,
                             isDiscardActiveDestination: viewModel.isDiscardRequired && !blocksGameplayInput,
                             isDiscardContentsPresented: showsDiscardContents && !blocksGameplayInput,
+                            discardTrayPlayfieldBottomLimit: discardTrayPlayfieldBottomLimit,
                             onConfirmScore: confirmScore,
                             onTapDiscardPile: handleDiscardPileTap,
                             onDismissDiscardContents: {
@@ -117,7 +127,10 @@ struct GameView: View {
 
                     Spacer(minLength: 0)
 
-                    GameActionFeedbackView(message: lastActionMessage)
+                    // Hide toast while discard contents are open so it cannot cover gem cells.
+                    GameActionFeedbackView(
+                        message: showsDiscardContents ? nil : lastActionMessage
+                    )
                         .frame(width: contentWidth, height: GameScreenLayout.actionFeedbackSlotHeight)
 
                     GameControlDockView(

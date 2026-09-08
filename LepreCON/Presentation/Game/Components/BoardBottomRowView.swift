@@ -27,7 +27,7 @@ struct BoardBottomRowView: View {
                     )
             }
         }
-        .frame(width: metrics.playfieldWidth, alignment: .center)
+        .frame(width: metrics.canvasWidth, alignment: .center)
     }
 
     @ViewBuilder

@@ -2,19 +2,37 @@
 // DiscardPileContentsOverlay.swift
 // LepreCON
 //
-// Wide read-only discard contents panel. Drawn as an overlay so it never
-// resizes the board, Pot, clouds, or rainbow lanes.
+// Compact discard gem tray anchored below the stationary discard control.
+// Overlay only — never resizes lanes, clouds, Pot, or the discard button.
 //
 
 import SwiftUI
 
-/// Hand-matching discard contents overlay. Viewing only — no domain mutations.
+/// Hand-matching compact discard tray. Viewing only — no domain mutations.
+/// Cell layout stays compatible with future selectable retrieval.
 struct DiscardPileContentsOverlay: View {
     let gemCounts: [GemCountDisplayItem]
+    let discardCount: Int
     let isActiveDestination: Bool
     let panelWidth: CGFloat
     let panelHeight: CGFloat
     var onDismiss: (() -> Void)? = nil
+
+    private var gemSize: CGFloat {
+        let scale = BoardLayoutMetrics.discardGemCellScale
+        return max(36 * scale, min(GameScreenLayout.handTrayGridGemSize * scale, panelWidth * 0.12 * scale))
+    }
+
+    private var cellMinHeight: CGFloat {
+        GameScreenLayout.handTrayGridCellMinHeight * BoardLayoutMetrics.discardGemCellScale
+    }
+
+    private var headerTitle: String {
+        if isActiveDestination {
+            return "DISCARD 1 GEM"
+        }
+        return "DISCARD • \(discardCount)"
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -24,11 +42,11 @@ struct DiscardPileContentsOverlay: View {
                 gemCounts: gemCounts,
                 canPlace: false,
                 showsDisabledAppearance: false,
-                emptyMessage: "Discard pile empty",
-                gemSize: max(36, min(52, panelWidth * 0.12)),
-                cellMinHeight: max(64, min(78, panelHeight * 0.42))
+                emptyMessage: "No discarded gems",
+                gemSize: gemSize,
+                cellMinHeight: cellMinHeight
             )
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
         .frame(width: panelWidth, height: panelHeight)
         .background(GemTrayPanelChrome.background)
@@ -37,15 +55,15 @@ struct DiscardPileContentsOverlay: View {
                 .padding(1)
         }
         .clipShape(RoundedRectangle(cornerRadius: GemTrayPanelChrome.cornerRadius, style: .continuous))
-        .shadow(color: .black.opacity(0.45), radius: 14, x: 0, y: 4)
+        .shadow(color: .black.opacity(0.35), radius: 8, x: 0, y: 3)
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("Discard pile contents")
+        .accessibilityLabel("Discard pile contents, \(discardCount) gems")
     }
 
     private var header: some View {
-        HStack(spacing: 8) {
-            Text(isActiveDestination ? "DISCARD 1 GEM" : "DISCARD")
-                .font(.system(size: 13, weight: .heavy, design: .rounded))
+        HStack(spacing: 6) {
+            Text(headerTitle)
+                .font(.system(size: 12, weight: .heavy, design: .rounded))
                 .foregroundStyle(
                     isActiveDestination ? BoardStyle.d12GradientTop : HUDFantasyText.labelColor
                 )
@@ -53,21 +71,47 @@ struct DiscardPileContentsOverlay: View {
                 .minimumScaleFactor(0.85)
                 .hudReadableShadow()
 
-            Spacer(minLength: 8)
+            Spacer(minLength: 6)
 
             if let onDismiss {
                 Button(action: onDismiss) {
                     Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 22, weight: .semibold))
-                        .foregroundStyle(BoardStyle.hudValue.opacity(0.92))
-                        .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 1)
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(BoardStyle.hudValue.opacity(0.9))
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Close discard pile")
+                .accessibilityLabel("Close discard tray")
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 12)
-        .padding(.bottom, 8)
+        .padding(.horizontal, 12)
+        .padding(.top, 8)
+        .padding(.bottom, 4)
+        .frame(height: BoardLayoutMetrics.discardTrayHeaderLogicalHeight, alignment: .center)
     }
+}
+
+#Preview("Discard tray empty") {
+    DiscardPileContentsOverlay(
+        gemCounts: [],
+        discardCount: 0,
+        isActiveDestination: false,
+        panelWidth: 360,
+        panelHeight: 76,
+        onDismiss: {}
+    )
+}
+
+#Preview("Discard tray with gems") {
+    DiscardPileContentsOverlay(
+        gemCounts: [
+            GemCountDisplayItem(kind: .red, count: 3),
+            GemCountDisplayItem(kind: .gold, count: 2),
+            GemCountDisplayItem(kind: .pink, count: 1)
+        ],
+        discardCount: 6,
+        isActiveDestination: true,
+        panelWidth: 360,
+        panelHeight: 150,
+        onDismiss: nil
+    )
 }

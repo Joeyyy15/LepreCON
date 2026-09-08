@@ -3,7 +3,7 @@
 // LepreCON
 //
 // Main visual gameplay board. Renders GameBoardDisplayState from the live session.
-// Layout matches the rulebook image; domain cup indices are unchanged.
+// Board content is drawn inside the fitted 390×540 canvas; extra playfield is margin.
 //
 
 import SwiftUI
@@ -15,6 +15,8 @@ struct GameBoardView: View {
     var discardGemCounts: [GemCountDisplayItem] = []
     var isDiscardActiveDestination: Bool = false
     var isDiscardContentsPresented: Bool = false
+    /// Playfield Y the tray bottom must stay at or above (dock top − board top − clearance).
+    var discardTrayPlayfieldBottomLimit: CGFloat? = nil
     var onConfirmScore: ((Int, GemKind) -> Void)? = nil
     var onTapDiscardPile: () -> Void = {}
     var onDismissDiscardContents: () -> Void = {}
@@ -24,66 +26,106 @@ struct GameBoardView: View {
             let metrics = BoardLayoutMetrics(playfieldSize: geometry.size)
 
             BoardContainerView {
-                ZStack(alignment: .bottom) {
-                    BoardLaneBackgroundsRowView(
-                        lanes: displayState.rainbowLanes,
-                        metrics: metrics
-                    )
-                    .padding(
-                        .bottom,
-                        metrics.bottomRowBottomInset + metrics.laneBackgroundBottomInset
-                    )
-                    .zIndex(0)
+                ZStack(alignment: .topLeading) {
+                    // Letterbox / pillarbox margins stay empty outside the canvas.
+                    Color.clear
 
-                    BoardBottomRowView(
-                        bottomRow: displayState.bottomRow,
-                        metrics: metrics,
-                        hideUnicornMarkers: hideUnicornMarkers,
-                        discardCount: discardCount,
-                        isDiscardActiveDestination: isDiscardActiveDestination,
-                        onConfirmScore: onConfirmScore,
-                        onTapDiscardPile: onTapDiscardPile
-                    )
-                    .padding(.bottom, metrics.bottomRowBottomInset)
-                    .zIndex(1)
-
-                    BoardLaneGemsRowView(
-                        lanes: displayState.rainbowLanes,
-                        metrics: metrics,
-                        hideUnicornMarkers: hideUnicornMarkers,
-                        onConfirmScore: onConfirmScore
-                    )
-                    .padding(
-                        .bottom,
-                        metrics.bottomRowBottomInset + metrics.laneGemStackBottomInset
-                    )
-                    .zIndex(2)
-
-                    // Overlay only — never participates in bottom-row / lane layout.
-                    if isDiscardContentsPresented {
-                        DiscardPileContentsOverlay(
-                            gemCounts: discardGemCounts,
-                            isActiveDestination: isDiscardActiveDestination,
-                            panelWidth: metrics.discardOverlayWidth,
-                            panelHeight: metrics.discardOverlayHeight,
-                            onDismiss: isDiscardActiveDestination ? nil : onDismissDiscardContents
+                    boardCanvasContent(metrics: metrics)
+                        .frame(
+                            width: metrics.canvasFit.size.width,
+                            height: metrics.canvasFit.size.height
                         )
-                        .padding(.bottom, metrics.discardOverlayBottomPadding)
-                        .transition(.opacity.combined(with: .move(edge: .top)))
-                        .zIndex(6)
-                    }
+                        .offset(
+                            x: metrics.canvasFit.origin.x,
+                            y: metrics.canvasFit.origin.y
+                        )
                 }
-                .frame(
-                    width: metrics.playfieldWidth,
-                    height: metrics.playfieldHeight,
-                    alignment: .bottom
-                )
-                .animation(.easeInOut(duration: 0.2), value: isDiscardContentsPresented)
+                .coordinateSpace(name: GameBoardCoordinateSpace.name)
+                .frame(width: geometry.size.width, height: geometry.size.height)
             }
-            .coordinateSpace(name: GameBoardCoordinateSpace.name)
             .frame(width: geometry.size.width, height: geometry.size.height)
         }
         .gameScreenDebugBorder(.green)
+    }
+
+    @ViewBuilder
+    private func boardCanvasContent(metrics: BoardLayoutMetrics) -> some View {
+        let trayHeight = discardTrayPanelHeight(metrics: metrics)
+        let trayBottomPadding = metrics.discardTrayBottomPadding(forHeight: trayHeight)
+
+        ZStack(alignment: .bottom) {
+            BoardLaneBackgroundsRowView(
+                lanes: displayState.rainbowLanes,
+                metrics: metrics
+            )
+            .padding(
+                .bottom,
+                metrics.bottomRowBottomInset + metrics.laneBackgroundBottomInset
+            )
+            .zIndex(0)
+
+            BoardBottomRowView(
+                bottomRow: displayState.bottomRow,
+                metrics: metrics,
+                hideUnicornMarkers: hideUnicornMarkers,
+                discardCount: discardCount,
+                isDiscardActiveDestination: isDiscardActiveDestination,
+                onConfirmScore: onConfirmScore,
+                onTapDiscardPile: onTapDiscardPile
+            )
+            .padding(.bottom, metrics.bottomRowBottomInset)
+            .zIndex(1)
+
+            BoardLaneGemsRowView(
+                lanes: displayState.rainbowLanes,
+                metrics: metrics,
+                hideUnicornMarkers: hideUnicornMarkers,
+                onConfirmScore: onConfirmScore
+            )
+            .padding(
+                .bottom,
+                metrics.bottomRowBottomInset + metrics.laneGemStackBottomInset
+            )
+            .zIndex(2)
+
+            // Compact tray: opens downward below the stationary discard control.
+            if isDiscardContentsPresented {
+                DiscardPileContentsOverlay(
+                    gemCounts: discardGemCounts,
+                    discardCount: discardCount,
+                    isActiveDestination: isDiscardActiveDestination,
+                    panelWidth: metrics.discardOverlayWidth,
+                    panelHeight: trayHeight,
+                    onDismiss: isDiscardActiveDestination ? nil : onDismissDiscardContents
+                )
+                .padding(.bottom, trayBottomPadding)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+                .zIndex(6)
+            }
+        }
+        .frame(
+            width: metrics.canvasWidth,
+            height: metrics.canvasHeight,
+            alignment: .bottom
+        )
+        // One shared composition shift — scales with canvasFit; does not retune pieces.
+        .offset(y: metrics.contentVerticalOffset)
+        .animation(.easeInOut(duration: 0.2), value: isDiscardContentsPresented)
+    }
+
+    private func discardTrayPanelHeight(metrics: BoardLayoutMetrics) -> CGFloat {
+        guard let limit = discardTrayPlayfieldBottomLimit else {
+            // Previews / callers without dock geometry: content-sized, no dock cap.
+            return BoardLayoutMetrics.idealDiscardTrayHeight(
+                gemKindCount: discardGemCounts.count,
+                panelWidth: metrics.discardOverlayWidth,
+                scale: metrics.canvasFit.scale
+            )
+        }
+        return metrics.discardTrayHeight(
+            gemKindCount: discardGemCounts.count,
+            playfieldBottomLimit: limit
+        )
     }
 }
 
@@ -92,5 +134,5 @@ struct GameBoardView: View {
         session: GameSessionFactory().makeNewGame(playerNames: ["Player 1"])
     ))
     .padding()
-    .frame(width: 360, height: 420)
+    .frame(width: 390, height: 540)
 }
