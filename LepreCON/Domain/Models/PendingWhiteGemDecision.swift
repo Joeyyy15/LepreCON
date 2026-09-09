@@ -2,14 +2,23 @@
 // PendingWhiteGemDecision.swift
 // LepreCON
 //
-// A paused white-gem / unicorn decision. Nothing is applied automatically —
-// the player must choose the unicorn outcome and the cup/chain outcome.
+// Two independent white-gem pauses. Nothing is applied automatically —
+// the player must resolve the active context.
 //
 
 import Foundation
 
-/// Pending choice when the unicorn cup contains a white gem at resolution time.
-struct PendingWhiteGemDecision: Equatable, Codable {
-    /// Index into `GameSession.cups` for the unicorn cup that contains a white gem.
-    let cupIndex: Int
+/// Pending white-gem choice owned by `GameSession`.
+enum PendingWhiteGemDecision: Equatable, Codable {
+    /// Final gem landed in a non-empty cup that contains white: scoop vs use-white-to-end-turn.
+    case endPlacementChain(cupIndex: Int)
+    /// End-of-turn unicorn cup contains white: explode vs use-white-to-calm.
+    case stopUnicornSpread(cupIndex: Int)
+
+    var cupIndex: Int {
+        switch self {
+        case .endPlacementChain(let cupIndex), .stopUnicornSpread(let cupIndex):
+            return cupIndex
+        }
+    }
 }

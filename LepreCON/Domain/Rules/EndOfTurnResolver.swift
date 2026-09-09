@@ -22,7 +22,7 @@ enum EndOfTurnResolver {
 
         if UnicornResolver.requiresPlayerDecision(in: session),
            let unicornIndex = session.unicornCupIndex {
-            session.pendingWhiteGemDecision = PendingWhiteGemDecision(cupIndex: unicornIndex)
+            session.pendingWhiteGemDecision = .stopUnicornSpread(cupIndex: unicornIndex)
             return
         }
 

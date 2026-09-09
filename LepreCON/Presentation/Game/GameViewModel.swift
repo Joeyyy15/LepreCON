@@ -156,26 +156,24 @@ final class GameViewModel: ObservableObject {
         refreshResolutionEventPresentation()
     }
 
-    /// Player confirms both outcomes of a pending white-gem / unicorn decision.
-    func resolveWhiteGemDecision(
-        triggerUnicorn: Bool,
-        scoopAndContinue: Bool
-    ) -> Result<Void, WhiteGemDecisionError> {
+    /// Player confirms a pending placement-chain white-gem decision.
+    func resolvePlacementChainDecision(scoopAndContinue: Bool) -> Result<Void, WhiteGemDecisionError> {
         let snapshotBeforeDecision = session
-        let result = WhiteGemDecisionEngine.resolve(
+        let result = WhiteGemDecisionEngine.resolvePlacementChain(
             session: &session,
-            triggerUnicorn: triggerUnicorn,
             scoopAndContinue: scoopAndContinue
         )
-        switch result {
-        case .success:
-            previousSessionSnapshot = snapshotBeforeDecision
-            applyGameOverIfNeeded()
-            refreshResolutionEventPresentation()
-        case .failure:
-            break
-        }
-        return result
+        return applyWhiteGemDecisionResult(result, snapshotBeforeDecision: snapshotBeforeDecision)
+    }
+
+    /// Player confirms a pending end-of-turn unicorn white-gem decision.
+    func resolveUnicornSpreadDecision(explode: Bool) -> Result<Void, WhiteGemDecisionError> {
+        let snapshotBeforeDecision = session
+        let result = WhiteGemDecisionEngine.resolveUnicornSpread(
+            session: &session,
+            explode: explode
+        )
+        return applyWhiteGemDecisionResult(result, snapshotBeforeDecision: snapshotBeforeDecision)
     }
 
     /// Player confirms one pending scoring color for a cup.
@@ -327,6 +325,21 @@ final class GameViewModel: ObservableObject {
 
     private func clearUndoSnapshot() {
         previousSessionSnapshot = nil
+    }
+
+    private func applyWhiteGemDecisionResult(
+        _ result: Result<Void, WhiteGemDecisionError>,
+        snapshotBeforeDecision: GameSession
+    ) -> Result<Void, WhiteGemDecisionError> {
+        switch result {
+        case .success:
+            previousSessionSnapshot = snapshotBeforeDecision
+            applyGameOverIfNeeded()
+            refreshResolutionEventPresentation()
+        case .failure:
+            break
+        }
+        return result
     }
 
     private func applyGameOverIfNeeded() {

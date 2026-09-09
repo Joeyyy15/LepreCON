@@ -196,10 +196,17 @@ struct GameView: View {
             )
         }
         .sheet(isPresented: $showsWhiteGemDecisionSheet) {
-            GameWhiteGemDecisionSheetView(
-                cupLabel: pendingWhiteGemCupLabel,
-                onResolve: resolveWhiteGemDecision
-            )
+            if let pending = viewModel.pendingWhiteGemDecision {
+                GameWhiteGemDecisionSheetView(
+                    decision: pending,
+                    cupLabel: pendingWhiteGemCupLabel,
+                    onScoopAndContinue: { resolvePlacementChain(scoopAndContinue: true) },
+                    onUseWhiteToEndTurn: { resolvePlacementChain(scoopAndContinue: false) },
+                    onExplodeUnicorn: { resolveUnicornSpread(explode: true) },
+                    onCalmUnicorn: { resolveUnicornSpread(explode: false) }
+                )
+                .id(pendingWhiteGemSheetID)
+            }
         }
         .sheet(isPresented: $showsResolutionSheet) {
             resolutionSheet
@@ -207,9 +214,9 @@ struct GameView: View {
         .onChange(of: viewModel.boardDisplayState.pendingScoringCups) { _, cups in
             showsScoringSheet = !viewModel.isGameOver && !cups.isEmpty
         }
-        .onChange(of: viewModel.hasPendingWhiteGemDecision) { _, isPending in
-            showsWhiteGemDecisionSheet = isPending && !viewModel.isGameOver
-            if isPending {
+        .onChange(of: viewModel.pendingWhiteGemDecision) { _, pending in
+            showsWhiteGemDecisionSheet = pending != nil && !viewModel.isGameOver
+            if pending != nil {
                 isHandTrayPresented = false
             }
         }
@@ -378,6 +385,16 @@ struct GameView: View {
         }
     }
 
+    private var pendingWhiteGemSheetID: String {
+        guard let pending = viewModel.pendingWhiteGemDecision else { return "none" }
+        switch pending {
+        case .endPlacementChain(let cupIndex):
+            return "chain-\(cupIndex)"
+        case .stopUnicornSpread(let cupIndex):
+            return "unicorn-\(cupIndex)"
+        }
+    }
+
     private var pendingWhiteGemCupLabel: String {
         guard let cupIndex = viewModel.pendingWhiteGemDecision?.cupIndex else {
             return "this cup"
@@ -385,20 +402,32 @@ struct GameView: View {
         return GameBoardDisplayState.cupLabel(forCupIndex: cupIndex, cups: viewModel.session.cups)
     }
 
-    private func resolveWhiteGemDecision(triggerUnicorn: Bool, scoopAndContinue: Bool) {
-        switch viewModel.resolveWhiteGemDecision(
-            triggerUnicorn: triggerUnicorn,
-            scoopAndContinue: scoopAndContinue
-        ) {
+    private func resolvePlacementChain(scoopAndContinue: Bool) {
+        switch viewModel.resolvePlacementChainDecision(scoopAndContinue: scoopAndContinue) {
         case .success:
             showsWhiteGemDecisionSheet = viewModel.hasPendingWhiteGemDecision
-            if scoopAndContinue, viewModel.canPlaceFromHand {
+            if scoopAndContinue {
                 lastActionMessage = "Picked up the cup. Continue placing from your hand."
-            } else if triggerUnicorn {
-                lastActionMessage = "Unicorn exploded."
+            } else if viewModel.hasPendingWhiteGemDecision {
+                lastActionMessage = "Used a white gem to end the turn. Choose unicorn outcome."
             } else {
-                lastActionMessage = "Unicorn was not exploded."
+                lastActionMessage = "Used a white gem to end the turn."
             }
+            if viewModel.isInScoringChoicePhase {
+                showsScoringSheet = true
+            }
+        case .failure(let error):
+            lastActionMessage = whiteGemDecisionErrorMessage(error)
+        }
+    }
+
+    private func resolveUnicornSpread(explode: Bool) {
+        switch viewModel.resolveUnicornSpreadDecision(explode: explode) {
+        case .success:
+            showsWhiteGemDecisionSheet = viewModel.hasPendingWhiteGemDecision
+            lastActionMessage = explode
+                ? "Unicorn exploded."
+                : "Used a white gem to calm the unicorn."
             if viewModel.isInScoringChoicePhase {
                 showsScoringSheet = true
             }
@@ -449,7 +478,7 @@ struct GameView: View {
         case .discardNotRequired: return "Discard is only allowed after a full board rotation."
         case .cannotDiscardBlackGem: return "Poop gems cannot be discarded after a full rotation."
         case .pendingScoreChoicesUnresolved: return "Score a cup or choose Skip Scoring before rolling again."
-        case .pendingWhiteGemDecisionUnresolved: return "Choose what happens with the white gem and unicorn."
+        case .pendingWhiteGemDecisionUnresolved: return "Resolve the white gem choice before continuing."
         }
     }
 
@@ -458,6 +487,8 @@ struct GameView: View {
         case .gameNotPlaying: return "Start the game first."
         case .noPendingDecision: return "There is no white-gem decision to resolve."
         case .invalidCupIndex: return "Invalid cup for the white-gem decision."
+        case .unexpectedDecisionKind: return "That choice does not apply to the current white-gem decision."
+        case .whiteGemNotInCup: return "That cup no longer has a white gem."
         }
     }
 }

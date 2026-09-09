@@ -2,59 +2,75 @@
 // GameWhiteGemDecisionSheetView.swift
 // LepreCON
 //
-// Player choices for a pending white-gem / unicorn decision.
-// Both outcomes are chosen here; the domain applies them together.
+// Presents the currently pending white-gem context. Placement-chain and unicorn
+// spread are separate decisions; this view does not combine them.
 //
 
 import SwiftUI
 
 struct GameWhiteGemDecisionSheetView: View {
+    let decision: PendingWhiteGemDecision
     let cupLabel: String
-    var onResolve: (_ triggerUnicorn: Bool, _ scoopAndContinue: Bool) -> Void = { _, _ in }
-
-    @State private var triggerUnicorn = false
-    @State private var scoopAndContinue = false
+    var onScoopAndContinue: () -> Void = {}
+    var onUseWhiteToEndTurn: () -> Void = {}
+    var onExplodeUnicorn: () -> Void = {}
+    var onCalmUnicorn: () -> Void = {}
 
     var body: some View {
         NavigationStack {
-            VStack(alignment: .leading, spacing: 20) {
-                Text("A white gem is in \(cupLabel). Choose the unicorn outcome and whether to pick up this cup.")
+            VStack(alignment: .leading, spacing: 16) {
+                Text(prompt)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
 
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Unicorn")
-                        .font(.headline)
-                    Picker("Unicorn", selection: $triggerUnicorn) {
-                        Text("Don't explode").tag(false)
-                        Text("Explode").tag(true)
+                switch decision {
+                case .endPlacementChain:
+                    Button("Scoop and continue placing") {
+                        onScoopAndContinue()
                     }
-                    .pickerStyle(.segmented)
-                }
+                    .buttonStyle(.borderedProminent)
 
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Cup")
-                        .font(.headline)
-                    Picker("Cup", selection: $scoopAndContinue) {
-                        Text("Leave and end turn").tag(false)
-                        Text("Pick up and continue").tag(true)
+                    Button("Use white to end the turn") {
+                        onUseWhiteToEndTurn()
                     }
-                    .pickerStyle(.segmented)
-                }
+                    .buttonStyle(.bordered)
 
-                Button("Confirm") {
-                    onResolve(triggerUnicorn, scoopAndContinue)
+                case .stopUnicornSpread:
+                    Button("Explode the unicorn") {
+                        onExplodeUnicorn()
+                    }
+                    .buttonStyle(.borderedProminent)
+
+                    Button("Use white to calm the unicorn") {
+                        onCalmUnicorn()
+                    }
+                    .buttonStyle(.bordered)
                 }
-                .buttonStyle(.borderedProminent)
 
                 Spacer()
             }
             .padding()
             .frame(maxWidth: .infinity, alignment: .leading)
-            .navigationTitle("White Gem")
+            .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
         }
         .presentationDetents([.medium, .large])
         .interactiveDismissDisabled()
+    }
+
+    private var title: String {
+        switch decision {
+        case .endPlacementChain: return "White Gem"
+        case .stopUnicornSpread: return "Unicorn"
+        }
+    }
+
+    private var prompt: String {
+        switch decision {
+        case .endPlacementChain:
+            return "\(cupLabel) contains a white gem. Scoop every gem and keep placing, or discard one white to end the turn."
+        case .stopUnicornSpread:
+            return "The unicorn's cup (\(cupLabel)) contains a white gem. Explode/spread, or discard one white to keep the unicorn here."
+        }
     }
 }

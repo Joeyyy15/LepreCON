@@ -73,7 +73,9 @@ enum GameTurnEngine {
     /// If this is the final gem in hand, the engine checks whether the cup
     /// already had gems before placement:
     /// - Empty before placement: the placement chain stops.
-    /// - Not empty before placement: scoop the whole cup into hand and continue.
+    /// - Not empty, and the cup has no white gem after placement: scoop and continue.
+    /// - Not empty, and the cup contains white after placement: pause for a
+    ///   player choice (scoop-and-continue vs use-white-to-end-turn).
     ///
     /// Completing a full rotation of available cups makes the next destination discard;
     /// that does not end placement by itself.
@@ -116,12 +118,11 @@ enum GameTurnEngine {
         session.cups[cupIndex].gems.append(gem)
         session.placementsCompletedInCurrentRotation += 1
 
-        if wasFinalGemInHand, shouldPauseForWhiteGemDecision(in: session, cupIndex: cupIndex) {
-            session.pendingWhiteGemDecision = PendingWhiteGemDecision(cupIndex: cupIndex)
-            return .success(())
-        }
-
         if wasFinalGemInHand && cupHadGemsBeforePlacement {
+            if WhiteGemDecisionEngine.cupContainsWhiteGem(session.cups[cupIndex]) {
+                session.pendingWhiteGemDecision = .endPlacementChain(cupIndex: cupIndex)
+                return .success(())
+            }
             scoopCupIntoHand(session: &session, cupIndex: cupIndex)
             advancePlacementIndex(session: &session)
         } else if wasFinalGemInHand {
@@ -201,11 +202,6 @@ enum GameTurnEngine {
             return canDiscardGemKind(kind)
         }
         return true
-    }
-
-    /// True when the unicorn is on this cup and the cup contains a white gem.
-    static func shouldPauseForWhiteGemDecision(in session: GameSession, cupIndex: Int) -> Bool {
-        session.unicornCupIndex == cupIndex && UnicornResolver.requiresPlayerDecision(in: session)
     }
 
     /// Count of cups that currently accept normal placement (completed cups excluded).

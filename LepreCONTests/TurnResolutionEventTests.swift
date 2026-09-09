@@ -123,7 +123,7 @@ final class TurnResolutionEventTests: XCTestCase {
         EndOfTurnResolver.resolveAfterPlacementEnds(session: &session)
 
         XCTAssertTrue(session.recentResolutionEvents.isEmpty)
-        XCTAssertEqual(session.pendingWhiteGemDecision?.cupIndex, 5)
+        XCTAssertEqual(session.pendingWhiteGemDecision, .stopUnicornSpread(cupIndex: 5))
     }
 
     func testBeginTurnClearsResolutionEvents() {
