@@ -8,23 +8,25 @@
 
 import SwiftUI
 
-/// Hand-matching compact discard tray. Viewing only — no domain mutations.
-/// Cell layout stays compatible with future selectable retrieval.
+/// Content-sized discard tray: dense grouped-by-kind grid with scroll only when needed.
+/// Viewing only — no domain mutations. Cells stay selection-ready for later retrieval.
 struct DiscardPileContentsOverlay: View {
     let gemCounts: [GemCountDisplayItem]
     let discardCount: Int
     let isActiveDestination: Bool
     let panelWidth: CGFloat
     let panelHeight: CGFloat
+    var gridColumnCount: Int = 1
+    /// When false, the full grid is shown without vertical scrolling.
+    var allowsScrolling: Bool = false
     var onDismiss: (() -> Void)? = nil
 
     private var gemSize: CGFloat {
-        let scale = BoardLayoutMetrics.discardGemCellScale
-        return max(36 * scale, min(GameScreenLayout.handTrayGridGemSize * scale, panelWidth * 0.12 * scale))
+        BoardLayoutMetrics.discardGemSize(panelWidth: panelWidth)
     }
 
     private var cellMinHeight: CGFloat {
-        GameScreenLayout.handTrayGridCellMinHeight * BoardLayoutMetrics.discardGemCellScale
+        BoardLayoutMetrics.discardGemCellMinHeight(gemSize: gemSize)
     }
 
     private var headerTitle: String {
@@ -38,13 +40,13 @@ struct DiscardPileContentsOverlay: View {
         VStack(spacing: 0) {
             header
 
-            HandTrayGemGridView(
+            DiscardGroupedGemGridView(
                 gemCounts: gemCounts,
-                canPlace: false,
-                showsDisabledAppearance: false,
-                emptyMessage: "No discarded gems",
                 gemSize: gemSize,
-                cellMinHeight: cellMinHeight
+                cellMinHeight: cellMinHeight,
+                columnCount: max(gridColumnCount, 1),
+                allowsScrolling: allowsScrolling,
+                emptyMessage: "No discarded gems"
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
@@ -61,31 +63,29 @@ struct DiscardPileContentsOverlay: View {
     }
 
     private var header: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 4) {
             Text(headerTitle)
-                .font(.system(size: 12, weight: .heavy, design: .rounded))
+                .font(.system(size: 10, weight: .heavy, design: .rounded))
                 .foregroundStyle(
                     isActiveDestination ? BoardStyle.d12GradientTop : HUDFantasyText.labelColor
                 )
                 .lineLimit(1)
-                .minimumScaleFactor(0.85)
+                .minimumScaleFactor(0.8)
                 .hudReadableShadow()
 
-            Spacer(minLength: 6)
+            Spacer(minLength: 2)
 
             if let onDismiss {
                 Button(action: onDismiss) {
                     Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(BoardStyle.hudValue.opacity(0.9))
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Close discard tray")
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.top, 8)
-        .padding(.bottom, 4)
+        .padding(.horizontal, 8)
         .frame(height: BoardLayoutMetrics.discardTrayHeaderLogicalHeight, alignment: .center)
     }
 }
@@ -95,23 +95,23 @@ struct DiscardPileContentsOverlay: View {
         gemCounts: [],
         discardCount: 0,
         isActiveDestination: false,
-        panelWidth: 360,
-        panelHeight: 76,
+        panelWidth: 148,
+        panelHeight: 42,
         onDismiss: {}
     )
 }
 
-#Preview("Discard tray with gems") {
+#Preview("Discard tray all kinds") {
     DiscardPileContentsOverlay(
-        gemCounts: [
-            GemCountDisplayItem(kind: .red, count: 3),
-            GemCountDisplayItem(kind: .gold, count: 2),
-            GemCountDisplayItem(kind: .pink, count: 1)
-        ],
-        discardCount: 6,
-        isActiveDestination: true,
-        panelWidth: 360,
-        panelHeight: 150,
-        onDismiss: nil
+        gemCounts: GemCountDisplayBuilder.displayOrder.map {
+            GemCountDisplayItem(kind: $0, count: 2)
+        },
+        discardCount: GemCountDisplayBuilder.displayOrder.count * 2,
+        isActiveDestination: false,
+        panelWidth: 280,
+        panelHeight: 80,
+        gridColumnCount: 6,
+        allowsScrolling: false,
+        onDismiss: {}
     )
 }

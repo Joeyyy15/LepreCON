@@ -56,24 +56,43 @@ final class BoardLayoutMetricsTests: XCTestCase {
         XCTAssertEqual(taller.contentVerticalOffset, 93, accuracy: tolerance)
     }
 
-    func testDiscardTrayAnchorsBelowControlWithDockCap() {
+    func testDiscardTrayAnchorsBelowControlWithContentSizedHeight() {
         let metrics = BoardLayoutMetrics(playfieldSize: BoardDesignCanvas.referenceSize)
-        // dockTop − boardTop − 4pt clearance on golden 17 Pro
         let playfieldBottomLimit: CGFloat = 540
+        let maxHeight = metrics.discardTrayMaxHeight(playfieldBottomLimit: playfieldBottomLimit)
 
-        let empty = metrics.discardTrayHeight(gemKindCount: 0, playfieldBottomLimit: playfieldBottomLimit)
-        let few = metrics.discardTrayHeight(gemKindCount: 2, playfieldBottomLimit: playfieldBottomLimit)
-        let many = metrics.discardTrayHeight(gemKindCount: 12, playfieldBottomLimit: playfieldBottomLimit)
+        let emptyWidth = metrics.discardTrayWidth(gemKindCount: 0)
+        let fewWidth = metrics.discardTrayWidth(gemKindCount: 2)
+        let manyWidth = metrics.discardTrayWidth(gemKindCount: 12)
 
-        // With fixed top, height fills to the dock limit regardless of gem count.
-        XCTAssertEqual(empty, few, accuracy: tolerance)
-        XCTAssertEqual(few, many, accuracy: tolerance)
+        let empty = metrics.discardTrayHeight(
+            gemKindCount: 0,
+            panelWidth: emptyWidth,
+            playfieldBottomLimit: playfieldBottomLimit
+        )
+        let few = metrics.discardTrayHeight(
+            gemKindCount: 2,
+            panelWidth: fewWidth,
+            playfieldBottomLimit: playfieldBottomLimit
+        )
+        let many = metrics.discardTrayHeight(
+            gemKindCount: 12,
+            panelWidth: manyWidth,
+            playfieldBottomLimit: playfieldBottomLimit
+        )
 
-        let top = metrics.discardTrayFixedTopInPlayfield
-        XCTAssertEqual(top + few, playfieldBottomLimit, accuracy: tolerance)
+        // Content-sized: empty is compact; many is taller but still ≤ dock max.
+        XCTAssertLessThan(empty, few)
+        XCTAssertLessThanOrEqual(few, many + 0.000_1)
+        XCTAssertLessThanOrEqual(many, maxHeight + 0.000_1)
+        XCTAssertLessThan(empty, maxHeight - 5)
 
-        let cramped = metrics.discardTrayHeight(gemKindCount: 3, playfieldBottomLimit: 0)
-        XCTAssertEqual(cramped, 0, accuracy: tolerance)
+        let cramped = metrics.discardTrayHeight(
+            gemKindCount: 3,
+            panelWidth: fewWidth,
+            playfieldBottomLimit: 0
+        )
+        XCTAssertEqual(cramped, 0, accuracy: 0.000_1)
     }
 
     func testGoldenArtMetricsRemainFrozenFromArtCanvasNotFitBox() {

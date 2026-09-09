@@ -146,69 +146,235 @@ struct BoardLayoutMetrics {
     static let discardTrayGapBelowControl: CGFloat = 4
 
     /// Compact tray header height (logical, before scale).
-    static let discardTrayHeaderLogicalHeight: CGFloat = 32
+    static let discardTrayHeaderLogicalHeight: CGFloat = 16
 
     /// Empty-tray body height below the header (logical, before scale).
-    static let discardTrayEmptyBodyLogicalHeight: CGFloat = 44
+    static let discardTrayEmptyBodyLogicalHeight: CGFloat = 26
 
-    /// Modest gem-cell reduction vs Hand so more kinds fit in the dock-capped tray.
-    static let discardGemCellScale: CGFloat = 0.9
+    /// Discard gem-cell size vs Hand — dense enough to show all kinds at a glance.
+    static let discardGemCellScale: CGFloat = 0.60
 
-    /// Ideal compact discard-tray height from grouped gem kind count (uncapped).
-    ///
-    /// Used for tests and for understanding content needs; runtime height fills
-    /// available space below the fixed tray top down to the dock limit.
+    /// Max columns before wrapping (6 → all 11 kinds fit in 2 rows on phone).
+    static let discardMaxColumns: Int = 6
+
+    /// Soft upper bound on visible rows; dock max height is the hard cap.
+    static let discardMaxVisibleRows: Int = 3
+
+    /// Narrowest non-empty panel (fits header + close).
+    static let discardPanelMinWidth: CGFloat = 132
+
+    /// Compact empty-state panel width.
+    static let discardEmptyPanelWidth: CGFloat = 148
+
+    /// Floor for column stride so dense cells stay readable.
+    static let discardGridColumnMinimumFloor: CGFloat = 44
+
+    static let discardGridSpacing: CGFloat = 2
+    static let discardGridHorizontalPadding: CGFloat = 8
+    static let discardGridVerticalPadding: CGFloat = 0
+
+    /// Stable gem image size (not derived from a full-bleed panel width).
+    static func discardContentGemSize(scale: CGFloat = 1) -> CGFloat {
+        let s = max(scale, 0.01)
+        return GameScreenLayout.handTrayGridGemSize * discardGemCellScale * s
+    }
+
+    /// Discard gem image size for a given tray panel width.
+    static func discardGemSize(panelWidth: CGFloat, scale: CGFloat = 1) -> CGFloat {
+        let s = max(scale, 0.01)
+        let base = discardContentGemSize(scale: s)
+        let narrowCap = max(22 * s, panelWidth * 0.40)
+        return min(base, narrowCap)
+    }
+
+    /// Compact cell height — count badge overlays the gem to save vertical space.
+    static func discardGemCellMinHeight(gemSize: CGFloat) -> CGFloat {
+        gemSize
+    }
+
+    /// Outer column stride used for content-driven width / wrapping.
+    static func discardCellOuterWidth(gemSize: CGFloat, scale: CGFloat = 1) -> CGFloat {
+        let s = max(scale, 0.01)
+        return max(gemSize + 8 * s, discardGridColumnMinimumFloor * s)
+    }
+
+    /// Adaptive column minimum used by the discard grouped grid.
+    static func discardGridColumnMinimum(gemSize: CGFloat) -> CGFloat {
+        discardCellOuterWidth(gemSize: gemSize)
+    }
+
+    /// Columns used for a content-sized panel of `panelWidth`.
+    static func discardColumnCount(
+        gemKindCount: Int,
+        panelWidth: CGFloat,
+        scale: CGFloat = 1
+    ) -> Int {
+        guard gemKindCount > 0 else { return 1 }
+        let s = max(scale, 0.01)
+        let gemSize = discardGemSize(panelWidth: panelWidth, scale: s)
+        let cellW = discardCellOuterWidth(gemSize: gemSize, scale: s)
+        let spacing = discardGridSpacing * s
+        let hPad = discardGridHorizontalPadding * s
+        let fitted = max(1, Int(floor((panelWidth - hPad + spacing) / (cellW + spacing))))
+        return min(gemKindCount, discardMaxColumns, fitted)
+    }
+
+    /// Content-driven panel width from grouped kind count (clamped to `maxWidth`).
+    static func discardPanelWidth(
+        gemKindCount: Int,
+        maxWidth: CGFloat,
+        scale: CGFloat = 1
+    ) -> CGFloat {
+        let s = max(scale, 0.01)
+        if gemKindCount <= 0 {
+            return min(maxWidth, discardEmptyPanelWidth * s)
+        }
+
+        let gemSize = discardContentGemSize(scale: s)
+        let cellW = discardCellOuterWidth(gemSize: gemSize, scale: s)
+        let spacing = discardGridSpacing * s
+        let hPad = discardGridHorizontalPadding * s
+        let columns = min(gemKindCount, discardMaxColumns)
+        let content = CGFloat(columns) * cellW
+            + CGFloat(max(0, columns - 1)) * spacing
+            + hPad
+        return min(maxWidth, max(discardPanelMinWidth * s, content))
+    }
+
+    /// Uncapped height for `visibleRowCount` rows inside `panelWidth`.
+    static func discardHeightForVisibleRows(
+        visibleRowCount: Int,
+        panelWidth: CGFloat,
+        scale: CGFloat = 1
+    ) -> CGFloat {
+        let s = max(scale, 0.01)
+        let header = discardTrayHeaderLogicalHeight * s
+        let rows = max(visibleRowCount, 0)
+        if rows == 0 {
+            return header + discardTrayEmptyBodyLogicalHeight * s
+        }
+
+        let gemSize = discardGemSize(panelWidth: panelWidth, scale: s)
+        let cellHeight = discardGemCellMinHeight(gemSize: gemSize)
+        let rowSpacing = discardGridSpacing * s
+        let gridPadding = discardGridVerticalPadding * s
+        let rowsHeight = CGFloat(rows) * cellHeight
+            + CGFloat(max(0, rows - 1)) * rowSpacing
+        return header + gridPadding + rowsHeight
+    }
+
+    /// Ideal content height for all rows (may exceed the on-screen max → scroll).
     static func idealDiscardTrayHeight(
         gemKindCount: Int,
         panelWidth: CGFloat,
         scale: CGFloat,
         gemCellScale: CGFloat = discardGemCellScale
     ) -> CGFloat {
-        let s = max(scale, 0.01)
-        let g = max(gemCellScale, 0.01)
-        let header = discardTrayHeaderLogicalHeight * s
+        _ = gemCellScale
         if gemKindCount <= 0 {
-            return header + discardTrayEmptyBodyLogicalHeight * s
+            return discardHeightForVisibleRows(visibleRowCount: 0, panelWidth: panelWidth, scale: scale)
+        }
+        let columns = discardColumnCount(
+            gemKindCount: gemKindCount,
+            panelWidth: panelWidth,
+            scale: scale
+        )
+        let rowsNeeded = Int(ceil(Double(gemKindCount) / Double(max(columns, 1))))
+        return discardHeightForVisibleRows(
+            visibleRowCount: rowsNeeded,
+            panelWidth: panelWidth,
+            scale: scale
+        )
+    }
+
+    /// Whether the full grouped grid fits in `maxHeight` without vertical scrolling.
+    static func discardGridFitsWithoutScrolling(
+        gemKindCount: Int,
+        panelWidth: CGFloat,
+        maxHeight: CGFloat,
+        scale: CGFloat = 1
+    ) -> Bool {
+        guard gemKindCount > 0, maxHeight > 0 else { return true }
+        let ideal = idealDiscardTrayHeight(
+            gemKindCount: gemKindCount,
+            panelWidth: panelWidth,
+            scale: scale
+        )
+        return ideal <= maxHeight + 0.5
+    }
+
+    /// Content-sized panel height, capped by `maxHeight` (dock clearance).
+    ///
+    /// Uses the full row count when it fits; otherwise caps at the dock max (scroll).
+    static func discardPanelHeight(
+        gemKindCount: Int,
+        panelWidth: CGFloat,
+        maxHeight: CGFloat,
+        scale: CGFloat = 1
+    ) -> CGFloat {
+        if maxHeight <= 0 { return 0 }
+
+        if gemKindCount <= 0 {
+            let empty = discardHeightForVisibleRows(
+                visibleRowCount: 0,
+                panelWidth: panelWidth,
+                scale: scale
+            )
+            return min(maxHeight, empty)
         }
 
-        let gemSize = max(
-            36 * s * g,
-            min(GameScreenLayout.handTrayGridGemSize * s * g, panelWidth * 0.12 * g)
+        let columns = discardColumnCount(
+            gemKindCount: gemKindCount,
+            panelWidth: panelWidth,
+            scale: scale
         )
-        let minColumnWidth = gemSize + 28 * s * g
-        let horizontalPadding = 24 * s
-        let columns = max(1, Int(floor((panelWidth - horizontalPadding) / minColumnWidth)))
-        let rowsNeeded = Int(ceil(Double(gemKindCount) / Double(columns)))
-        let visibleRows = min(max(rowsNeeded, 1), 2)
-
-        let cellHeight = (GameScreenLayout.handTrayGridCellMinHeight * g + 16 * g) * s
-        let rowSpacing = 10 * s
-        let gridPadding = 16 * s
-        let rowsHeight = CGFloat(visibleRows) * cellHeight
-            + CGFloat(max(0, visibleRows - 1)) * rowSpacing
-
-        return header + gridPadding + rowsHeight
+        let rowsNeeded = Int(ceil(Double(gemKindCount) / Double(max(columns, 1))))
+        let visibleRows = min(max(rowsNeeded, 1), discardMaxVisibleRows)
+        let content = discardHeightForVisibleRows(
+            visibleRowCount: visibleRows,
+            panelWidth: panelWidth,
+            scale: scale
+        )
+        return min(maxHeight, content)
     }
 
     /// Fixed tray top in playfield coordinates (discard button bottom + gap).
-    /// This must stay stable when height changes — only the bottom edge moves.
+    /// Stable when height changes — only the bottom edge moves.
     var discardTrayFixedTopInPlayfield: CGFloat {
         discardControlBottomInCanvas
             + contentVerticalOffset
             + Self.discardTrayGapBelowControl
     }
 
-    /// Downward tray height with **fixed top**, bottom at `playfieldBottomLimit`.
-    ///
-    /// `playfieldBottomLimit` is playfield Y of (dock top − clearance).
-    /// Height grows only by moving the bottom edge down; never negative.
+    /// Maximum tray height that still clears the dock (`nil` → uncapped for previews).
+    func discardTrayMaxHeight(playfieldBottomLimit: CGFloat?) -> CGFloat {
+        guard let limit = playfieldBottomLimit else {
+            return 10_000
+        }
+        return max(0, limit - discardTrayFixedTopInPlayfield)
+    }
+
+    /// Content-driven tray height, never automatically filling to the dock.
     func discardTrayHeight(
         gemKindCount: Int,
-        playfieldBottomLimit: CGFloat
+        panelWidth: CGFloat,
+        playfieldBottomLimit: CGFloat?
     ) -> CGFloat {
-        // gemKindCount reserved for future content-min policies; height fills to dock.
-        _ = gemKindCount
-        return max(0, playfieldBottomLimit - discardTrayFixedTopInPlayfield)
+        Self.discardPanelHeight(
+            gemKindCount: gemKindCount,
+            panelWidth: panelWidth,
+            maxHeight: discardTrayMaxHeight(playfieldBottomLimit: playfieldBottomLimit),
+            scale: canvasFit.scale
+        )
+    }
+
+    /// Content-driven tray width, clamped to the board overlay max.
+    func discardTrayWidth(gemKindCount: Int) -> CGFloat {
+        Self.discardPanelWidth(
+            gemKindCount: gemKindCount,
+            maxWidth: discardOverlayWidth,
+            scale: canvasFit.scale
+        )
     }
 
     /// Bottom padding that keeps tray top fixed while `height` extends the bottom edge.

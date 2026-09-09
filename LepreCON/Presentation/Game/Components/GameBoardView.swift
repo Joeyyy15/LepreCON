@@ -50,8 +50,28 @@ struct GameBoardView: View {
 
     @ViewBuilder
     private func boardCanvasContent(metrics: BoardLayoutMetrics) -> some View {
-        let trayHeight = discardTrayPanelHeight(metrics: metrics)
+        let kindCount = discardGemCounts.count
+        let trayWidth = metrics.discardTrayWidth(gemKindCount: kindCount)
+        let trayHeight = metrics.discardTrayHeight(
+            gemKindCount: kindCount,
+            panelWidth: trayWidth,
+            playfieldBottomLimit: discardTrayPlayfieldBottomLimit
+        )
         let trayBottomPadding = metrics.discardTrayBottomPadding(forHeight: trayHeight)
+        let gridColumns = BoardLayoutMetrics.discardColumnCount(
+            gemKindCount: kindCount,
+            panelWidth: trayWidth,
+            scale: metrics.canvasFit.scale
+        )
+        let maxTrayHeight = metrics.discardTrayMaxHeight(
+            playfieldBottomLimit: discardTrayPlayfieldBottomLimit
+        )
+        let allowsScrolling = !BoardLayoutMetrics.discardGridFitsWithoutScrolling(
+            gemKindCount: kindCount,
+            panelWidth: trayWidth,
+            maxHeight: maxTrayHeight,
+            scale: metrics.canvasFit.scale
+        )
 
         ZStack(alignment: .bottom) {
             BoardLaneBackgroundsRowView(
@@ -88,14 +108,16 @@ struct GameBoardView: View {
             )
             .zIndex(2)
 
-            // Compact tray: opens downward below the stationary discard control.
+            // Content-sized tray: opens downward below the stationary discard control.
             if isDiscardContentsPresented {
                 DiscardPileContentsOverlay(
                     gemCounts: discardGemCounts,
                     discardCount: discardCount,
                     isActiveDestination: isDiscardActiveDestination,
-                    panelWidth: metrics.discardOverlayWidth,
+                    panelWidth: trayWidth,
                     panelHeight: trayHeight,
+                    gridColumnCount: max(gridColumns, 1),
+                    allowsScrolling: allowsScrolling,
                     onDismiss: isDiscardActiveDestination ? nil : onDismissDiscardContents
                 )
                 .padding(.bottom, trayBottomPadding)
@@ -111,21 +133,6 @@ struct GameBoardView: View {
         // One shared composition shift — scales with canvasFit; does not retune pieces.
         .offset(y: metrics.contentVerticalOffset)
         .animation(.easeInOut(duration: 0.2), value: isDiscardContentsPresented)
-    }
-
-    private func discardTrayPanelHeight(metrics: BoardLayoutMetrics) -> CGFloat {
-        guard let limit = discardTrayPlayfieldBottomLimit else {
-            // Previews / callers without dock geometry: content-sized, no dock cap.
-            return BoardLayoutMetrics.idealDiscardTrayHeight(
-                gemKindCount: discardGemCounts.count,
-                panelWidth: metrics.discardOverlayWidth,
-                scale: metrics.canvasFit.scale
-            )
-        }
-        return metrics.discardTrayHeight(
-            gemKindCount: discardGemCounts.count,
-            playfieldBottomLimit: limit
-        )
     }
 }
 
