@@ -38,6 +38,21 @@ final class ScoreConfirmationEngineTests: XCTestCase {
         return session
     }
 
+    private func sessionWithGems(_ gems: [Gem], cupIndex: Int) -> GameSession {
+        var cups = makeBoardCups()
+        cups[cupIndex].gems = gems
+        var session = GameSession(phase: .playing, cups: cups)
+        PendingScoreDetector.refreshPendingScoreChoices(in: &session)
+        return session
+    }
+
+    private func allGemIDs(in session: GameSession) -> [UUID] {
+        session.cups.flatMap(\.gems).map(\.id)
+            + session.gemsInHand.map(\.id)
+            + session.gemsInBag.map(\.id)
+            + session.discardPile.map(\.id)
+    }
+
     private func assertFailure(
         _ result: Result<Void, ScoreConfirmationError>,
         equals expected: ScoreConfirmationError,
@@ -123,18 +138,141 @@ final class ScoreConfirmationEngineTests: XCTestCase {
         XCTAssertEqual(completion?.adjustedGoodCount, 5)
     }
 
-    func testGoldInScoredCupMovesToPotOfGold() {
-        var session = sessionWithPendingScore(
-            cupIndex: 2,
-            gemKinds: Array(repeating: .red, count: 5) + [.gold, .gold]
+    func testScoringCupWithOneGoldTransfersThatGoldToPotOfGold() {
+        let gold = Gem(kind: .gold)
+        var session = sessionWithGems(
+            gems(Array(repeating: .red, count: 5)) + [gold],
+            cupIndex: 2
         )
         let potIndex = GameSetup.potOfGoldCupIndex
-        let potGoldBefore = session.cups[potIndex].gems.filter { $0.kind == .gold }.count
 
         _ = ScoreConfirmationEngine.confirmScore(session: &session, cupIndex: 2, scoringColor: .red)
 
-        XCTAssertEqual(session.cups[potIndex].gems.filter { $0.kind == .gold }.count, potGoldBefore + 2)
-        XCTAssertFalse(session.cups[2].gems.contains(where: { $0.kind == .gold }))
+        XCTAssertEqual(session.cups[potIndex].gems.map(\.id), [gold.id])
+        XCTAssertEqual(session.cups[potIndex].gems.map(\.kind), [.gold])
+        XCTAssertTrue(session.cups[2].gems.isEmpty)
+    }
+
+    func testScoringCupWithMultipleGoldTransfersAllGoldToPotOfGold() {
+        let golds = [Gem(kind: .gold), Gem(kind: .gold), Gem(kind: .gold)]
+        var session = sessionWithGems(
+            gems(Array(repeating: .red, count: 5)) + golds,
+            cupIndex: 2
+        )
+        let potIndex = GameSetup.potOfGoldCupIndex
+
+        _ = ScoreConfirmationEngine.confirmScore(session: &session, cupIndex: 2, scoringColor: .red)
+
+        XCTAssertEqual(session.cups[potIndex].gems.map(\.id), golds.map(\.id))
+        XCTAssertEqual(session.cups[potIndex].gems.map(\.kind), Array(repeating: .gold, count: 3))
+        XCTAssertTrue(session.cups[2].gems.isEmpty)
+    }
+
+    func testScoringCupWithNoGoldLeavesPotUnchanged() {
+        let existingPotGold = Gem(kind: .gold)
+        var session = sessionWithPendingScore(cupIndex: 2, gemKinds: Array(repeating: .red, count: 5))
+        let potIndex = GameSetup.potOfGoldCupIndex
+        session.cups[potIndex].gems = [existingPotGold]
+        let potIDsBefore = session.cups[potIndex].gems.map(\.id)
+
+        _ = ScoreConfirmationEngine.confirmScore(session: &session, cupIndex: 2, scoringColor: .red)
+
+        XCTAssertEqual(session.cups[potIndex].gems.map(\.id), potIDsBefore)
+        XCTAssertTrue(session.cups[2].isCompleted)
+        XCTAssertTrue(session.cups[2].gems.isEmpty)
+    }
+
+    func testExistingPotGoldRemainsAndTransferredGoldIsAppended() {
+        let existingPotGold = Gem(kind: .gold)
+        let transferredGold = Gem(kind: .gold)
+        var session = sessionWithGems(
+            gems(Array(repeating: .red, count: 5)) + [transferredGold],
+            cupIndex: 2
+        )
+        let potIndex = GameSetup.potOfGoldCupIndex
+        session.cups[potIndex].gems = [existingPotGold]
+
+        _ = ScoreConfirmationEngine.confirmScore(session: &session, cupIndex: 2, scoringColor: .red)
+
+        XCTAssertEqual(session.cups[potIndex].gems.map(\.id), [existingPotGold.id, transferredGold.id])
+    }
+
+    func testNonGoldGemsAreNotTransferredToPot() {
+        let gold = Gem(kind: .gold)
+        let white = Gem(kind: .white)
+        var session = sessionWithGems(
+            gems(Array(repeating: .red, count: 5)) + [gold, white],
+            cupIndex: 2
+        )
+        let potIndex = GameSetup.potOfGoldCupIndex
+
+        _ = ScoreConfirmationEngine.confirmScore(session: &session, cupIndex: 2, scoringColor: .red)
+
+        XCTAssertEqual(session.cups[potIndex].gems.map(\.id), [gold.id])
+        XCTAssertFalse(session.cups[potIndex].gems.contains(where: { $0.kind != .gold }))
+        XCTAssertFalse(session.cups[potIndex].gems.contains(where: { $0.id == white.id }))
+    }
+
+    func testGoldStaysInCupWhenScoreIsOnlyPending() {
+        let gold = Gem(kind: .gold)
+        let cupGems = gems(Array(repeating: .red, count: 5)) + [gold]
+        let session = sessionWithGems(cupGems, cupIndex: 2)
+        let potIndex = GameSetup.potOfGoldCupIndex
+
+        XCTAssertNotNil(session.pendingScoreChoices.first { $0.cupIndex == 2 })
+        XCTAssertEqual(session.cups[2].gems.map(\.id), cupGems.map(\.id))
+        XCTAssertTrue(session.cups[potIndex].gems.isEmpty)
+        XCTAssertNil(session.cups[2].completion)
+    }
+
+    func testGoldTransferDoesNotDuplicateOrLoseGoldGems() {
+        let golds = [Gem(kind: .gold), Gem(kind: .gold)]
+        var session = sessionWithGems(
+            gems(Array(repeating: .red, count: 5)) + golds,
+            cupIndex: 2
+        )
+        let potIndex = GameSetup.potOfGoldCupIndex
+        let goldIDs = golds.map(\.id)
+        let uniqueIDsBefore = Set(allGemIDs(in: session))
+
+        _ = ScoreConfirmationEngine.confirmScore(session: &session, cupIndex: 2, scoringColor: .red)
+
+        let potGoldIDs = session.cups[potIndex].gems.map(\.id)
+        XCTAssertEqual(potGoldIDs, goldIDs)
+        XCTAssertEqual(Set(potGoldIDs).count, goldIDs.count)
+        XCTAssertTrue(Set(goldIDs).isSubset(of: Set(allGemIDs(in: session))))
+        XCTAssertTrue(session.cups[2].gems.isEmpty)
+        XCTAssertEqual(
+            allGemIDs(in: session).filter { goldIDs.contains($0) }.count,
+            goldIDs.count
+        )
+        XCTAssertTrue(Set(goldIDs).isSubset(of: uniqueIDsBefore))
+    }
+
+    func testMixedScoringCupKeepsScoreResultAndTransfersGoldSeparately() {
+        let golds = [Gem(kind: .gold), Gem(kind: .gold)]
+        let cupGems = gems([
+            .red, .red, .red, .red, .red, .red, .red,
+            .clear,
+            .white,
+            .green, .green,
+            .purple
+        ]) + golds
+        var session = sessionWithGems(cupGems, cupIndex: 2)
+        let expected = ScoreEvaluator.evaluate(cup: session.cups[2]).candidates.first { $0.scoringColor == .red }
+        XCTAssertNotNil(expected)
+        let potIndex = GameSetup.potOfGoldCupIndex
+
+        _ = ScoreConfirmationEngine.confirmScore(session: &session, cupIndex: 2, scoringColor: .red)
+
+        let completion = session.cups[2].completion
+        XCTAssertEqual(completion?.scoredColor, expected?.scoringColor)
+        XCTAssertEqual(completion?.goodCount, expected?.goodCount)
+        XCTAssertEqual(completion?.passCount, expected?.passCount)
+        XCTAssertEqual(completion?.blemishCount, expected?.blemishCount)
+        XCTAssertEqual(completion?.adjustedGoodCount, expected?.adjustedGoodCount)
+        XCTAssertEqual(session.cups[potIndex].gems.map(\.id), golds.map(\.id))
+        XCTAssertTrue(session.cups[2].gems.isEmpty)
     }
 
     func testNonGoldGemsAreClearedFromCompletedCup() {

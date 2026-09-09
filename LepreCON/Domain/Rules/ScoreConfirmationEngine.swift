@@ -79,11 +79,21 @@ enum ScoreConfirmationEngine {
         candidate: CupScoreCandidate
     ) {
         captureUnicornIfOnCup(session: &session, cupIndex: cupIndex)
-
-        let goldGems = session.cups[cupIndex].gems.filter { $0.kind == .gold }
-        session.cups[potIndex].gems.append(contentsOf: goldGems)
+        transferGoldGemsToPotOfGold(fromCupIndex: cupIndex, potIndex: potIndex, session: &session)
         session.cups[cupIndex].gems.removeAll()
         session.cups[cupIndex].completion = CupCompletion(from: candidate)
+    }
+
+    /// Moves every gold gem from the scored cup into the Pot of Gold.
+    /// Preserves gem identity; does not copy or discard gold.
+    private static func transferGoldGemsToPotOfGold(
+        fromCupIndex cupIndex: Int,
+        potIndex: Int,
+        session: inout GameSession
+    ) {
+        let goldGems = session.cups[cupIndex].gems.filter { $0.kind == .gold }
+        session.cups[cupIndex].gems.removeAll { $0.kind == .gold }
+        session.cups[potIndex].gems.append(contentsOf: goldGems)
     }
 
     /// Scoring a cup that holds the unicorn captures it (+3 at end if rainbow is complete).
