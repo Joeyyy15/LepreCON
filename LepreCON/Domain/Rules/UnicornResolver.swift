@@ -98,11 +98,9 @@ enum UnicornResolver {
 
     // MARK: - Explosion
 
-    /// Takes all gems from the unicorn cup and spreads them one-by-one clockwise.
-    /// Circuit progress is measured from the Unicorn's current board position to
-    /// the same rotation boundary humans use (wrap back to the first available
-    /// cup). After that remaining stretch, the next gem is discarded automatically.
-    /// Player placement rotation state is not used or mutated.
+    /// Takes all gems from the unicorn cup and spreads them one-by-one along the
+    /// fixed board sequence: cups 0...10, discard, then back to cup 0.
+    /// Completed cups are skipped; discard is never skipped.
     private static func explodeGems(
         fromCupIndex unicornIndex: Int,
         in session: inout GameSession
@@ -111,63 +109,73 @@ enum UnicornResolver {
         session.cups[unicornIndex].gems.removeAll()
         record(.unicornExplosionStarted(fromCupIndex: unicornIndex), in: &session)
 
-        let cupCount = session.cups.count
-        let availableCount = GameTurnEngine.availablePlacementCupCount(in: session)
-        var spreadFrom = (unicornIndex + 1) % cupCount
-        var remainingUntilDiscard = GameTurnEngine.remainingPlacementsUntilRotationBoundary(
-            startingFrom: spreadFrom,
-            in: session
-        )
+        var destination = nextSpreadDestination(after: .cup(index: unicornIndex), in: session)
         var finalCupIndex: Int?
 
         for gem in gemsToSpread {
-            if availableCount > 0, remainingUntilDiscard == 0 {
+            switch destination {
+            case .discard:
                 session.discardPile.append(gem)
                 record(.unicornExplosionDiscarded(gemKind: gem.kind), in: &session)
-                remainingUntilDiscard = availableCount
-                continue
-            }
-
-            guard let targetIndex = GameTurnEngine.nextAvailablePlacementCupIndex(
-                in: session,
-                startingFrom: spreadFrom
-            ) else {
-                // Every cup is completed — gem has nowhere to land; return it to the unicorn cup.
-                session.cups[unicornIndex].gems.append(gem)
+            case .cup(let targetIndex):
+                session.cups[targetIndex].gems.append(gem)
                 record(
                     .unicornExplosionStep(
                         gemKind: gem.kind,
                         fromCupIndex: unicornIndex,
-                        toCupIndex: unicornIndex
+                        toCupIndex: targetIndex
                     ),
                     in: &session
                 )
-                continue
+                finalCupIndex = targetIndex
             }
-
-            session.cups[targetIndex].gems.append(gem)
-            record(
-                .unicornExplosionStep(
-                    gemKind: gem.kind,
-                    fromCupIndex: unicornIndex,
-                    toCupIndex: targetIndex
-                ),
-                in: &session
-            )
-            finalCupIndex = targetIndex
-            spreadFrom = (targetIndex + 1) % cupCount
-            if remainingUntilDiscard > 0 {
-                remainingUntilDiscard -= 1
-            }
+            destination = nextSpreadDestination(after: destination, in: session)
         }
 
-        // Unicorn follows the last gem that landed on a cup; discarded gems are not landings.
         if let finalCupIndex {
             syncUnicorn(to: finalCupIndex, in: &session)
             record(.unicornMoved(toCupIndex: finalCupIndex), in: &session)
         }
 
         return .exploded(fromCupIndex: unicornIndex, finalCupIndex: finalCupIndex)
+    }
+
+    /// Next destination in the 12-step sequence after `current`.
+    /// Cups 0...10 then discard, then cup 0. Completed cups are skipped.
+    private static func nextSpreadDestination(
+        after current: PlacementDestination,
+        in session: GameSession
+    ) -> PlacementDestination {
+        let potIndex = GameSetup.potOfGoldCupIndex
+        switch current {
+        case .discard:
+            return firstAvailableCup(
+                from: GameSetup.firstPlacementCupIndex,
+                through: potIndex,
+                in: session
+            ) ?? .discard
+        case .cup(let index):
+            guard index < potIndex else {
+                return .discard
+            }
+            return firstAvailableCup(from: index + 1, through: potIndex, in: session) ?? .discard
+        }
+    }
+
+    /// First non-completed cup in `from...through`. Does not wrap and does not skip discard.
+    private static func firstAvailableCup(
+        from start: Int,
+        through limit: Int,
+        in session: GameSession
+    ) -> PlacementDestination? {
+        guard start <= limit else { return nil }
+        for index in start...limit {
+            guard session.cups.indices.contains(index), !session.cups[index].isCompleted else {
+                continue
+            }
+            return .cup(index: index)
+        }
+        return nil
     }
 
     private static func record(_ event: TurnResolutionEvent, in session: inout GameSession) {
