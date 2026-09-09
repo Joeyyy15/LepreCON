@@ -39,6 +39,8 @@ enum TurnResolutionEventDisplayBuilder {
                 logLines.append(
                     "\(gemKind.displayName) gem moved to \(cupLabel(forCupIndex: toCupIndex, cups: cups))"
                 )
+            case .unicornExplosionDiscarded(let gemKind):
+                logLines.append("\(gemKind.displayName) gem discarded by Unicorn")
             case .unicornMoved(let toCupIndex):
                 logLines.append("Unicorn moved to \(cupLabel(forCupIndex: toCupIndex, cups: cups))")
             case .poopDiscardedCup(let cupIndex, let gems):

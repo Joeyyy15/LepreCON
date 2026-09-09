@@ -53,6 +53,10 @@ final class TurnResolutionEventTests: XCTestCase {
             if case .unicornMoved(toCupIndex: 5) = $0 { return true }
             return false
         })
+        XCTAssertFalse(session.recentResolutionEvents.contains {
+            if case .unicornExplosionDiscarded = $0 { return true }
+            return false
+        })
     }
 
     func testUnicornCalmRecordsCalmEvent() {

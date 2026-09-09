@@ -35,6 +35,17 @@ final class UnicornResolutionAnimationBuilderTests: XCTestCase {
         )
     }
 
+    func testAutomaticUnicornDiscardDoesNotCreateACupCarryStep() {
+        let events: [TurnResolutionEvent] = [
+            .unicornExplosionStarted(fromCupIndex: 0),
+            .unicornExplosionStep(gemKind: .red, fromCupIndex: 0, toCupIndex: 1),
+            .unicornExplosionDiscarded(gemKind: .gold),
+            .unicornMoved(toCupIndex: 1)
+        ]
+        let script = UnicornResolutionAnimationBuilder.script(from: events)
+        XCTAssertEqual(script?.steps, [.carryGemToCup(gemKind: .red, toCupIndex: 1)])
+    }
+
     func testReturnsNilWhenNoUnicornEvents() {
         XCTAssertNil(
             UnicornResolutionAnimationBuilder.script(

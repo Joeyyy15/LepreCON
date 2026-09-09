@@ -25,6 +25,8 @@ enum UnicornResolutionAnimationBuilder {
                 }
             case .unicornExplosionStep(let gemKind, _, let toCupIndex):
                 steps.append(.carryGemToCup(gemKind: gemKind, toCupIndex: toCupIndex))
+            case .unicornExplosionDiscarded:
+                break
             case .unicornMoved:
                 break
             case .poopDiscardedCup, .poopResolved:

@@ -99,6 +99,9 @@ enum UnicornResolver {
     // MARK: - Explosion
 
     /// Takes all gems from the unicorn cup and spreads them one-by-one clockwise.
+    /// After each full circuit of currently available cups, the next spread gem
+    /// is discarded automatically. That discard does not move the unicorn or the
+    /// player's placement rotation counter.
     private static func explodeGems(
         fromCupIndex unicornIndex: Int,
         in session: inout GameSession
@@ -108,10 +111,19 @@ enum UnicornResolver {
         record(.unicornExplosionStarted(fromCupIndex: unicornIndex), in: &session)
 
         let cupCount = session.cups.count
+        let circuitLength = GameTurnEngine.availablePlacementCupCount(in: session)
         var spreadFrom = (unicornIndex + 1) % cupCount
         var finalCupIndex: Int?
+        var gemsPlacedThisCircuit = 0
 
         for gem in gemsToSpread {
+            if circuitLength > 0, gemsPlacedThisCircuit == circuitLength {
+                session.discardPile.append(gem)
+                record(.unicornExplosionDiscarded(gemKind: gem.kind), in: &session)
+                gemsPlacedThisCircuit = 0
+                continue
+            }
+
             guard let targetIndex = GameTurnEngine.nextAvailablePlacementCupIndex(
                 in: session,
                 startingFrom: spreadFrom
@@ -140,9 +152,10 @@ enum UnicornResolver {
             )
             finalCupIndex = targetIndex
             spreadFrom = (targetIndex + 1) % cupCount
+            gemsPlacedThisCircuit += 1
         }
 
-        // Unicorn follows the last gem that landed; if none landed, stay on the empty cup.
+        // Unicorn follows the last gem that landed on a cup; discarded gems are not landings.
         if let finalCupIndex {
             syncUnicorn(to: finalCupIndex, in: &session)
             record(.unicornMoved(toCupIndex: finalCupIndex), in: &session)
