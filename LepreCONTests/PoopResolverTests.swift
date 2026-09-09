@@ -21,6 +21,9 @@ final class PoopResolverTests: XCTestCase {
         for index in session.cups.indices {
             session.cups[index].gems = []
         }
+        // Pin unicorn away from cups used in poop/score ordering tests.
+        session.unicornCupIndex = 9
+        session.unicornCupID = session.cups[9].id
         return session
     }
 

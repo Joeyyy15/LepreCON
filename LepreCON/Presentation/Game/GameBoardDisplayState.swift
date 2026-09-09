@@ -126,6 +126,9 @@ struct GameBoardDisplayState: Equatable {
     static func from(session: GameSession) -> GameBoardDisplayState {
         let cups = session.cups
         let highlightIndex: Int? = {
+            if let pending = session.pendingWhiteGemDecision {
+                return pending.cupIndex
+            }
             guard GameTurnEngine.canPlaceFromHand(in: session) else { return nil }
             if case .cup(let index) = GameTurnEngine.currentPlacementDestination(in: session) {
                 return index

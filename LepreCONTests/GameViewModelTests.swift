@@ -977,6 +977,95 @@ final class GameViewModelTests: XCTestCase {
             XCTAssertFalse(viewModel.isDiscardRequired)
         }
     }
+
+    func testPlacingFinalWhiteGemOnUnicornCupExposesPendingDecision() async {
+        await MainActor.run {
+            var session = GameSessionFactory().makeNewGame(playerNames: ["Player 1"])
+            session.phase = .playing
+            for index in session.cups.indices {
+                session.cups[index].gems = []
+            }
+            let white = Gem(kind: .white)
+            session.gemsInHand = [white]
+            session.currentRoll = 1
+            session.nextPlacementCupIndex = 0
+            session.isTurnPlacementComplete = false
+            session.unicornCupIndex = 0
+            session.unicornCupID = session.cups[0].id
+
+            let viewModel = GameViewModel(session: session)
+            _ = viewModel.placeGemInCurrentCup(gemID: white.id)
+
+            XCTAssertTrue(viewModel.hasPendingWhiteGemDecision)
+            XCTAssertEqual(viewModel.pendingWhiteGemDecision?.cupIndex, 0)
+            XCTAssertFalse(viewModel.canPlaceFromHand)
+            XCTAssertFalse(viewModel.canRollD12)
+            XCTAssertEqual(viewModel.session.unicornCupIndex, 0)
+            XCTAssertTrue(viewModel.session.recentResolutionEvents.isEmpty)
+        }
+    }
+
+    func testUndoRestoresPendingWhiteGemDecision() async {
+        await MainActor.run {
+            var session = GameSessionFactory().makeNewGame(playerNames: ["Player 1"])
+            session.phase = .playing
+            for index in session.cups.indices {
+                session.cups[index].gems = []
+            }
+            let white = Gem(kind: .white)
+            session.gemsInHand = [white]
+            session.currentRoll = 1
+            session.nextPlacementCupIndex = 0
+            session.unicornCupIndex = 0
+            session.unicornCupID = session.cups[0].id
+
+            let viewModel = GameViewModel(session: session)
+            _ = viewModel.placeGemInCurrentCup(gemID: white.id)
+            XCTAssertTrue(viewModel.hasPendingWhiteGemDecision)
+
+            viewModel.undoLastPlacement()
+
+            XCTAssertFalse(viewModel.hasPendingWhiteGemDecision)
+            XCTAssertEqual(viewModel.session.gemsInHand.map(\.id), [white.id])
+            XCTAssertTrue(viewModel.session.cups[0].gems.isEmpty)
+            XCTAssertFalse(viewModel.session.isTurnPlacementComplete)
+        }
+    }
+
+    func testUndoAfterResolvingWhiteGemDecisionRestoresPendingState() async {
+        await MainActor.run {
+            var session = GameSessionFactory().makeNewGame(playerNames: ["Player 1"])
+            session.phase = .playing
+            for index in session.cups.indices {
+                session.cups[index].gems = []
+            }
+            let white = Gem(kind: .white)
+            session.gemsInHand = [white]
+            session.currentRoll = 1
+            session.nextPlacementCupIndex = 0
+            session.unicornCupIndex = 0
+            session.unicornCupID = session.cups[0].id
+
+            let viewModel = GameViewModel(session: session)
+            _ = viewModel.placeGemInCurrentCup(gemID: white.id)
+            XCTAssertTrue(viewModel.hasPendingWhiteGemDecision)
+
+            let resolved = viewModel.resolveWhiteGemDecision(
+                triggerUnicorn: false,
+                scoopAndContinue: true
+            )
+            XCTAssertTrue(resolved.isSuccess)
+            XCTAssertFalse(viewModel.hasPendingWhiteGemDecision)
+            XCTAssertEqual(viewModel.session.gemsInHand.map(\.id), [white.id])
+
+            viewModel.undoLastPlacement()
+
+            XCTAssertTrue(viewModel.hasPendingWhiteGemDecision)
+            XCTAssertEqual(viewModel.pendingWhiteGemDecision?.cupIndex, 0)
+            XCTAssertEqual(viewModel.session.cups[0].gems.map(\.id), [white.id])
+            XCTAssertTrue(viewModel.session.gemsInHand.isEmpty)
+        }
+    }
 }
 
 private extension Result where Success == Void {

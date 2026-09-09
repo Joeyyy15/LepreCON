@@ -5,7 +5,8 @@
 // Runs end-of-turn resolution in rulebook order after placement ends:
 // Unicorn → Poop → Score detection.
 //
-// Unicorn and poop resolution are wired.
+// A white gem in the unicorn cup pauses here for a pending player decision
+// instead of auto-calming.
 //
 
 import Foundation
@@ -14,9 +15,23 @@ import Foundation
 enum EndOfTurnResolver {
 
     /// Runs every resolution step in rulebook order. Call when placement ends.
+    /// If the unicorn cup contains a white gem, records a pending decision and returns
+    /// without poop or score detection.
     static func resolveAfterPlacementEnds(session: inout GameSession) {
         session.recentResolutionEvents.removeAll()
+
+        if UnicornResolver.requiresPlayerDecision(in: session),
+           let unicornIndex = session.unicornCupIndex {
+            session.pendingWhiteGemDecision = PendingWhiteGemDecision(cupIndex: unicornIndex)
+            return
+        }
+
         resolveUnicorn(in: &session)
+        resolveRemainingAfterUnicorn(session: &session)
+    }
+
+    /// Poop then score detection. Used after the player resolves a white-gem unicorn choice.
+    static func resolveRemainingAfterUnicorn(session: inout GameSession) {
         resolvePoop(in: &session)
         refreshPendingScores(in: &session)
     }

@@ -27,6 +27,8 @@ enum GameTurnError: Error, Equatable {
     case cannotDiscardBlackGem
     /// Placement finished but the player must confirm or skip pending score choices first.
     case pendingScoreChoicesUnresolved
+    /// A white-gem / unicorn decision must be resolved before placement or a new turn.
+    case pendingWhiteGemDecisionUnresolved
 }
 
 /// Turn placement and drawing logic for LepreCON.
@@ -40,6 +42,7 @@ enum GameTurnEngine {
             && !GameCompletionDetector.isGameOver(session: session)
             && !isTurnInProgress(in: session)
             && session.pendingScoreChoices.isEmpty
+            && session.pendingWhiteGemDecision == nil
     }
 
     /// Starts a turn: records the D12 roll, draws gems from the bag into hand, and sets
@@ -50,6 +53,7 @@ enum GameTurnEngine {
         guard (1...12).contains(roll) else { return .failure(.invalidRoll) }
         guard !isTurnInProgress(in: session) else { return .failure(.turnAlreadyInProgress) }
         guard session.pendingScoreChoices.isEmpty else { return .failure(.pendingScoreChoicesUnresolved) }
+        guard session.pendingWhiteGemDecision == nil else { return .failure(.pendingWhiteGemDecisionUnresolved) }
 
         session.currentRoll = roll
         session.isTurnPlacementComplete = false
@@ -75,6 +79,9 @@ enum GameTurnEngine {
     /// that does not end placement by itself.
     static func placeGemInCurrentCup(session: inout GameSession, gemID: UUID) -> Result<Void, GameTurnError> {
         guard session.phase == .playing else { return .failure(.gameNotPlaying) }
+        guard session.pendingWhiteGemDecision == nil else {
+            return .failure(.pendingWhiteGemDecisionUnresolved)
+        }
         guard canPlaceFromHand(in: session) else { return .failure(.noActiveTurn) }
 
         switch currentPlacementDestination(in: session) {
@@ -109,6 +116,11 @@ enum GameTurnEngine {
         session.cups[cupIndex].gems.append(gem)
         session.placementsCompletedInCurrentRotation += 1
 
+        if wasFinalGemInHand, shouldPauseForWhiteGemDecision(in: session, cupIndex: cupIndex) {
+            session.pendingWhiteGemDecision = PendingWhiteGemDecision(cupIndex: cupIndex)
+            return .success(())
+        }
+
         if wasFinalGemInHand && cupHadGemsBeforePlacement {
             scoopCupIntoHand(session: &session, cupIndex: cupIndex)
             advancePlacementIndex(session: &session)
@@ -130,6 +142,9 @@ enum GameTurnEngine {
     /// unless the hand is empty afterward.
     static func placeGemInDiscard(session: inout GameSession, gemID: UUID) -> Result<Void, GameTurnError> {
         guard session.phase == .playing else { return .failure(.gameNotPlaying) }
+        guard session.pendingWhiteGemDecision == nil else {
+            return .failure(.pendingWhiteGemDecisionUnresolved)
+        }
         guard canPlaceFromHand(in: session) else { return .failure(.noActiveTurn) }
         guard case .discard = currentPlacementDestination(in: session) else {
             return .failure(.discardNotRequired)
@@ -188,6 +203,11 @@ enum GameTurnEngine {
         return true
     }
 
+    /// True when the unicorn is on this cup and the cup contains a white gem.
+    static func shouldPauseForWhiteGemDecision(in session: GameSession, cupIndex: Int) -> Bool {
+        session.unicornCupIndex == cupIndex && UnicornResolver.requiresPlayerDecision(in: session)
+    }
+
     /// Count of cups that currently accept normal placement (completed cups excluded).
     static func availablePlacementCupCount(in session: GameSession) -> Int {
         session.cups.reduce(0) { count, cup in
@@ -216,6 +236,7 @@ enum GameTurnEngine {
             && !GameCompletionDetector.isGameOver(session: session)
             && isTurnInProgress(in: session)
             && !session.gemsInHand.isEmpty
+            && session.pendingWhiteGemDecision == nil
     }
 
     // MARK: - Helpers

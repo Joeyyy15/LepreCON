@@ -41,6 +41,8 @@ struct GameSession: Identifiable, Equatable, Codable {
     var isTurnPlacementComplete: Bool
     /// Cups the player may choose to score after placement ends. Cleared when a new turn starts.
     var pendingScoreChoices: [PendingScoreChoice]
+    /// White-gem / unicorn decision waiting for the player. Blocks placement and end-of-turn.
+    var pendingWhiteGemDecision: PendingWhiteGemDecision?
     /// Board cup index where the unicorn starts (assigned during new-game setup).
     var unicornCupIndex: Int?
     /// Cup id for the unicorn location. Kept in sync with `unicornCupIndex` for stable identity.
@@ -64,6 +66,7 @@ struct GameSession: Identifiable, Equatable, Codable {
         placementsCompletedInCurrentRotation: Int = 0,
         isTurnPlacementComplete: Bool = false,
         pendingScoreChoices: [PendingScoreChoice] = [],
+        pendingWhiteGemDecision: PendingWhiteGemDecision? = nil,
         unicornCupIndex: Int? = nil,
         unicornCupID: UUID? = nil,
         unicornCaptured: Bool = false,
@@ -82,6 +85,7 @@ struct GameSession: Identifiable, Equatable, Codable {
         self.placementsCompletedInCurrentRotation = placementsCompletedInCurrentRotation
         self.isTurnPlacementComplete = isTurnPlacementComplete
         self.pendingScoreChoices = pendingScoreChoices
+        self.pendingWhiteGemDecision = pendingWhiteGemDecision
         self.unicornCupIndex = unicornCupIndex
         self.unicornCupID = unicornCupID
         self.unicornCaptured = unicornCaptured

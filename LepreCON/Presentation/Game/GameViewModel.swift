@@ -98,6 +98,14 @@ final class GameViewModel: ObservableObject {
         !session.pendingScoreChoices.isEmpty
     }
 
+    var hasPendingWhiteGemDecision: Bool {
+        session.pendingWhiteGemDecision != nil
+    }
+
+    var pendingWhiteGemDecision: PendingWhiteGemDecision? {
+        session.pendingWhiteGemDecision
+    }
+
     /// Current final score breakdown from completed cups and the Pot of Gold.
     var finalScoreResult: FinalScoreResult {
         FinalScoreEvaluator.evaluate(session: session)
@@ -146,6 +154,28 @@ final class GameViewModel: ObservableObject {
         session = snapshot
         clearUndoSnapshot()
         refreshResolutionEventPresentation()
+    }
+
+    /// Player confirms both outcomes of a pending white-gem / unicorn decision.
+    func resolveWhiteGemDecision(
+        triggerUnicorn: Bool,
+        scoopAndContinue: Bool
+    ) -> Result<Void, WhiteGemDecisionError> {
+        let snapshotBeforeDecision = session
+        let result = WhiteGemDecisionEngine.resolve(
+            session: &session,
+            triggerUnicorn: triggerUnicorn,
+            scoopAndContinue: scoopAndContinue
+        )
+        switch result {
+        case .success:
+            previousSessionSnapshot = snapshotBeforeDecision
+            applyGameOverIfNeeded()
+            refreshResolutionEventPresentation()
+        case .failure:
+            break
+        }
+        return result
     }
 
     /// Player confirms one pending scoring color for a cup.

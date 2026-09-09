@@ -54,46 +54,52 @@ final class UnicornResolverTests: XCTestCase {
         XCTAssertTrue(session.discardPile.isEmpty)
     }
 
-    // MARK: - White calming
+    // MARK: - White gem awaits player decision
 
-    func testWhiteGemInUnicornCupMovesExactlyOneWhiteToDiscard() {
+    func testWhiteGemInUnicornCupDoesNotAutoCalmOnResolve() {
         let white = Gem(kind: .white)
+        let red = Gem(kind: .red)
         var session = makePlayingSession()
         placeUnicorn(on: 3, in: &session)
-        session.cups[3].gems = [white, Gem(kind: .red)]
+        session.cups[3].gems = [white, red]
 
         let outcome = UnicornResolver.resolve(in: &session)
 
-        XCTAssertEqual(outcome, .calmedByWhite(cupIndex: 3))
-        XCTAssertEqual(session.discardPile.count, 1)
-        XCTAssertEqual(session.discardPile.first?.id, white.id)
-        XCTAssertEqual(session.discardPile.first?.kind, .white)
+        XCTAssertEqual(outcome, .awaitingPlayerDecision(cupIndex: 3))
+        XCTAssertEqual(session.cups[3].gems.map(\.id), [white.id, red.id])
+        XCTAssertTrue(session.discardPile.isEmpty)
+        XCTAssertEqual(session.unicornCupIndex, 3)
+        XCTAssertTrue(session.recentResolutionEvents.isEmpty)
     }
 
-    func testWhiteCalmingLeavesOtherGemsInUnicornCup() {
+    func testCalmDiscardsExactlyOneWhiteAndLeavesOtherGems() {
+        let white = Gem(kind: .white)
         let red = Gem(kind: .red)
         let blue = Gem(kind: .blue)
         var session = makePlayingSession()
         placeUnicorn(on: 4, in: &session)
-        session.cups[4].gems = [Gem(kind: .white), red, blue]
+        session.cups[4].gems = [white, red, blue]
 
-        _ = UnicornResolver.resolve(in: &session)
+        let outcome = UnicornResolver.calm(in: &session)
 
+        XCTAssertEqual(outcome, .calmedByWhite(cupIndex: 4))
+        XCTAssertEqual(session.discardPile.map(\.id), [white.id])
         XCTAssertEqual(session.cups[4].gems.map(\.id), [red.id, blue.id])
-        XCTAssertEqual(session.cups[4].gems.map(\.kind), [.red, .blue])
+        XCTAssertEqual(session.unicornCupIndex, 4)
     }
 
-    func testWhiteGemInUnicornCupCalmsUnicorn() {
+    func testCalmWithOnlyWhiteEmptiesUnicornCupAndLeavesUnicorn() {
         let white = Gem(kind: .white)
         var session = makePlayingSession()
         placeUnicorn(on: 3, in: &session)
         session.cups[3].gems = [white]
 
-        let outcome = UnicornResolver.resolve(in: &session)
+        let outcome = UnicornResolver.calm(in: &session)
 
         XCTAssertEqual(outcome, .calmedByWhite(cupIndex: 3))
         XCTAssertEqual(session.discardPile.map(\.kind), [.white])
         XCTAssertTrue(session.cups[3].gems.isEmpty)
+        XCTAssertEqual(session.unicornCupIndex, 3)
     }
 
     func testClearGemInUnicornCupDoesNotCalmUnicorn() {
@@ -138,10 +144,26 @@ final class UnicornResolverTests: XCTestCase {
         session.cups[5].gems = gems([.white, .green])
         let originalCupID = session.unicornCupID
 
-        _ = UnicornResolver.resolve(in: &session)
+        _ = UnicornResolver.calm(in: &session)
 
         XCTAssertEqual(session.unicornCupIndex, 5)
         XCTAssertEqual(session.unicornCupID, originalCupID)
+    }
+
+    func testExplodeCanRunEvenWhenWhiteGemIsPresent() {
+        let white = Gem(kind: .white)
+        let red = Gem(kind: .red)
+        var session = makePlayingSession()
+        placeUnicorn(on: 2, in: &session)
+        session.cups[2].gems = [white, red]
+
+        let outcome = UnicornResolver.explode(in: &session)
+
+        XCTAssertEqual(outcome, .exploded(fromCupIndex: 2, finalCupIndex: 4))
+        XCTAssertTrue(session.cups[2].gems.isEmpty)
+        XCTAssertEqual(session.cups[3].gems.map(\.id), [white.id])
+        XCTAssertEqual(session.cups[4].gems.map(\.id), [red.id])
+        XCTAssertEqual(session.unicornCupIndex, 4)
     }
 
     // MARK: - Explosion

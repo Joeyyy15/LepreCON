@@ -60,7 +60,7 @@ final class TurnResolutionEventTests: XCTestCase {
         placeUnicorn(on: 4, in: &session)
         session.cups[4].gems = gems([.white, .yellow])
 
-        UnicornResolver.resolve(in: &session)
+        UnicornResolver.calm(in: &session)
 
         XCTAssertEqual(session.recentResolutionEvents, [.unicornCalmed(cupIndex: 4)])
     }
@@ -106,11 +106,24 @@ final class TurnResolutionEventTests: XCTestCase {
         var session = makePlayingSession()
         session.recentResolutionEvents = [.unicornCalmed(cupIndex: 0)]
         placeUnicorn(on: 5, in: &session)
+        session.cups[5].gems = gems([.red])
+
+        EndOfTurnResolver.resolveAfterPlacementEnds(session: &session)
+
+        XCTAssertEqual(session.recentResolutionEvents.first, .unicornExplosionStarted(fromCupIndex: 5))
+        XCTAssertEqual(session.recentResolutionEvents.last, .unicornMoved(toCupIndex: 6))
+    }
+
+    func testEndOfTurnWithWhiteGemDoesNotRecordCalmUntilPlayerDecides() {
+        var session = makePlayingSession()
+        session.recentResolutionEvents = [.unicornCalmed(cupIndex: 0)]
+        placeUnicorn(on: 5, in: &session)
         session.cups[5].gems = gems([.white])
 
         EndOfTurnResolver.resolveAfterPlacementEnds(session: &session)
 
-        XCTAssertEqual(session.recentResolutionEvents, [.unicornCalmed(cupIndex: 5)])
+        XCTAssertTrue(session.recentResolutionEvents.isEmpty)
+        XCTAssertEqual(session.pendingWhiteGemDecision?.cupIndex, 5)
     }
 
     func testBeginTurnClearsResolutionEvents() {
