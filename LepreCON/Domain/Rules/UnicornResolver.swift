@@ -99,9 +99,10 @@ enum UnicornResolver {
     // MARK: - Explosion
 
     /// Takes all gems from the unicorn cup and spreads them one-by-one clockwise.
-    /// After each full circuit of currently available cups, the next spread gem
-    /// is discarded automatically. That discard does not move the unicorn or the
-    /// player's placement rotation counter.
+    /// Circuit progress is measured from the Unicorn's current board position to
+    /// the same rotation boundary humans use (wrap back to the first available
+    /// cup). After that remaining stretch, the next gem is discarded automatically.
+    /// Player placement rotation state is not used or mutated.
     private static func explodeGems(
         fromCupIndex unicornIndex: Int,
         in session: inout GameSession
@@ -111,16 +112,19 @@ enum UnicornResolver {
         record(.unicornExplosionStarted(fromCupIndex: unicornIndex), in: &session)
 
         let cupCount = session.cups.count
-        let circuitLength = GameTurnEngine.availablePlacementCupCount(in: session)
+        let availableCount = GameTurnEngine.availablePlacementCupCount(in: session)
         var spreadFrom = (unicornIndex + 1) % cupCount
+        var remainingUntilDiscard = GameTurnEngine.remainingPlacementsUntilRotationBoundary(
+            startingFrom: spreadFrom,
+            in: session
+        )
         var finalCupIndex: Int?
-        var gemsPlacedThisCircuit = 0
 
         for gem in gemsToSpread {
-            if circuitLength > 0, gemsPlacedThisCircuit == circuitLength {
+            if availableCount > 0, remainingUntilDiscard == 0 {
                 session.discardPile.append(gem)
                 record(.unicornExplosionDiscarded(gemKind: gem.kind), in: &session)
-                gemsPlacedThisCircuit = 0
+                remainingUntilDiscard = availableCount
                 continue
             }
 
@@ -152,7 +156,9 @@ enum UnicornResolver {
             )
             finalCupIndex = targetIndex
             spreadFrom = (targetIndex + 1) % cupCount
-            gemsPlacedThisCircuit += 1
+            if remainingUntilDiscard > 0 {
+                remainingUntilDiscard -= 1
+            }
         }
 
         // Unicorn follows the last gem that landed on a cup; discarded gems are not landings.

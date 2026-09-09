@@ -689,6 +689,51 @@ final class GameTurnEngineTests: XCTestCase {
         assertSuccess(result)
     }
 
+    func testRemainingPlacementsUntilRotationBoundaryFromMidCircuit() {
+        var session = makePlayingSession(bag: [])
+        XCTAssertEqual(
+            GameTurnEngine.remainingPlacementsUntilRotationBoundary(startingFrom: 8, in: session),
+            3
+        )
+        XCTAssertEqual(
+            GameTurnEngine.remainingPlacementsUntilRotationBoundary(startingFrom: 10, in: session),
+            1
+        )
+        XCTAssertEqual(
+            GameTurnEngine.remainingPlacementsUntilRotationBoundary(startingFrom: 0, in: session),
+            11
+        )
+        XCTAssertEqual(
+            GameTurnEngine.remainingPlacementsUntilRotationBoundary(startingFrom: 1, in: session),
+            10
+        )
+    }
+
+    func testRemainingPlacementsUntilRotationBoundarySkipsCompletedCups() {
+        var session = makePlayingSession(bag: [])
+        session.cups[8].completion = CupCompletion(
+            scoredColor: .red,
+            wasMatchingCupColor: false,
+            goodCount: 5,
+            passCount: 0,
+            blemishCount: 0,
+            adjustedGoodCount: 5
+        )
+        session.cups[9].completion = CupCompletion(
+            scoredColor: .blue,
+            wasMatchingCupColor: false,
+            goodCount: 5,
+            passCount: 0,
+            blemishCount: 0,
+            adjustedGoodCount: 5
+        )
+
+        XCTAssertEqual(
+            GameTurnEngine.remainingPlacementsUntilRotationBoundary(startingFrom: 8, in: session),
+            1
+        )
+    }
+
     func testDestinationRemainsCupBeforeFullRotation() {
         var session = makePlayingSession(bag: [])
         session.gemsInHand = makeHand(count: 5)

@@ -279,11 +279,15 @@ final class UnicornResolverTests: XCTestCase {
 
     // MARK: - Unicorn-spread circuit discard
 
-    func testSpreadShorterThanOneCircuitDoesNotDiscard() {
+    func testSpreadShorterThanRemainingCircuitDoesNotDiscard() {
         let spreadGems = gems([.red, .blue, .green])
         var session = makePlayingSession()
         placeUnicorn(on: 2, in: &session)
         session.cups[2].gems = spreadGems
+        XCTAssertEqual(
+            GameTurnEngine.remainingPlacementsUntilRotationBoundary(startingFrom: 3, in: session),
+            8
+        )
 
         _ = UnicornResolver.resolve(in: &session)
 
@@ -293,135 +297,157 @@ final class UnicornResolverTests: XCTestCase {
         XCTAssertEqual(session.cups[5].gems.map(\.id), [spreadGems[2].id])
     }
 
-    func testExactlyOneFullCircuitPlacesEveryGemAndDoesNotDiscard() {
+    func testUnicornThreeCupsBeforeBoundaryDiscardsTheFourthGem() {
+        let gemA = Gem(kind: .red)
+        let gemB = Gem(kind: .blue)
+        let gemC = Gem(kind: .green)
+        let gemD = Gem(kind: .gold)
+        let gemE = Gem(kind: .pink)
         var session = makePlayingSession()
-        placeUnicorn(on: 0, in: &session)
-        let circuitLength = GameTurnEngine.availablePlacementCupCount(in: session)
-        XCTAssertEqual(circuitLength, 11)
-        let spreadGems = gems(Array(repeating: .red, count: circuitLength))
-        session.cups[0].gems = spreadGems
+        placeUnicorn(on: 7, in: &session)
+        session.cups[7].gems = [gemA, gemB, gemC, gemD, gemE]
+        XCTAssertEqual(
+            GameTurnEngine.remainingPlacementsUntilRotationBoundary(startingFrom: 8, in: session),
+            3
+        )
+
+        let outcome = UnicornResolver.resolve(in: &session)
+
+        XCTAssertEqual(session.cups[8].gems.map(\.id), [gemA.id])
+        XCTAssertEqual(session.cups[9].gems.map(\.id), [gemB.id])
+        XCTAssertEqual(session.cups[10].gems.map(\.id), [gemC.id])
+        XCTAssertEqual(session.discardPile.map(\.id), [gemD.id])
+        XCTAssertFalse(session.cups.contains { $0.gems.contains(where: { $0.id == gemD.id }) })
+        XCTAssertEqual(session.cups[0].gems.map(\.id), [gemE.id])
+        XCTAssertEqual(outcome, .exploded(fromCupIndex: 7, finalCupIndex: 0))
+        XCTAssertEqual(session.unicornCupIndex, 0)
+        XCTAssertEqual(session.unicornCupID, session.cups[0].id)
+    }
+
+    func testUnicornOneCupBeforeBoundaryPlacesThenDiscards() {
+        let first = Gem(kind: .red)
+        let discarded = Gem(kind: .blue)
+        var session = makePlayingSession()
+        placeUnicorn(on: 9, in: &session)
+        session.cups[9].gems = [first, discarded]
+        XCTAssertEqual(
+            GameTurnEngine.remainingPlacementsUntilRotationBoundary(startingFrom: 10, in: session),
+            1
+        )
 
         _ = UnicornResolver.resolve(in: &session)
 
-        XCTAssertTrue(session.discardPile.isEmpty)
-        XCTAssertEqual(gemsPlacedOnBoard(in: session).count, circuitLength)
-        XCTAssertEqual(Set(gemsPlacedOnBoard(in: session).map(\.id)), Set(spreadGems.map(\.id)))
+        XCTAssertEqual(session.cups[10].gems.map(\.id), [first.id])
+        XCTAssertEqual(session.discardPile.map(\.id), [discarded.id])
+        XCTAssertEqual(session.unicornCupIndex, 10)
+    }
+
+    func testDiscardOccursAfterRemainingCupsNotAfterANewFullLap() {
+        let spreadGems = gems([.red, .blue, .green, .gold])
+        var session = makePlayingSession()
+        placeUnicorn(on: 7, in: &session)
+        session.cups[7].gems = spreadGems
+
+        _ = UnicornResolver.resolve(in: &session)
+
+        XCTAssertEqual(session.discardPile.map(\.id), [spreadGems[3].id])
+        XCTAssertEqual(gemsPlacedOnBoard(in: session).count, 3)
+        XCTAssertTrue(session.cups[1].gems.isEmpty)
+        XCTAssertTrue(session.cups[2].gems.isEmpty)
+    }
+
+    func testSpreadContinuesAfterAutomaticDiscard() {
+        let extra = Gem(kind: .pink)
+        var session = makePlayingSession()
+        placeUnicorn(on: 7, in: &session)
+        session.cups[7].gems = gems([.red, .blue, .green, .gold]) + [extra]
+
+        _ = UnicornResolver.resolve(in: &session)
+
+        XCTAssertEqual(session.cups[0].gems.map(\.id), [extra.id])
         XCTAssertEqual(session.unicornCupIndex, 0)
     }
 
-    func testOneFullCircuitPlusOneGemDiscardsTheExtraGem() {
+    func testSecondFullCircuitCausesAnotherAutomaticDiscard() {
         var session = makePlayingSession()
-        placeUnicorn(on: 0, in: &session)
-        let circuitLength = GameTurnEngine.availablePlacementCupCount(in: session)
-        let discarded = Gem(kind: .gold)
-        let spreadGems = gems(Array(repeating: .red, count: circuitLength)) + [discarded]
-        session.cups[0].gems = spreadGems
-
-        _ = UnicornResolver.resolve(in: &session)
-
-        XCTAssertEqual(session.discardPile.map(\.id), [discarded.id])
-        XCTAssertFalse(session.cups.contains { cup in cup.gems.contains(where: { $0.id == discarded.id }) })
-        XCTAssertEqual(gemsPlacedOnBoard(in: session).count, circuitLength)
-        XCTAssertEqual(session.unicornCupIndex, 0)
-        XCTAssertTrue(session.recentResolutionEvents.contains {
-            if case .unicornExplosionDiscarded(gemKind: .gold) = $0 { return true }
-            return false
-        })
-    }
-
-    func testOneFullCircuitPlusMultipleGemsDiscardsOnceThenContinuesClockwise() {
-        var session = makePlayingSession()
-        placeUnicorn(on: 0, in: &session)
-        let circuitLength = GameTurnEngine.availablePlacementCupCount(in: session)
-        let discarded = Gem(kind: .pink)
-        let extra = Gem(kind: .blue)
-        let spreadGems = gems(Array(repeating: .red, count: circuitLength)) + [discarded, extra]
-        session.cups[0].gems = spreadGems
-
-        _ = UnicornResolver.resolve(in: &session)
-
-        XCTAssertEqual(session.discardPile.map(\.id), [discarded.id])
-        XCTAssertEqual(session.cups[1].gems.last?.id, extra.id)
-        XCTAssertEqual(session.unicornCupIndex, 1)
-        XCTAssertEqual(gemsPlacedOnBoard(in: session).count, circuitLength + 1)
-    }
-
-    func testTwoFullCircuitsProduceTwoAutomaticDiscards() {
-        var session = makePlayingSession()
-        for index in 3...10 {
+        for index in 1...6 {
             markCompleted(&session, cupIndex: index)
         }
-        placeUnicorn(on: 0, in: &session)
-        XCTAssertEqual(GameTurnEngine.availablePlacementCupCount(in: session), 3)
+        placeUnicorn(on: 7, in: &session)
+        XCTAssertEqual(GameTurnEngine.availablePlacementCupCount(in: session), 5)
+        XCTAssertEqual(
+            GameTurnEngine.remainingPlacementsUntilRotationBoundary(startingFrom: 8, in: session),
+            3
+        )
 
         let firstDiscard = Gem(kind: .gold)
         let secondDiscard = Gem(kind: .pink)
         let spreadGems = [
             Gem(kind: .red), Gem(kind: .blue), Gem(kind: .green),
             firstDiscard,
-            Gem(kind: .orange), Gem(kind: .yellow), Gem(kind: .purple),
+            Gem(kind: .orange), Gem(kind: .yellow), Gem(kind: .purple), Gem(kind: .clear), Gem(kind: .red),
             secondDiscard
         ]
-        session.cups[0].gems = spreadGems
+        session.cups[7].gems = spreadGems
 
         _ = UnicornResolver.resolve(in: &session)
 
         XCTAssertEqual(session.discardPile.map(\.id), [firstDiscard.id, secondDiscard.id])
-        XCTAssertEqual(session.cups[1].gems.map(\.kind), [.red, .orange])
-        XCTAssertEqual(session.cups[2].gems.map(\.kind), [.blue, .yellow])
-        XCTAssertEqual(session.cups[0].gems.map(\.kind), [.green, .purple])
-        XCTAssertEqual(session.unicornCupIndex, 0)
+        XCTAssertEqual(session.cups[8].gems.map(\.kind), [.red, .purple])
+        XCTAssertEqual(session.cups[9].gems.map(\.kind), [.blue, .clear])
+        XCTAssertEqual(session.cups[10].gems.map(\.kind), [.green, .red])
+        XCTAssertEqual(session.cups[0].gems.map(\.kind), [.orange])
+        XCTAssertEqual(session.cups[7].gems.map(\.kind), [.yellow])
+        XCTAssertEqual(session.unicornCupIndex, 10)
     }
 
-    func testCompletedCupsShortenTheUnicornCircuit() {
+    func testCompletedCupsShortenRemainingCircuitBeforeDiscard() {
         var session = makePlayingSession()
-        markCompleted(&session, cupIndex: 2)
-        markCompleted(&session, cupIndex: 3)
-        markCompleted(&session, cupIndex: 4)
-        placeUnicorn(on: 0, in: &session)
-        let circuitLength = GameTurnEngine.availablePlacementCupCount(in: session)
-        XCTAssertEqual(circuitLength, 8)
+        markCompleted(&session, cupIndex: 8)
+        markCompleted(&session, cupIndex: 9)
+        placeUnicorn(on: 7, in: &session)
+        XCTAssertEqual(
+            GameTurnEngine.remainingPlacementsUntilRotationBoundary(startingFrom: 8, in: session),
+            1
+        )
 
+        let first = Gem(kind: .red)
         let discarded = Gem(kind: .gold)
-        session.cups[0].gems = gems(Array(repeating: .red, count: circuitLength)) + [discarded]
+        let extra = Gem(kind: .blue)
+        session.cups[7].gems = [first, discarded, extra]
 
         _ = UnicornResolver.resolve(in: &session)
 
+        XCTAssertEqual(session.cups[10].gems.map(\.id), [first.id])
+        XCTAssertTrue(session.cups[8].gems.isEmpty)
+        XCTAssertTrue(session.cups[9].gems.isEmpty)
         XCTAssertEqual(session.discardPile.map(\.id), [discarded.id])
-        XCTAssertTrue(session.cups[2].gems.isEmpty)
-        XCTAssertTrue(session.cups[3].gems.isEmpty)
-        XCTAssertTrue(session.cups[4].gems.isEmpty)
-        XCTAssertEqual(gemsPlacedOnBoard(in: session).count, circuitLength)
+        XCTAssertEqual(session.cups[0].gems.map(\.id), [extra.id])
+        XCTAssertEqual(session.unicornCupIndex, 0)
     }
 
-    func testPotOfGoldCountsTowardTheUnicornCircuit() {
-        var session = makePlayingSession()
-        for index in 0...8 {
-            markCompleted(&session, cupIndex: index)
-        }
-        placeUnicorn(on: 9, in: &session)
-        XCTAssertEqual(GameTurnEngine.availablePlacementCupCount(in: session), 2)
-
+    func testPotOfGoldIsTheLastCupOfTheCircuit() {
         let first = Gem(kind: .red)
-        let second = Gem(kind: .blue)
         let discarded = Gem(kind: .gold)
-        session.cups[9].gems = [first, second, discarded]
+        let extra = Gem(kind: .blue)
+        var session = makePlayingSession()
+        placeUnicorn(on: 9, in: &session)
+        session.cups[9].gems = [first, discarded, extra]
 
         _ = UnicornResolver.resolve(in: &session)
 
         let potIndex = GameSetup.potOfGoldCupIndex
         XCTAssertEqual(session.cups[potIndex].gems.map(\.id), [first.id])
-        XCTAssertEqual(session.cups[9].gems.map(\.id), [second.id])
         XCTAssertEqual(session.discardPile.map(\.id), [discarded.id])
-        XCTAssertEqual(session.unicornCupIndex, 9)
+        XCTAssertEqual(session.cups[0].gems.map(\.id), [extra.id])
+        XCTAssertEqual(session.unicornCupIndex, 0)
     }
 
     func testAutomaticUnicornDiscardPreservesGemIdentity() {
-        var session = makePlayingSession()
-        placeUnicorn(on: 0, in: &session)
-        let circuitLength = GameTurnEngine.availablePlacementCupCount(in: session)
         let discarded = Gem(kind: .clear)
-        session.cups[0].gems = gems(Array(repeating: .red, count: circuitLength)) + [discarded]
+        var session = makePlayingSession()
+        placeUnicorn(on: 9, in: &session)
+        session.cups[9].gems = [Gem(kind: .red), discarded]
         let existingDiscard = Gem(kind: .yellow)
         session.discardPile = [existingDiscard]
 
@@ -433,29 +459,23 @@ final class UnicornResolverTests: XCTestCase {
     }
 
     func testBlackGemCanBeAutomaticallyDiscardedByUnicornSpread() {
-        var session = makePlayingSession()
-        for index in 2...10 {
-            markCompleted(&session, cupIndex: index)
-        }
-        placeUnicorn(on: 0, in: &session)
-        XCTAssertEqual(GameTurnEngine.availablePlacementCupCount(in: session), 2)
-
         let red = Gem(kind: .red)
-        let blue = Gem(kind: .blue)
         let poop = Gem(kind: .black)
-        session.cups[0].gems = [red, blue, poop]
+        var session = makePlayingSession()
+        placeUnicorn(on: 9, in: &session)
+        session.cups[9].gems = [red, poop]
 
         _ = UnicornResolver.resolve(in: &session)
 
         XCTAssertEqual(session.discardPile.map(\.id), [poop.id])
         XCTAssertFalse(session.cups.contains { $0.gems.contains(where: { $0.id == poop.id }) })
-        XCTAssertEqual(session.unicornCupIndex, 0)
+        XCTAssertEqual(session.unicornCupIndex, 10)
     }
 
     func testUnicornSpreadDoesNotChangePlayerRotationProgress() {
         var session = makePlayingSession()
-        placeUnicorn(on: 2, in: &session)
-        session.cups[2].gems = gems(Array(repeating: .red, count: 12))
+        placeUnicorn(on: 7, in: &session)
+        session.cups[7].gems = gems([.red, .blue, .green, .gold, .pink])
         session.placementsCompletedInCurrentRotation = 4
         session.nextPlacementCupIndex = 3
         session.currentRoll = 5
@@ -471,19 +491,38 @@ final class UnicornResolverTests: XCTestCase {
         XCTAssertEqual(session.nextPlacementCupIndex, 3)
     }
 
-    func testUnicornEndsOnLastCupThatReceivedASpreadGemAfterDiscard() {
-        var session = makePlayingSession()
-        placeUnicorn(on: 0, in: &session)
-        let circuitLength = GameTurnEngine.availablePlacementCupCount(in: session)
+    func testAutomaticUnicornDiscardAppearsInDiscardDisplayState() {
         let discarded = Gem(kind: .gold)
-        session.cups[0].gems = gems(Array(repeating: .red, count: circuitLength)) + [discarded]
+        var session = makePlayingSession()
+        placeUnicorn(on: 9, in: &session)
+        session.cups[9].gems = [Gem(kind: .red), discarded]
+
+        _ = UnicornResolver.resolve(in: &session)
+
+        let display = GameBoardDisplayState.from(session: session)
+        XCTAssertEqual(display.discardGemCounts.map(\.kind), [.gold])
+        XCTAssertEqual(display.discardGemCounts.first?.count, 1)
+        XCTAssertFalse(GameTurnEngine.isDiscardRequired(in: session))
+        XCTAssertNotEqual(GameTurnEngine.currentPlacementDestination(in: session), .discard)
+    }
+
+    func testUnicornEndsOnLastCupThatReceivedASpreadGemAfterDiscard() {
+        let gemC = Gem(kind: .green)
+        let discarded = Gem(kind: .gold)
+        var session = makePlayingSession()
+        placeUnicorn(on: 7, in: &session)
+        session.cups[7].gems = [Gem(kind: .red), Gem(kind: .blue), gemC, discarded]
 
         let outcome = UnicornResolver.resolve(in: &session)
 
-        XCTAssertEqual(outcome, .exploded(fromCupIndex: 0, finalCupIndex: 0))
-        XCTAssertEqual(session.unicornCupIndex, 0)
-        XCTAssertEqual(session.unicornCupID, session.cups[0].id)
+        XCTAssertEqual(outcome, .exploded(fromCupIndex: 7, finalCupIndex: 10))
+        XCTAssertEqual(session.unicornCupIndex, 10)
+        XCTAssertEqual(session.unicornCupID, session.cups[10].id)
         XCTAssertEqual(session.discardPile.map(\.id), [discarded.id])
+        XCTAssertTrue(session.recentResolutionEvents.contains {
+            if case .unicornExplosionDiscarded(gemKind: .gold) = $0 { return true }
+            return false
+        })
     }
 
     // MARK: - End-of-turn ordering

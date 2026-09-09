@@ -233,6 +233,44 @@ enum GameTurnEngine {
         }
     }
 
+    /// Legal cup landings remaining from `startingFrom` until the rotation wraps
+    /// back to the first available placement cup. That wrap cup is not counted.
+    ///
+    /// This is the board-position equivalent of a human chain's remaining cups
+    /// before required discard, without reading or writing
+    /// `placementsCompletedInCurrentRotation`.
+    ///
+    /// When `startingFrom` is already the rotation start, a full circuit remains
+    /// and the first gem places in that cup.
+    static func remainingPlacementsUntilRotationBoundary(
+        startingFrom: Int,
+        in session: GameSession
+    ) -> Int {
+        let cupCount = session.cups.count
+        guard cupCount > 0 else { return 0 }
+        guard let circuitStart = firstAvailablePlacementCupIndex(in: session) else {
+            return 0
+        }
+
+        let start = ((startingFrom % cupCount) + cupCount) % cupCount
+        if start == circuitStart {
+            return availablePlacementCupCount(in: session)
+        }
+
+        var remaining = 0
+        var index = start
+        for _ in 0..<cupCount {
+            if index == circuitStart {
+                return remaining
+            }
+            if !session.cups[index].isCompleted {
+                remaining += 1
+            }
+            index = (index + 1) % cupCount
+        }
+        return remaining
+    }
+
     // MARK: - Placement phase completion
 
     /// Marks placement finished and runs end-of-turn resolution (Unicorn → Poop → Score detection).
