@@ -224,6 +224,123 @@ final class GameTurnEngineTests: XCTestCase {
         XCTAssertFalse(GameTurnEngine.canDiscardGemKind(.black))
     }
 
+    // MARK: - Black gem cannot enter the unicorn cup
+
+    func testBlackGemCannotBePlacedIntoUnicornOccupiedCup() {
+        let poop = Gem(kind: .black)
+        let red = Gem(kind: .red)
+        var session = makePlayingSession(bag: [])
+        session.gemsInHand = [poop, red]
+        session.currentRoll = 2
+        session.nextPlacementCupIndex = 9
+        session.unicornCupIndex = 9
+        session.unicornCupID = session.cups[9].id
+        session.cups[9].gems = [Gem(kind: .blue)]
+        session.placementsCompletedInCurrentRotation = 3
+        session.pendingWhiteGemDecision = nil
+
+        let handBefore = session.gemsInHand
+        let cupBefore = session.cups[9].gems
+        let unicornIndexBefore = session.unicornCupIndex
+        let unicornIDBefore = session.unicornCupID
+        let rotationBefore = session.placementsCompletedInCurrentRotation
+        let discardBefore = session.discardPile
+        let destinationBefore = GameTurnEngine.currentPlacementDestination(in: session)
+        let pendingBefore = session.pendingWhiteGemDecision
+
+        XCTAssertFalse(GameTurnEngine.canPlaceGemKind(.black, in: session))
+        XCTAssertFalse(GameTurnEngine.canSelectHandGemKind(.black, in: session))
+        XCTAssertTrue(GameTurnEngine.canSelectHandGemKind(.red, in: session))
+
+        let rejected = GameTurnEngine.placeGemInCurrentCup(session: &session, gemID: poop.id)
+
+        assertFailure(rejected, .cannotPlaceBlackGemWithUnicorn)
+        XCTAssertEqual(session.gemsInHand.map(\.id), handBefore.map(\.id))
+        XCTAssertEqual(session.cups[9].gems.map(\.id), cupBefore.map(\.id))
+        XCTAssertEqual(session.unicornCupIndex, unicornIndexBefore)
+        XCTAssertEqual(session.unicornCupID, unicornIDBefore)
+        XCTAssertEqual(session.placementsCompletedInCurrentRotation, rotationBefore)
+        XCTAssertEqual(session.discardPile.map(\.id), discardBefore.map(\.id))
+        XCTAssertEqual(GameTurnEngine.currentPlacementDestination(in: session), destinationBefore)
+        XCTAssertEqual(session.nextPlacementCupIndex, 9)
+        XCTAssertEqual(session.pendingWhiteGemDecision, pendingBefore)
+        XCTAssertFalse(session.isTurnPlacementComplete)
+    }
+
+    func testNonBlackGemCanStillBePlacedIntoUnicornCup() {
+        let red = Gem(kind: .red)
+        let remaining = Gem(kind: .blue)
+        var session = makePlayingSession(bag: [])
+        session.gemsInHand = [red, remaining]
+        session.currentRoll = 2
+        session.nextPlacementCupIndex = 9
+        session.unicornCupIndex = 9
+        session.unicornCupID = session.cups[9].id
+
+        XCTAssertTrue(GameTurnEngine.canPlaceGemKind(.red, in: session))
+        XCTAssertTrue(GameTurnEngine.canSelectHandGemKind(.red, in: session))
+
+        let result = GameTurnEngine.placeGemInCurrentCup(session: &session, gemID: red.id)
+
+        assertSuccess(result)
+        XCTAssertEqual(session.cups[9].gems.map(\.id), [red.id])
+        XCTAssertEqual(session.gemsInHand.map(\.id), [remaining.id])
+        XCTAssertEqual(session.unicornCupIndex, 9)
+        XCTAssertEqual(session.nextPlacementCupIndex, 10)
+        XCTAssertEqual(session.placementsCompletedInCurrentRotation, 1)
+    }
+
+    func testBlackGemCanStillBePlacedIntoNonUnicornCup() {
+        let poop = Gem(kind: .black)
+        let remaining = Gem(kind: .red)
+        var session = makePlayingSession(bag: [])
+        session.gemsInHand = [poop, remaining]
+        session.currentRoll = 2
+        session.nextPlacementCupIndex = 0
+        session.unicornCupIndex = 9
+        session.unicornCupID = session.cups[9].id
+
+        XCTAssertTrue(GameTurnEngine.canPlaceGemKind(.black, in: session))
+        XCTAssertTrue(GameTurnEngine.canSelectHandGemKind(.black, in: session))
+
+        let result = GameTurnEngine.placeGemInCurrentCup(session: &session, gemID: poop.id)
+
+        assertSuccess(result)
+        XCTAssertEqual(session.cups[0].gems.map(\.id), [poop.id])
+        XCTAssertEqual(session.gemsInHand.map(\.id), [remaining.id])
+        XCTAssertEqual(session.unicornCupIndex, 9)
+        XCTAssertEqual(session.nextPlacementCupIndex, 1)
+    }
+
+    func testSoleBlackGemInHandOnUnicornCupIsBlockedWithoutMutation() {
+        let poop = Gem(kind: .black)
+        var session = makePlayingSession(bag: [])
+        session.gemsInHand = [poop]
+        session.currentRoll = 1
+        session.nextPlacementCupIndex = 4
+        session.unicornCupIndex = 4
+        session.unicornCupID = session.cups[4].id
+        session.cups[4].gems = [Gem(kind: .gold)]
+        session.placementsCompletedInCurrentRotation = 2
+        session.pendingWhiteGemDecision = nil
+
+        let sessionBefore = session
+
+        XCTAssertTrue(GameTurnEngine.canPlaceFromHand(in: session))
+        XCTAssertFalse(GameTurnEngine.canSelectHandGemKind(.black, in: session))
+        XCTAssertFalse(GameTurnEngine.canPlaceGemKind(.black, in: session))
+
+        let rejected = GameTurnEngine.placeGemInCurrentCup(session: &session, gemID: poop.id)
+
+        assertFailure(rejected, .cannotPlaceBlackGemWithUnicorn)
+        XCTAssertEqual(session, sessionBefore)
+        XCTAssertEqual(session.gemsInHand.map(\.id), [poop.id])
+        XCTAssertFalse(session.isTurnPlacementComplete)
+        XCTAssertNil(session.pendingWhiteGemDecision)
+        XCTAssertEqual(session.nextPlacementCupIndex, 4)
+        XCTAssertEqual(session.unicornCupIndex, 4)
+    }
+
     func testFirstPlacementCupIndexIsFirstCloudAfterPot() {
         XCTAssertEqual(GameSetup.firstPlacementCupIndex, 0)
         XCTAssertEqual(GameSetup.potOfGoldCupIndex, 10)

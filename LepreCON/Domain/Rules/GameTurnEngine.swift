@@ -25,6 +25,8 @@ enum GameTurnError: Error, Equatable {
     case discardNotRequired
     /// A black/poop gem cannot be discarded during the required rotation discard.
     case cannotDiscardBlackGem
+    /// A black/poop gem cannot be placed into the cup currently occupied by the unicorn.
+    case cannotPlaceBlackGemWithUnicorn
     /// Placement finished but the player must confirm or skip pending score choices first.
     case pendingScoreChoicesUnresolved
     /// A white-gem / unicorn decision must be resolved before placement or a new turn.
@@ -108,6 +110,9 @@ enum GameTurnEngine {
         let cupIndex = session.nextPlacementCupIndex
         guard !session.cups[cupIndex].isCompleted else {
             return .failure(.invalidPlacementCupIndex)
+        }
+        guard canPlaceGemKind(session.gemsInHand[handIndex].kind, in: session) else {
+            return .failure(.cannotPlaceBlackGemWithUnicorn)
         }
 
         let cupHadGemsBeforePlacement = !session.cups[cupIndex].gems.isEmpty
@@ -201,7 +206,24 @@ enum GameTurnEngine {
         if isDiscardRequired(in: session) {
             return canDiscardGemKind(kind)
         }
+        return canPlaceGemKind(kind, in: session)
+    }
+
+    /// True when this gem kind may be placed into the current cup destination.
+    /// Black/poop gems cannot be placed into the unicorn's current cup.
+    static func canPlaceGemKind(_ kind: GemKind, in session: GameSession) -> Bool {
+        if kind == .black, isCurrentPlacementCupOccupiedByUnicorn(in: session) {
+            return false
+        }
         return true
+    }
+
+    /// True when the current cup destination is the unicorn's cup.
+    static func isCurrentPlacementCupOccupiedByUnicorn(in session: GameSession) -> Bool {
+        guard case .cup(let cupIndex) = currentPlacementDestination(in: session) else {
+            return false
+        }
+        return session.unicornCupIndex == cupIndex
     }
 
     /// Count of cups that currently accept normal placement (completed cups excluded).

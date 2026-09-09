@@ -477,6 +477,7 @@ struct GameView: View {
         case .placementRequiresDiscard: return "Discard one gem after completing a full rotation."
         case .discardNotRequired: return "Discard is only allowed after a full board rotation."
         case .cannotDiscardBlackGem: return "Poop gems cannot be discarded after a full rotation."
+        case .cannotPlaceBlackGemWithUnicorn: return "Poop gems cannot be placed in the unicorn's cup."
         case .pendingScoreChoicesUnresolved: return "Score a cup or choose Skip Scoring before rolling again."
         case .pendingWhiteGemDecisionUnresolved: return "Resolve the white gem choice before continuing."
         }

@@ -978,6 +978,109 @@ final class GameViewModelTests: XCTestCase {
         }
     }
 
+    func testBlackGemIsUnselectableOnlyWhenDestinationIsUnicornCup() async {
+        await MainActor.run {
+            func makeSession(destinationCup: Int, unicornCup: Int) -> GameSession {
+                var session = GameSessionFactory().makeNewGame(playerNames: ["Player 1"])
+                session.phase = .playing
+                for index in session.cups.indices {
+                    session.cups[index].gems = []
+                }
+                session.gemsInHand = [Gem(kind: .black), Gem(kind: .red)]
+                session.currentRoll = 2
+                session.nextPlacementCupIndex = destinationCup
+                session.isTurnPlacementComplete = false
+                session.unicornCupIndex = unicornCup
+                session.unicornCupID = session.cups[unicornCup].id
+                return session
+            }
+
+            let onUnicorn = GameViewModel(session: makeSession(destinationCup: 4, unicornCup: 4))
+            XCTAssertFalse(onUnicorn.canSelectHandGem(kind: .black))
+            XCTAssertTrue(onUnicorn.canSelectHandGem(kind: .red))
+            XCTAssertTrue(onUnicorn.canPlaceFromHand)
+            XCTAssertEqual(Set(onUnicorn.boardDisplayState.handGemCounts.map(\.kind)), Set([.black, .red]))
+            XCTAssertFalse(onUnicorn.boardDisplayState.selectableHandGemKinds.contains(.black))
+            XCTAssertTrue(onUnicorn.boardDisplayState.selectableHandGemKinds.contains(.red))
+
+            let offUnicorn = GameViewModel(session: makeSession(destinationCup: 0, unicornCup: 4))
+            XCTAssertTrue(offUnicorn.canSelectHandGem(kind: .black))
+            XCTAssertTrue(offUnicorn.canSelectHandGem(kind: .red))
+            XCTAssertTrue(offUnicorn.boardDisplayState.selectableHandGemKinds.contains(.black))
+        }
+    }
+
+    func testPlaceHandGemRejectsBlackOnUnicornCupWithoutMutating() async {
+        await MainActor.run {
+            var session = GameSessionFactory().makeNewGame(playerNames: ["Player 1"])
+            session.phase = .playing
+            for index in session.cups.indices {
+                session.cups[index].gems = []
+            }
+            let poop = Gem(kind: .black)
+            let red = Gem(kind: .red)
+            session.gemsInHand = [poop, red]
+            session.currentRoll = 2
+            session.nextPlacementCupIndex = 4
+            session.placementsCompletedInCurrentRotation = 1
+            session.isTurnPlacementComplete = false
+            session.unicornCupIndex = 4
+            session.unicornCupID = session.cups[4].id
+            session.cups[4].gems = [Gem(kind: .gold)]
+
+            let viewModel = GameViewModel(session: session)
+            let sessionBefore = viewModel.session
+
+            let rejected = viewModel.placeHandGem(kind: .black)
+
+            if case .failure(let error) = rejected {
+                XCTAssertEqual(error, .cannotPlaceBlackGemWithUnicorn)
+            } else {
+                XCTFail("Expected cannotPlaceBlackGemWithUnicorn, got \(rejected)")
+            }
+            XCTAssertEqual(viewModel.session, sessionBefore)
+
+            let accepted = viewModel.placeHandGem(kind: .red)
+            XCTAssertTrue(accepted.isSuccess)
+            XCTAssertEqual(viewModel.session.cups[4].gems.last?.id, red.id)
+            XCTAssertEqual(viewModel.session.gemsInHand.map(\.id), [poop.id])
+        }
+    }
+
+    func testSoleBlackGemOnUnicornCupStaysBlockedInViewModel() async {
+        await MainActor.run {
+            var session = GameSessionFactory().makeNewGame(playerNames: ["Player 1"])
+            session.phase = .playing
+            for index in session.cups.indices {
+                session.cups[index].gems = []
+            }
+            let poop = Gem(kind: .black)
+            session.gemsInHand = [poop]
+            session.currentRoll = 1
+            session.nextPlacementCupIndex = 4
+            session.isTurnPlacementComplete = false
+            session.unicornCupIndex = 4
+            session.unicornCupID = session.cups[4].id
+
+            let viewModel = GameViewModel(session: session)
+            XCTAssertTrue(viewModel.canPlaceFromHand)
+            XCTAssertFalse(viewModel.canSelectHandGem(kind: .black))
+            XCTAssertTrue(viewModel.boardDisplayState.selectableHandGemKinds.isEmpty)
+            XCTAssertEqual(viewModel.boardDisplayState.handGemCounts.map(\.kind), [.black])
+
+            let sessionBefore = viewModel.session
+            let rejected = viewModel.placeHandGem(kind: .black)
+
+            if case .failure(let error) = rejected {
+                XCTAssertEqual(error, .cannotPlaceBlackGemWithUnicorn)
+            } else {
+                XCTFail("Expected cannotPlaceBlackGemWithUnicorn, got \(rejected)")
+            }
+            XCTAssertEqual(viewModel.session, sessionBefore)
+            XCTAssertFalse(viewModel.session.isTurnPlacementComplete)
+        }
+    }
+
     func testPlacingFinalWhiteGemOnOccupiedCupExposesPlacementChainDecision() async {
         await MainActor.run {
             var session = GameSessionFactory().makeNewGame(playerNames: ["Player 1"])
