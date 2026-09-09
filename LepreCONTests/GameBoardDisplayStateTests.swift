@@ -256,6 +256,43 @@ final class GameBoardDisplayStateTests: XCTestCase {
         XCTAssertEqual(display.handGemCounts.first { $0.kind == .clear }?.shortLabel, "C")
     }
 
+    func testSelectableHandGemKindsExcludeBlackDuringRequiredDiscard() {
+        var session = GameSessionFactory().makeNewGame(playerNames: ["Alex"])
+        session.phase = .playing
+        for index in session.cups.indices {
+            session.cups[index].gems = []
+        }
+        session.gemsInHand = [Gem(kind: .black), Gem(kind: .red), Gem(kind: .blue)]
+        session.currentRoll = 3
+        session.nextPlacementCupIndex = 0
+        session.placementsCompletedInCurrentRotation = session.cups.count
+        session.isTurnPlacementComplete = false
+
+        let display = GameBoardDisplayState.from(session: session)
+
+        XCTAssertEqual(Set(display.handGemCounts.map(\.kind)), Set([.black, .red, .blue]))
+        XCTAssertEqual(display.selectableHandGemKinds, Set([.red, .blue]))
+        XCTAssertFalse(display.selectableHandGemKinds.contains(.black))
+        XCTAssertTrue(display.canPlaceFromHand)
+    }
+
+    func testSelectableHandGemKindsIncludeBlackDuringCupPlacement() {
+        var session = GameSessionFactory().makeNewGame(playerNames: ["Alex"])
+        session.phase = .playing
+        for index in session.cups.indices {
+            session.cups[index].gems = []
+        }
+        session.gemsInHand = [Gem(kind: .black), Gem(kind: .red)]
+        session.currentRoll = 2
+        session.nextPlacementCupIndex = 0
+        session.placementsCompletedInCurrentRotation = 0
+        session.isTurnPlacementComplete = false
+
+        let display = GameBoardDisplayState.from(session: session)
+
+        XCTAssertEqual(display.selectableHandGemKinds, Set([.black, .red]))
+    }
+
     func testUnicornMarksCorrectCupWithoutObstructingGemCounts() {
         var session = GameSessionFactory().makeNewGame(playerNames: ["Alex"])
         session.phase = .playing

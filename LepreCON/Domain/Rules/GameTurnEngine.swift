@@ -23,6 +23,8 @@ enum GameTurnError: Error, Equatable {
     case placementRequiresDiscard
     /// Current destination is a cup; discard is not legal yet.
     case discardNotRequired
+    /// A black/poop gem cannot be discarded during the required rotation discard.
+    case cannotDiscardBlackGem
     /// Placement finished but the player must confirm or skip pending score choices first.
     case pendingScoreChoicesUnresolved
 }
@@ -122,6 +124,7 @@ enum GameTurnEngine {
     /// Moves exactly one gem from hand into the discard pile after a full board rotation.
     ///
     /// Discard is only legal when `currentPlacementDestination` is `.discard`.
+    /// Black/poop gems (`GemKind.black`) cannot be discarded.
     /// After a successful discard, a new rotation begins at the already-advanced
     /// `nextPlacementCupIndex`. Discard alone does not trigger end-of-turn resolution
     /// unless the hand is empty afterward.
@@ -133,6 +136,9 @@ enum GameTurnEngine {
         }
         guard let handIndex = session.gemsInHand.firstIndex(where: { $0.id == gemID }) else {
             return .failure(.gemNotInHand)
+        }
+        guard canDiscardGemKind(session.gemsInHand[handIndex].kind) else {
+            return .failure(.cannotDiscardBlackGem)
         }
 
         let gem = session.gemsInHand.remove(at: handIndex)
@@ -165,6 +171,21 @@ enum GameTurnEngine {
             return true
         }
         return false
+    }
+
+    /// True when this gem kind may be discarded during a required rotation discard.
+    /// Black/poop gems are never a legal rotation-discard choice.
+    static func canDiscardGemKind(_ kind: GemKind) -> Bool {
+        kind != .black
+    }
+
+    /// True when tapping this hand gem kind is a legal choice for the current destination.
+    static func canSelectHandGemKind(_ kind: GemKind, in session: GameSession) -> Bool {
+        guard canPlaceFromHand(in: session) else { return false }
+        if isDiscardRequired(in: session) {
+            return canDiscardGemKind(kind)
+        }
+        return true
     }
 
     /// Count of cups that currently accept normal placement (completed cups excluded).

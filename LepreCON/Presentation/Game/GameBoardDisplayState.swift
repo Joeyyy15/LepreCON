@@ -96,6 +96,8 @@ struct GameBoardDisplayState: Equatable {
     /// Bottom row left → right per rulebook image: cloud2, cloud1, pot, cloud3, cloud4.
     let bottomRow: [BottomRowSlotDisplay]
     let handGemCounts: [GemCountDisplayItem]
+    /// Hand gem kinds the player may currently tap, derived from domain legality.
+    let selectableHandGemKinds: Set<GemKind>
     let discardGemCounts: [GemCountDisplayItem]
     let currentRoll: Int?
     let canRollD12: Bool
@@ -208,6 +210,11 @@ struct GameBoardDisplayState: Equatable {
             ],
             bottomRow: bottomRow,
             handGemCounts: GemCountDisplayBuilder.groupedCounts(from: session.gemsInHand),
+            selectableHandGemKinds: Set(
+                session.gemsInHand.map(\.kind).filter {
+                    GameTurnEngine.canSelectHandGemKind($0, in: session)
+                }
+            ),
             discardGemCounts: GemCountDisplayBuilder.groupedCounts(from: session.discardPile),
             currentRoll: session.currentRoll,
             canRollD12: GameTurnEngine.canRollD12(in: session),

@@ -10,6 +10,8 @@ import SwiftUI
 struct HandTrayGemGridView: View {
     let gemCounts: [GemCountDisplayItem]
     let canPlace: Bool
+    /// Domain-derived per-kind legality. Used only when `canPlace` is true.
+    var isKindSelectable: (GemKind) -> Bool = { _ in true }
     /// When false, non-interactive cells keep full opacity (e.g. discard inspection).
     var showsDisabledAppearance: Bool = true
     var emptyMessage: String = "No gems"
@@ -23,8 +25,12 @@ struct HandTrayGemGridView: View {
         ]
     }
 
-    private var cellsAppearActive: Bool {
-        canPlace || !showsDisabledAppearance
+    private func isSelectable(_ kind: GemKind) -> Bool {
+        canPlace && isKindSelectable(kind)
+    }
+
+    private func cellAppearsActive(for kind: GemKind) -> Bool {
+        isSelectable(kind) || !showsDisabledAppearance
     }
 
     var body: some View {
@@ -39,7 +45,7 @@ struct HandTrayGemGridView: View {
                 ScrollView {
                     LazyVGrid(columns: gridColumns, alignment: .center, spacing: 10) {
                         ForEach(gemCounts) { item in
-                            if canPlace {
+                            if isSelectable(item.kind) {
                                 Button {
                                     onTapKind(item.kind)
                                 } label: {
@@ -59,7 +65,8 @@ struct HandTrayGemGridView: View {
     }
 
     private func handTrayGemCell(_ item: GemCountDisplayItem) -> some View {
-        VStack(spacing: 4) {
+        let appearsActive = cellAppearsActive(for: item.kind)
+        return VStack(spacing: 4) {
             GemView(imageName: item.imageName, size: gemSize)
 
             if let label = item.kind.handGemOverlayLabel {
@@ -79,16 +86,16 @@ struct HandTrayGemGridView: View {
         .padding(.vertical, 8)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.white.opacity(cellsAppearActive ? 0.18 : 0.08))
+                .fill(Color.white.opacity(appearsActive ? 0.18 : 0.08))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(BoardStyle.hudBadgeStroke.opacity(cellsAppearActive ? 0.65 : 0.3), lineWidth: 1)
+                .stroke(BoardStyle.hudBadgeStroke.opacity(appearsActive ? 0.65 : 0.3), lineWidth: 1)
         )
-        .opacity(cellsAppearActive ? 1 : 0.55)
+        .opacity(appearsActive ? 1 : 0.55)
         .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(item.displayName) \(item.count)")
-        .accessibilityAddTraits(canPlace ? .isButton : [])
+        .accessibilityAddTraits(isSelectable(item.kind) ? .isButton : [])
     }
 }

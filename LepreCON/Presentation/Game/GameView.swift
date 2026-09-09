@@ -159,6 +159,7 @@ struct GameView: View {
                     HandTrayOverlayView(
                         gemCounts: viewModel.boardDisplayState.handGemCounts,
                         canPlace: viewModel.canPlaceFromHand,
+                        isKindSelectable: { viewModel.canSelectHandGem(kind: $0) },
                         trayHeight: handTrayHeight,
                         onTapKind: placeHandGemFromTray,
                         onDismiss: { isHandTrayPresented = false }
@@ -403,6 +404,7 @@ struct GameView: View {
         case .invalidPlacementCupIndex: return "Invalid cup for placement."
         case .placementRequiresDiscard: return "Discard one gem after completing a full rotation."
         case .discardNotRequired: return "Discard is only allowed after a full board rotation."
+        case .cannotDiscardBlackGem: return "Poop gems cannot be discarded after a full rotation."
         case .pendingScoreChoicesUnresolved: return "Score a cup or choose Skip Scoring before rolling again."
         }
     }

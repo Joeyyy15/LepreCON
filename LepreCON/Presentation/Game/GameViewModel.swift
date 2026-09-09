@@ -59,6 +59,11 @@ final class GameViewModel: ObservableObject {
         boardDisplayState.canPlaceFromHand
     }
 
+    /// Domain-derived legality for tapping a grouped hand gem kind.
+    func canSelectHandGem(kind: GemKind) -> Bool {
+        GameTurnEngine.canSelectHandGemKind(kind, in: session)
+    }
+
     /// Domain-owned next legal placement target (cup or rotation discard).
     var currentPlacementDestination: PlacementDestination {
         GameTurnEngine.currentPlacementDestination(in: session)

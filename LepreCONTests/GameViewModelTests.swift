@@ -927,6 +927,56 @@ final class GameViewModelTests: XCTestCase {
             XCTAssertEqual(viewModel.currentPlacementDestination, .cup(index: 0))
         }
     }
+
+    func testPlaceHandGemRejectsBlackGemWhenDiscardRequiredThenAllowsNormalGem() async {
+        await MainActor.run {
+            var session = GameSessionFactory().makeNewGame(playerNames: ["Player 1"])
+            session.phase = .playing
+            for index in session.cups.indices {
+                session.cups[index].gems = []
+            }
+            let poop = Gem(kind: .black)
+            let red = Gem(kind: .red)
+            session.gemsInHand = [poop, red]
+            session.currentRoll = 2
+            session.nextPlacementCupIndex = 0
+            session.placementsCompletedInCurrentRotation = session.cups.count
+            session.isTurnPlacementComplete = false
+            session.discardPile = [Gem(kind: .pink)]
+            session.unicornCupIndex = 9
+            session.unicornCupID = session.cups[9].id
+
+            let viewModel = GameViewModel(session: session)
+            XCTAssertTrue(viewModel.isDiscardRequired)
+            XCTAssertFalse(viewModel.canSelectHandGem(kind: .black))
+            XCTAssertTrue(viewModel.canSelectHandGem(kind: .red))
+            XCTAssertFalse(viewModel.boardDisplayState.selectableHandGemKinds.contains(.black))
+
+            let handBefore = viewModel.session.gemsInHand
+            let pileBefore = viewModel.session.discardPile
+            let rotationBefore = viewModel.session.placementsCompletedInCurrentRotation
+
+            let rejected = viewModel.placeHandGem(kind: .black)
+
+            if case .failure(let error) = rejected {
+                XCTAssertEqual(error, .cannotDiscardBlackGem)
+            } else {
+                XCTFail("Expected cannotDiscardBlackGem, got \(rejected)")
+            }
+            XCTAssertEqual(viewModel.session.gemsInHand.map(\.id), handBefore.map(\.id))
+            XCTAssertEqual(viewModel.session.discardPile.map(\.id), pileBefore.map(\.id))
+            XCTAssertEqual(viewModel.session.placementsCompletedInCurrentRotation, rotationBefore)
+            XCTAssertTrue(viewModel.isDiscardRequired)
+            XCTAssertEqual(viewModel.currentPlacementDestination, .discard)
+
+            let accepted = viewModel.placeHandGem(kind: .red)
+
+            XCTAssertTrue(accepted.isSuccess)
+            XCTAssertEqual(viewModel.session.gemsInHand.map(\.id), [poop.id])
+            XCTAssertEqual(viewModel.session.discardPile.last?.id, red.id)
+            XCTAssertFalse(viewModel.isDiscardRequired)
+        }
+    }
 }
 
 private extension Result where Success == Void {

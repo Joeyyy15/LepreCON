@@ -10,6 +10,7 @@ import SwiftUI
 struct HandTrayOverlayView: View {
     let gemCounts: [GemCountDisplayItem]
     let canPlace: Bool
+    var isKindSelectable: (GemKind) -> Bool = { _ in true }
     let trayHeight: CGFloat
     var onTapKind: (GemKind) -> Void = { _ in }
     var onDismiss: () -> Void = {}
@@ -35,6 +36,7 @@ struct HandTrayOverlayView: View {
             HandTrayGemGridView(
                 gemCounts: gemCounts,
                 canPlace: canPlace,
+                isKindSelectable: isKindSelectable,
                 onTapKind: onTapKind
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)

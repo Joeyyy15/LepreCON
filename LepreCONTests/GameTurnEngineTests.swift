@@ -129,7 +129,7 @@ final class GameTurnEngineTests: XCTestCase {
 
     // MARK: - Rotation discard rules
 
-  func testPlaceGemInDiscardAddsToDiscardPileWithoutAdvancingCup() {
+    func testPlaceGemInDiscardAddsToDiscardPileWithoutAdvancingCup() {
     let gem = Gem(kind: .pink)
     let remaining = Gem(kind: .blue)
     var session = makePlayingSession(bag: [])
@@ -147,6 +147,82 @@ final class GameTurnEngineTests: XCTestCase {
     XCTAssertEqual(session.nextPlacementCupIndex, 0)
     XCTAssertEqual(session.placementsCompletedInCurrentRotation, 0)
   }
+
+    func testNormalGemCanBeDiscardedWhenDiscardIsRequired() {
+        let gem = Gem(kind: .red)
+        let remaining = Gem(kind: .blue)
+        var session = makePlayingSession(bag: [])
+        session.gemsInHand = [gem, remaining]
+        session.currentRoll = 2
+        session.nextPlacementCupIndex = 0
+        session.placementsCompletedInCurrentRotation = session.cups.count
+
+        XCTAssertTrue(GameTurnEngine.isDiscardRequired(in: session))
+        XCTAssertTrue(GameTurnEngine.canDiscardGemKind(.red))
+        XCTAssertTrue(GameTurnEngine.canSelectHandGemKind(.red, in: session))
+
+        let result = GameTurnEngine.placeGemInDiscard(session: &session, gemID: gem.id)
+
+        assertSuccess(result)
+        XCTAssertEqual(session.discardPile.map(\.id), [gem.id])
+        XCTAssertEqual(session.gemsInHand.map(\.id), [remaining.id])
+        XCTAssertFalse(GameTurnEngine.isDiscardRequired(in: session))
+    }
+
+    func testBlackGemCannotBeDiscardedDuringRequiredRotationDiscard() {
+        let poop = Gem(kind: .black)
+        let red = Gem(kind: .red)
+        let alreadyDiscarded = Gem(kind: .pink)
+        var session = makePlayingSession(bag: [])
+        session.gemsInHand = [poop, red]
+        session.currentRoll = 2
+        session.nextPlacementCupIndex = 3
+        session.placementsCompletedInCurrentRotation = session.cups.count
+        session.discardPile = [alreadyDiscarded]
+
+        XCTAssertTrue(GameTurnEngine.isDiscardRequired(in: session))
+        XCTAssertFalse(GameTurnEngine.canDiscardGemKind(.black))
+        XCTAssertFalse(GameTurnEngine.canSelectHandGemKind(.black, in: session))
+        XCTAssertTrue(GameTurnEngine.canSelectHandGemKind(.red, in: session))
+
+        let handBefore = session.gemsInHand
+        let pileBefore = session.discardPile
+        let rotationBefore = session.placementsCompletedInCurrentRotation
+        let destinationBefore = GameTurnEngine.currentPlacementDestination(in: session)
+        let resumeCupBefore = session.nextPlacementCupIndex
+
+        let rejected = GameTurnEngine.placeGemInDiscard(session: &session, gemID: poop.id)
+
+        assertFailure(rejected, .cannotDiscardBlackGem)
+        XCTAssertEqual(session.gemsInHand.map(\.id), handBefore.map(\.id))
+        XCTAssertTrue(session.gemsInHand.contains(where: { $0.id == poop.id }))
+        XCTAssertEqual(session.discardPile.map(\.id), pileBefore.map(\.id))
+        XCTAssertEqual(session.placementsCompletedInCurrentRotation, rotationBefore)
+        XCTAssertEqual(GameTurnEngine.currentPlacementDestination(in: session), destinationBefore)
+        XCTAssertEqual(session.nextPlacementCupIndex, resumeCupBefore)
+        XCTAssertTrue(GameTurnEngine.isDiscardRequired(in: session))
+        XCTAssertFalse(session.isTurnPlacementComplete)
+
+        let accepted = GameTurnEngine.placeGemInDiscard(session: &session, gemID: red.id)
+
+        assertSuccess(accepted)
+        XCTAssertEqual(session.discardPile.map(\.id), [alreadyDiscarded.id, red.id])
+        XCTAssertEqual(session.gemsInHand.map(\.id), [poop.id])
+        XCTAssertFalse(GameTurnEngine.isDiscardRequired(in: session))
+        XCTAssertEqual(GameTurnEngine.currentPlacementDestination(in: session), .cup(index: resumeCupBefore))
+        XCTAssertEqual(session.placementsCompletedInCurrentRotation, 0)
+    }
+
+    func testNonBlackGemKindsRemainLegalRotationDiscards() {
+        let nonBlackKinds = GemKind.allCases.filter { $0 != .black }
+        for kind in nonBlackKinds {
+            XCTAssertTrue(
+                GameTurnEngine.canDiscardGemKind(kind),
+                "Expected \(kind) to remain a legal rotation discard"
+            )
+        }
+        XCTAssertFalse(GameTurnEngine.canDiscardGemKind(.black))
+    }
 
     func testFirstPlacementCupIndexIsFirstCloudAfterPot() {
         XCTAssertEqual(GameSetup.firstPlacementCupIndex, 0)
